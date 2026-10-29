@@ -940,7 +940,11 @@ window.WalesaMainland=(()=>{
      den=rx*sy-ry*sx;if(Math.abs(den)<1e-6)continue;
     const qx=c[0]-a[0],qy=c[1]-a[1],
      t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
-    if(t>0&&t<1&&u>0&&u<1){cuts[i].push(t);cuts[j].push(u)}
+    // Una entrada se une a la calle por su EXTREMO (u=0 o u=1).
+    // Excluir extremos aislaba los accesos y rompía el GPS del teléfono.
+    if(t>=-1e-7&&t<=1+1e-7&&u>=-1e-7&&u<=1+1e-7){
+     cuts[i].push(clamp(t,0,1));cuts[j].push(clamp(u,0,1));
+    }
    }
   }
   const nodes=[],adj=[],lookup=new Map();
