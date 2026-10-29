@@ -34,7 +34,18 @@ const server=http.createServer((req,res)=>{
    },{});
    return {
     extent:[m.MW,m.MH],legacy:legacy.map(x=>x.room),houses:homes.length,
-    invalid,collide,reg,roadConnections:L.streetSegments.length,
+    invalid,collide,invalidDiag:invalid.map(id=>{
+     const b=homes.find(h=>h.id===id);let best={d:Infinity,index:-1};
+     const lines=L.streetSegments,hw=b.city?37:30,top=b.city?41:32;
+     lines.forEach(([a,c],index)=>{
+      for(const xx of [b.x-hw,b.x,b.x+hw])for(const yy of [b.y-top,b.y-(top+1)/2,b.y-1]){
+       const dx=c[0]-a[0],dy=c[1]-a[1],
+       t=Math.max(0,Math.min(1,((xx-a[0])*dx+(yy-a[1])*dy)/(dx*dx+dy*dy||1))),
+       d=Math.hypot(xx-a[0]-t*dx,yy-a[1]-t*dy);
+       if(d<best.d)best={d:+d.toFixed(1),index,arterial:index<38};
+      }
+     });return{id,x:b.x,y:b.y,...best};
+    }),reg,roadConnections:L.streetSegments.length,
     garden:m.objs.some(o=>o.s===World.spr.gazebo&&o.x>2800&&Math.abs(o.x-k.x)<5),
     nativePicnic:m.objs.some(o=>o.s===World.spr.basket&&o.x>2800),
     contacts:L.townResidents.length,
