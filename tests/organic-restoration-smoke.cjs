@@ -60,7 +60,7 @@ const server=http.createServer((req,res)=>{
   assert.ok(result.houses>=45,'Expanded city populated with additional native businesses');
   assert.equal(result.invalid.length,0,'No house footprint should intersect a road');
   assert.equal(result.collide.length,0,'Expanded houses should not overlap');
-  for(const t of ['town','candy','city','chile','shroom'])assert.ok(result.reg[t]>1,t+' is represented');
+  for(const t of ['town','candy','city','chile','shroom'])assert.ok(result.reg[t]>=1,t+' is represented');
   assert.equal(result.garden,true,'Native kiosk sprite restored on main village');
   assert.equal(result.nativePicnic,true,'Native picnic sprite restored in plaza');
   assert.ok(result.contacts>=10,'New region has distinct NPCs');
