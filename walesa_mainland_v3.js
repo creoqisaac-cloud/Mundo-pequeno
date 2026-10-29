@@ -780,10 +780,13 @@ window.WalesaMainland=(()=>{
    ['Ciudad del Sur',P.town.x,P.town.y,'🏙️'],
    ['Bosque Profundo',P.forest.x,P.forest.y,'🌲'],
    ['Ciudad Corazón',870,878,'🏠']
-  ].map(([name,x,y,icon])=>({name,x,y,icon}));
-  const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:b.icon||'🏪'}));
-  const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:'🏡'}));
-  return [...landmarks,...scenic,...districtDetails,...jobs,...homes];
+  ].map(([name,x,y,icon],i)=>({name,x,y,icon,category:i===5?'homes':'parks'}));
+  const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,
+   icon:b.icon||'🏪',category:'shops'}));
+  const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,
+   icon:'🏡',category:'homes'}));
+  return [...landmarks,...scenic.map(p=>({...p,category:'parks'})),
+    ...districtDetails.map(p=>({...p,category:'parks'})),...jobs,...homes];
  }
  function ensureGuideBar(){
   if(guideBar)return guideBar;
@@ -848,7 +851,14 @@ window.WalesaMainland=(()=>{
    '<div style="display:flex;gap:5px;margin:7px 0;align-items:center;flex-wrap:wrap">'+
    '<button data-nav="minus" aria-label="Alejar mapa">−</button><button data-nav="plus" aria-label="Acercar mapa">＋</button>'+
    '<button data-nav="me">📍 Mi ubicación</button><button data-nav="all">🌍 Isla completa</button>'+
-   '</div><canvas id="walesa-streets-map" width="560" height="435" style="display:block;box-sizing:border-box;width:100%;height:auto;'+
+   '<button data-nav="style" aria-label="Cambiar estilo del mapa">🌿 Relieve</button>'+
+   '</div><div data-nav="filters" role="group" aria-label="Categorías de lugares" style="display:flex;gap:5px;overflow-x:auto;'+
+   'padding:3px 1px 6px;scrollbar-width:thin">'+
+   '<button data-filter="all" aria-pressed="true">✦ Todos</button>'+
+   '<button data-filter="parks" aria-pressed="false">🌿 Parques</button>'+
+   '<button data-filter="shops" aria-pressed="false">🏬 Servicios</button>'+
+   '<button data-filter="homes" aria-pressed="false">🏠 Casas</button></div>'+
+   '<canvas id="walesa-streets-map" width="560" height="435" style="display:block;box-sizing:border-box;width:100%;height:auto;'+
    'border:2px solid #bfd2c2;border-radius:12px;touch-action:none;background:#d6ebed" aria-label="Mapa de calles de Walesa, arrastra para explorar"></canvas>'+
    '<div style="margin-top:5px;font-size:10px;color:#62786b">Arrastra, pellizca o usa + / −. Toca un punto para elegir destino.</div>'+
    '<div style="display:flex;gap:6px;margin-top:8px;align-items:stretch"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:8px;'+
@@ -863,8 +873,35 @@ window.WalesaMainland=(()=>{
   const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d'),sel=wrap.querySelector('select'),
     status=wrap.querySelector('[data-nav="status"]'),search=wrap.querySelector('input[type="search"]'),
     results=wrap.querySelector('[data-nav="search-results"]'),CW=cv.width,CH=cv.height;
-  const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';sel.append(opt);
-  all.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;sel.append(o)});
+  let category='all',terrainMode=false,terrainPreview=null;
+  function refreshList(){
+   const previous=sel.value;sel.replaceChildren();
+   const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';
+   sel.append(opt);
+   all.forEach((p,i)=>{
+    if(category!=='all'&&p.category!==category)return;
+    const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;
+    sel.append(o);
+   });
+   if([...sel.options].some(o=>o.value===previous))sel.value=previous;
+  }
+  refreshList();
+  for(const b of wrap.querySelectorAll('[data-filter]')){
+   b.style.cssText='white-space:nowrap;flex:0 0 auto;padding:7px 10px;border-radius:18px;'+
+    'border:1px solid #bdd7c4;background:#f0f5eb;color:#4c6958;font:800 11px system-ui;cursor:pointer';
+   b.onclick=()=>{
+    category=b.dataset.filter;
+    for(const node of wrap.querySelectorAll('[data-filter]')){
+     const active=node.dataset.filter===category;
+     node.setAttribute('aria-pressed',String(active));
+     node.style.background=active?'#3f745d':'#f0f5eb';
+     node.style.color=active?'#fffef8':'#4c6958';
+    }
+    refreshList();repaint();
+   };
+  }
+  wrap.querySelector('[data-filter="all"]').style.background='#3f745d';
+  wrap.querySelector('[data-filter="all"]').style.color='#fffef8';
   let zoom=phone?3.2:2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null,raf=0;
   const pointers=new Map();let pinch=null,suppressTap=false;
   const clampCenter=()=>{
@@ -892,9 +929,22 @@ window.WalesaMainland=(()=>{
   function draw(){
    ctx.clearRect(0,0,CW,CH);ctx.fillStyle='#a6d8e6';ctx.fillRect(0,0,CW,CH);
    const v=view();m.mainland.sampleMap(ctx,v.ox,v.oy,v.k);
-   ctx.drawImage(m.ground,v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
-   // Distinción de hitos sin amontonar las viviendas a escala regional.
-   const candidates=all.filter((p,i)=>zoom>=6||i<11||p.icon!=='🏡');
+   // El mapa de calles queda limpio, sin la imagen antigua cuadrada encima.
+   // "Relieve" es opcional y usa una copia reducida hasta el zoom cercano.
+   if(terrainMode){
+    if(!terrainPreview){
+     terrainPreview=document.createElement('canvas');
+     terrainPreview.width=900;terrainPreview.height=440;
+     terrainPreview.getContext('2d').drawImage(m.ground,0,0,900,440);
+    }
+    ctx.globalAlpha=.84;
+    ctx.drawImage(zoom>8?m.ground:terrainPreview,
+      v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
+    ctx.globalAlpha=1;
+   }
+   // Filtro de destinos y detalle progresivo: los rótulos no se enciman.
+   const candidates=all.filter((p,i)=>category!=='all'?p.category===category:
+     zoom>=6||i<11||p.icon!=='🏡');
    for(const p of candidates){
     const s=screen(p);if(s.x<-35||s.x>CW+35||s.y<-25||s.y>CH+25)continue;
     const selected=target===p;
@@ -918,10 +968,27 @@ window.WalesaMainland=(()=>{
    ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fillStyle='rgba(54,124,221,.15)';ctx.fill();
    ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();
    ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();
+   // Brújula y escala del mundo (unidades del juego, no metros inventados).
+   ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillStyle='rgba(255,254,247,.92)';
+   ctx.beginPath();ctx.arc(CW-28,31,19,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#3d695a';ctx.font='900 15px system-ui';ctx.fillText('N',CW-28,26);
+   ctx.beginPath();ctx.moveTo(CW-28,29);ctx.lineTo(CW-33,39);ctx.lineTo(CW-23,39);
+   ctx.closePath();ctx.fillStyle='#df8b74';ctx.fill();
+   const units=[50,100,250,500,1000,2000].filter(q=>q*v.k<=130);
+   const measure=units.length?units[units.length-1]:50,px=measure*v.k;
+   ctx.fillStyle='rgba(255,254,247,.87)';ctx.fillRect(11,CH-32,Math.max(93,px+20),26);
+   ctx.strokeStyle='#3d695a';ctx.lineWidth=3;
+   ctx.beginPath();ctx.moveTo(21,CH-16);ctx.lineTo(21+px,CH-16);ctx.stroke();
+   ctx.lineWidth=1;for(const x of [21,21+px]){
+    ctx.beginPath();ctx.moveTo(x,CH-21);ctx.lineTo(x,CH-12);ctx.stroke();
+   }
+   ctx.fillStyle='#385b4e';ctx.font='bold 12px system-ui';
+   ctx.fillText(measure+' u',21+px/2,CH-24);ctx.restore();
    if(preview&&!preview.connected){
-    ctx.fillStyle='rgba(255,249,240,.93)';ctx.fillRect(7,CH-35,CW-14,27);
+    ctx.fillStyle='rgba(255,249,240,.93)';ctx.fillRect(7,CH-64,CW-14,27);
     ctx.fillStyle='#875a47';ctx.textAlign='center';ctx.font='bold 13px system-ui';
-    ctx.fillText('Ruta orientativa: no hay un camino continuo',CW/2,CH-21);
+    ctx.fillText('Ruta orientativa: no hay un camino continuo',CW/2,CH-50);
    }
   }
   function choose(p){
@@ -935,6 +1002,12 @@ window.WalesaMainland=(()=>{
   controls('minus').onclick=()=>zoomAt(1/1.5);
   controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
   controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
+  controls('style').onclick=()=>{
+   terrainMode=!terrainMode;
+   controls('style').textContent=terrainMode?'🗺️ Plano':'🌿 Relieve';
+   controls('style').setAttribute('aria-pressed',String(terrainMode));
+   repaint();
+  };
   controls('route').onclick=()=>{if(!target){status.textContent='Elige primero un destino.';return}
     if(X.M()!==main||X.st.scene!=='out'){
      status.textContent='La ruta se puede activar al salir al exterior del continente.';return;
