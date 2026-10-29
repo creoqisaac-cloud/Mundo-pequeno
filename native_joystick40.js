@@ -294,6 +294,7 @@
   '#game #sheet.wcBagLeaving50 .panel{transform:translateY(38px) scale(.95);opacity:0;transition:transform .22s ease-in,opacity .22s ease-in}',
   '#game .fon{opacity:1;filter:none;transform-origin:center 85%;transition:transform .34s cubic-bezier(.22,.82,.28,1),opacity .34s ease,filter .34s ease}',
   '#game .fon.on{transform:translate(-50%,0);opacity:1;filter:none}',
+  '#game .fon .home{position:relative;z-index:3;flex-shrink:0;isolation:isolate}',
   '#game .fon.wcPhoneLeaving50:not(.on){visibility:visible;pointer-events:none;transform:translate(-50%,113%) rotate(5deg) scale(.92);opacity:0;filter:blur(1.3px)}',
   '@media(prefers-reduced-motion:reduce){#game #sheet.wcZipClosing37 .panel,#game #sheet.wcBagLeaving50 .panel,#game .fon{transition-duration:.01ms!important;filter:none!important}}'
  ].join('\n');
