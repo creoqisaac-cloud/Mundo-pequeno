@@ -9400,7 +9400,7 @@ window.Wardrobe=Wardrobe;
  /* ═════ 2 · el picnic ═════ */
  const FOOD=['galleta','fruta','cupcake','helado','pizza','dulce','algodon','cafe','te','tamarindo','galletasC','mermelada','brocheta','baya','malva'];
  async function lookNote(id){const d=Talk.NOTES[id],i=save.talk[id]||0;save.talk[id]=i+1;persist();await X.say(d.name,d.text[i%2]);if(id!=='gazebo')X.gain(id,d.name,d.text[0])}
- async function picnic(){const S=V.MAIN.spots.picnic,i=await X.ask('El picnic',['🧺 Invitar a alguien','🍙 Comer algo aquí','👀 Mirar el picnic','Nada']);
+ async function picnic(){const S=(window.WalesaMainland?.picnicAt&&X.player.x>2800?WalesaMainland.picnicAt:V.MAIN.spots.picnic),i=await X.ask('El picnic',['🧺 Invitar a alguien','🍙 Comer algo aquí','👀 Mirar el picnic','Nada']);
   if(i===2)return lookNote('picnic');if(i===1)return eat(null);if(i!==0)return;
   const L=near(0).sort((a,b)=>Math.hypot(a.x-S.x,a.y-S.y)-Math.hypot(b.x-S.x,b.y-S.y)).slice(0,8);if(!L.length){await X.say('','No hay nadie paseando ahorita. A lo mejor más tarde.');return}
   const j=await X.ask('¿A quién invitas?',L.map(n=>nm(n.id)).concat(['Mejor no']));if(j>=L.length)return;const n=L[j],pl=X.player;
@@ -9426,7 +9426,7 @@ window.Wardrobe=Wardrobe;
  async function kiosco(){const N=gameHour()>=20||gameHour()<6,i=await X.ask('El kiosco',['🎵 Tocar una canción','💃 Bailar con alguien',N?'🌙 Ver las estrellas':'☁️ Ver el cielo','🪑 Sentarme un rato','Nada']);
   if(i===0){X.startMG('rhythm');return}
   if(i===1){const L=near(300);if(!L.length){await X.say('','No hay nadie cerca para bailar. Bailas solita y se siente bien igual.');if(hasPose()){V5.startPose('dance',0);await X.wait(3200);poseEnd()}return}
-   const j=await X.ask('¿Con quién bailas?',L.slice(0,6).map(n=>nm(n.id)).concat(['Mejor no']));if(j>=Math.min(6,L.length))return;const n=L[j],S=V.MAIN.spots.gazebo;
+   const j=await X.ask('¿Con quién bailas?',L.slice(0,6).map(n=>nm(n.id)).concat(['Mejor no']));if(j>=Math.min(6,L.length))return;const n=L[j],S=(window.WalesaMainland?.kioskAt&&X.player.x>2800?WalesaMainland.kioskAt:V.MAIN.spots.gazebo);
    await X.iris(()=>{X.player.x=S.x-12;X.player.y=S.y+10;n.x=S.x+12;n.y=S.y+10;n.static=true});n.dance=4.5;if(hasPose())V5.startPose('dance',0);Sound.init&&Sound.init();[67,71,74,79,74,71,67,72].forEach((q,k)=>setTimeout(()=>G.sfx.note&&G.sfx.note(q),k*280));
    await X.wait(4200);poseEnd();await say(n.id,line('baile',n.id,'Me pisaste una vez. Yo te pisé dos. Quedamos a mano.'));release(n);if(save.danceDay!==today()+n.id){save.danceDay=today()+n.id;window.Life&&Life.bump&&Life.bump(n.id,1)}return}
   if(i===2){await X.say('',line(N?'estrellas':'cielo',null,N?'Desde el kiosco se ven un montón de estrellas. Una parpadea como si te reconociera.':'Las nubes pasan despacito sobre el kiosco. Una parece un helado derritiéndose.'));
