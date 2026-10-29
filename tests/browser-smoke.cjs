@@ -27,6 +27,11 @@ async function slideZipper(page){
  // un ID ficticio cuyo pointercapture puede perderse entre microtareas.
  const close=page.locator('#sheet .panel h3 .close');
  await close.waitFor({state:'visible'});
+ // Playwright can scroll the document when selecting a low settings row.
+ // The game's full-screen close handle must be back inside the viewport
+ // before validating a real swipe; otherwise pointer coordinates are negative.
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await close.scrollIntoViewIfNeeded();
  const rect=await close.boundingBox();
  assert.ok(rect&&rect.width>0&&rect.height>0,'Tirador visible');
  const x=rect.x+rect.width/2,y=rect.y+rect.height/2;
