@@ -3722,7 +3722,7 @@ const V5=(()=>{const V=World,X=Game.X,H=X.HOOKS,P=Paint,G=Game.G,MG=Game.MG;
   if(partner){g.save();g.strokeStyle='#fffaf3';g.lineWidth=7;g.strokeRect(3.5,3.5,W-7,H-7);g.strokeStyle='#f4abc8';g.lineWidth=1.5;g.strokeRect(7,7,W-14,H-14);
   for(const [x,y] of [[14,16],[W-14,16],[14,H-16],[W-14,H-16]]){Paint.heart(g,x,y,4,'#e8456f')}g.font='800 9px Nunito,sans-serif';g.textAlign='center';g.fillStyle='#fffaf3';g.strokeStyle='#b9517a';g.lineWidth=2.5;const tx='✿ selfie · '+new Date().toLocaleDateString('es-MX',{day:'numeric',month:'short'})+' ✿';g.strokeText(tx,W/2,H-12);g.fillText(tx,W/2,H-12);g.restore()}
   X.photo();pose.flash=1;setTimeout(()=>{pose.flash=0},240);setTimeout(()=>{X.cam.tz=X.cam.uz;for(const n of list){n.static=!!n.selfieWas;n.selfie=null;n.wait=1}},700)}
- H.update.push((dt,t)=>{if(!comp)return;/* Los acompañantes esperan dentro de los edificios; no se despiden al entrar al salón. */if(X.st.scene==='in')return;const p=X.player;if(!X.NPCS.includes(comp)){const same=X.NPCS.find(q=>q.id===comp.id);if(same){same.comp=1;same.static=true;comp=same}else{endComp(false);return}}const n=comp;compT-=dt;
+ H.update.push((dt,t)=>{if(!comp)return;/* Los acompañantes esperan dentro de los edificios; no se despiden al entrar al salón. */if(X.st.scene==='in')return;const p=X.player;if(!X.NPCS.includes(comp)){const same=X.NPCS.find(q=>q.id===comp.id);if(same){same.comp=1;same.static=true;comp=same}else{endComp(false);return}}const n=comp;if(n._picnic31)return;compT-=dt;
   if(n.hug>0)return;const bx=p.x+(p.dir===2?16:-16),by=p.y+6,dx=bx-n.x,dy=by-n.y,d=Math.hypot(dx,dy);if(d>200){n.x=p.x;n.y=p.y+10}else if(d>8){const s=Math.min(d*3,100)*dt;n.x+=dx/d*s;n.y+=dy/d*s;n.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);n.anim+=dt*8;n.frame=1+(Math.floor(n.anim)%2)}else n.frame=0;
   if(Math.random()<dt*.12)X.bubble(n,fresh(n.id+':walkc',['¡Qué bonito!','♪','Me gusta aquí','¡Mira eso!','♡','Jeje','¿Vamos a la playa?','Huele a flores','¡Corre!','Qué buen día']));
   if(compT<=0)endComp(true)});
@@ -8476,7 +8476,7 @@ window.Wardrobe=Wardrobe;
  const say0=X.say;const sayIn=(n,t,v)=>{X.st.menu=false;return say0(n,t,v).finally(()=>{X.st.menu=openFlag})};
  async function call(id,out){X.st.busy=true;try{callScreen(id);G.sfx.pop&&G.sfx.pop();const D=window.Dialogos,f=F();f.log.push({id,t:hhmm(),out:out?1:0});
   const hi=D?D.fmt(D.pk(id,'hi')):'¡Hola!',bye=D?D.fmt(D.pk(id,'bye')):'¡Adiós!';await talk(id,[(out?'':'¡')+(out?hi:'Hola, '+X.kname()+'! Te llamo porque… '+(D?D.fmt(D.pk(id,'t')):''))].filter(Boolean));
-  let meeting=false;if(out&&window.WalesaMeet){const v=await X.ask('¿Quieres ver a '+nm(id)+' en la isla?',['📍 Quedar en la plaza','🌊 Quedar en el muelle','🎵 Quedar en el kiosco','🏒 Quedar en el Salón de juegos','Solo quería saludar']);const zone=['plaza','pier','gazebo','arcade'][v];if(zone){WalesaMeet.invite(id,zone);await talk(id,['¡Perfecto! Voy caminando para allá. Nos vemos pronto.']);meeting=true}}
+  let meeting=false;if(out&&window.WalesaMeet){const v=await X.ask('¿Quieres ver a '+nm(id)+' en la isla?',['📍 Quedar en la plaza','🌊 Quedar en el muelle','🎵 Quedar en el kiosco','🏒 Quedar en el Salón de juegos','🧺 Quedar en el picnic','Solo quería saludar']);const zone=['plaza','pier','gazebo','arcade','picnic'][v];if(zone){WalesaMeet.invite(id,zone);await talk(id,['¡Perfecto! Voy caminando para allá. Nos vemos pronto.']);meeting=true}}
   const has=f.missions.some(m=>m.by===id&&!m.done);if(!meeting&&!has&&Math.random()<(out?.35:.75)){const m=mission(id);if(m){await talk(id,[m.ask]);const i=await X.ask('¿Le ayudas?',['¡Claro que sí!','Ahorita no puedo']);if(i===0){f.missions.push(m);if(f.missions.length>12)f.missions.shift();await talk(id,['¡Gracias! Te lo anoto en tu teléfono, en Encargos.']);X.toast('📋 Nuevo encargo de '+nm(id))}else await talk(id,['No te preocupes, otro día.'])}}
   else if(out){await talk(id,[D?D.fmt(D.pk(id,'t')):'¿Cómo estás?'].flat())}
   await talk(id,[bye]);G.save()}finally{X.st.busy=false;if(openFlag)homeV()}}
@@ -9397,22 +9397,22 @@ window.Wardrobe=Wardrobe;
    sin mover al personaje a través de paredes ni exigir que esté en la misma escena. */
 (()=>{const X=Game.X,V=World,H=X.HOOKS,G=Game.G;
  const store=()=>{if(!save.fon)save.fon={};if(!Array.isArray(save.fon.meetups))save.fon.meetups=[];return save.fon.meetups};
- const names={plaza:'la plaza',pier:'el muelle',gazebo:'el kiosco',arcade:'el Salón de juegos'};
+ const names={plaza:'la plaza',pier:'el muelle',gazebo:'el kiosco',arcade:'el Salón de juegos',picnic:'el picnic'};
  const point=(z,m)=>{if(!m)return null;if(z==='arcade'){
    if(!m.city&&!m.cityOff)return null;const b=(m.build||[]).find(b=>b.job==='arcade');return b?{x:b.x+14,y:b.y+25}:null}
    if(!m.main)return null;const pts=V.MAIN.spots||{};
    if(z==='plaza'&&pts.plaza)return {x:pts.plaza.x+34,y:pts.plaza.y+36};
    if(z==='pier'&&m.pier)return {x:m.pier.x+22,y:m.pier.y+m.pier.h-22};
-   if(z==='gazebo')return{x:896,y:706};return null};
+   if(z==='gazebo')return{x:896,y:706};if(z==='picnic'&&pts.picnic)return{x:pts.picnic.x+29,y:pts.picnic.y+22};return null};
  function invite(id,zone){if(!Talk.P[id]||id==='isaac'||!names[zone])return false;const L=store();
    for(let i=L.length-1;i>=0;i--)if(L[i].id===id||L[i].day!==X.today())L.splice(i,1);
    L.push({id,zone,day:X.today(),status:'en camino'});G.save();X.toast('📍 '+Talk.P[id].name+' irá a '+names[zone]+'.');return true}
  H.update.push(dt=>{if(X.st.scene!=='out'||!X.M()||X.st.mg)return;
-  const m=X.M();for(const rec of store()){if(rec.day!==X.today())continue;const target=point(rec.zone,m);if(!target)continue;
+  const m=X.M();for(const rec of store()){if(rec.day!==X.today())continue;const base=point(rec.zone,m);if(!base)continue;const target={...base};if(rec.zone==='picnic'){const index=store().filter(q=>q.zone==='picnic'&&q.day===rec.day).findIndex(q=>q.id===rec.id);target.x+=Math.max(0,index%3)*13;target.y+=Math.floor(Math.max(0,index)/3)*12;}
    let n=X.NPCS.find(n=>n.id===rec.id);if(!n){const sx=target.x-85,sy=target.y-22;
     n=X.mkNPC(rec.id,V.blockedOut(sx,sy,7)?target.x: sx,V.blockedOut(sx,sy,7)?target.y: sy);
     X.NPCS.push(n)}
-   if(n.comp||n.talk||n.hug>0)continue;
+   if(n.comp||n.talk||n.hug>0||n._picnic31)continue;
    const key=rec.id+'/'+rec.zone+'/'+rec.day;
    if(n._meetKey!==key){n._meetKey=key;n._meetPath=null;n._meetT=0;n._meetArrived=false}
    n.static=true;const dx=target.x-n.x,dy=target.y-n.y,d=Math.hypot(dx,dy);
@@ -9429,6 +9429,7 @@ window.Wardrobe=Wardrobe;
  window.WalesaMeet={invite,store,point,atArcade:()=>store().find(q=>q.day===X.today()&&q.zone==='arcade')?.id||null};
 })();
 </script>
+<script src="./picnic_v31.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
