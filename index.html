@@ -2056,8 +2056,12 @@ const Paint=(()=>{
   /* ventanas y macetas */
   for(const wx of[13,49]){windowP(g,wx,54,10,10,night);flowerBox(g,wx,64.6,10)}
   if(opt.awning){const[c1,c2]=opt.awning;for(let i=0;i<9;i++){const x=10+i*5.6;wc(g,PL([[x,49.6],[x+5.6,49.6],[x+5.6,53.4],[x+2.8,55.4],[x,53.4]]),i%2?c1:c2,{lw:.4,hl:.25})}}
-  /* letrero */
-  wc(g,RR(27,50,18,6,1.6),'#fbf6ee',{lw:.45,hl:.2});emoji(g,SIGNI[opt.sign]||'💗',36,53.2,4.6);
+  /* Letreros a pincel: las casas nuevas no llevan emojis flotantes. */
+  wc(g,RR(27,50,18,6,1.6),'#fbf6ee',{lw:.45,hl:.2});
+  if(opt.sign==='lantern'){wc(g,RR(34.7,50.7,2.6,3.4,.6),'#e7bf71',{lw:.28,gloss:.5});ln(g,[[34.3,51],[35.2,50.3],[37,50.3],[37.8,51]],'#6c9b87',.5);dot(g,36,52.1,.6,'#fff7c9')}
+  else if(opt.sign==='jam'){wc(g,RR(33,51.1,6,3.1,1),'#b65670',{lw:.3,gloss:.4});wc(g,RR(32.9,50.4,6.2,1.1,.35),'#f4c38e',{lw:.25});dot(g,35.2,52.3,.55,'#ffe7f0')}
+  else if(opt.sign==='kite'){wc(g,PG([[36,50.5],[39,52],[36,54.3],[33,52]]),'#8bc6d2',{lw:.3,gloss:.4});ln(g,[[36,50.5],[36,54.3]],'#fffaf2',.4);ln(g,[[36,54.3],[38,55.3]],'#b6788e',.4)}
+  else emoji(g,SIGNI[opt.sign]||'💗',36,53.2,4.6);
   if(opt.flag){ln(g,[[58,2],[58,16]],'#6e4630',.7);wc(g,PL([[58.4,2.6],[66,4.4],[58.4,7.6]]),'#e4799b',{lw:.4})}
   wc(g,RR(25,78,22,2,1),'#d9c7a6',{lw:.3,flat:1});wc(g,RR(27,76.4,18,2.2,1),'#e9dcc4',{lw:.35});for(const x of[25.4,46.6]){wc(g,RR(x-.7,64,1.4,10,.6),'#4b3044',{lw:.25});wc(g,E(x,63,2,2.4),night?'#ffe08a':'#fff6d6',{lw:.35,gloss:.5})}
   for(let i=0;i<6;i++){g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=.5;g.beginPath();g.moveTo(10+i*9,46.2);g.lineTo(13+i*9,46.2);g.stroke()}},{clean:1,grain:.1});
@@ -2093,6 +2097,18 @@ const Paint=(()=>{
  HK.stand=(c1,c2,icon)=>paint(48,46,24,45,g=>{wc(g,RR(4,24,40,20,1.6),'#d39a72',{hl:.3});for(let x=6;x<44;x+=6)ln(g,[[x,26],[x,42]],'#b98058',.5,.8);for(const x of[5,41])wc(g,RR(x,8,2.4,18,1),'#a8734f',{lw:.4});
   for(let i=0;i<8;i++){const x=2+i*5.5;wc(g,PL([[x,6],[x+5.5,6],[x+5.5,12],[x+2.75,14.4],[x,12]]),i%2?c1:c2,{lw:.4,hl:.3})}wc(g,RR(2,4,44,3,1.2),tn(c1,-.2),{lw:.4});
   if(icon==='cotton')for(const[x,c]of[[14,'#f7b6d2'],[24,'#bfe3f7'],[34,'#f7b6d2']]){ln(g,[[x,30],[x,23]],'#fffaf6',1);wc(g,E(x,19.6,4.2,4),c,{hl:.5,sh:.1})}
+  else if(icon==='castle'){
+   // Puestito original de 48×46, arena húmeda, torres, pala y cubeta a pincel.
+   wc(g,E(24,25,16,4.2),'#efd7a4',{lw:.3,hl:.3});
+   wc(g,RR(18,17,12,7,1),'#e4bd80',{lw:.45,hl:.3});
+   for(const x of[18,22,26])wc(g,RR(x,14.5,3.2,4.2,.5),'#f5d7a0',{lw:.25});
+   wc(g,RR(22,20,4,4,1.8),'#aa805e',{lw:.3});
+   wc(g,PL([[8,29],[14,29],[13,36],[9,36]]),'#9cc9d0',{gloss:.45,lw:.45});
+   ln(g,[[9,29],[13,29]],'#fff9f1',.6);ln(g,[[36,35],[34,19]],'#c08f6f',1.2);
+   wc(g,E(34,18,2,3),'#fff6e6',{lw:.3});
+   wc(g,RR(10,17,4,2,1),'#f7d88f',{lw:.3});
+   for(const x of[10,38])dot(g,x,24,1.1,'#fff7e3',.8)
+  }
   else{wc(g,PL([[18,24],[20,16],[28,15],[31,20],[28,24]]),'#e8456f',{gloss:.3});for(let i=0;i<4;i++)ln(g,[[19+i*3,17],[19+i*3,24]],['#f2c230','#5a9be0','#4fa64a','#fff'][i],.8)}});
  /* Cualquier otro sprite de pixeles se repinta con pinceladas redondas, volumen y grano de papel */
  HK.paintify=(c,ax,ay)=>{const w=c.width,h=c.height,k=PK,d=c.getContext('2d').getImageData(0,0,w,h).data,hi=mk(w*k,h*k),g=hi.getContext('2d'),A=(x,y)=>x<0||y<0||x>=w||y>=h?0:d[(y*w+x)*4+3];
@@ -2507,7 +2523,7 @@ const Game=(()=>{
   const joy=window.WalesaJoystick37?.vector?.();if(joy){dx+=joy.x;dy+=joy.y}
   if(!joy&&steer&&steer.active&&!st.busy){const w=screenToWorld(steer.x,steer.y);if(w){const ddx=w.x-player.x,ddy=w.y-player.y,d=Math.hypot(ddx,ddy);if(d>5){dx=ddx/d;dy=ddy/d;run=d>70}}}
   if(st.busy||st.poseLock||st.trans||st.menu)dx=dy=0;const m=Math.hypot(dx,dy),ox0=player.x,oy0=player.y,vm=vspeed();
-  if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn;moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt*(joy?Math.min(1,Math.max(.32,m)):1))}
+  if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn||!!(joy&&Math.hypot(joy.x,joy.y)>.92);moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt*(joy?Math.min(1,Math.max(.32,m)):1))}
   else if(player.path&&!st.busy&&!st.poseLock){const [tx,ty]=player.path[0],d=Math.hypot(tx-player.x,ty-player.y);run=player.path.length>2||d>80||!!st.runOn;
    if(d<2.5){player.path.shift();if(!player.path.length)player.path=null}else{const ox=player.x,oy=player.y;step(player,(tx-player.x)/d,(ty-player.y)/d,Math.min(d,(run?88:60)*vm*(window.Health32?Health32.speed:1)*dt));moved=Math.hypot(player.x-ox,player.y-oy)>.05;if(!moved){player.stuck+=dt;if(player.stuck>.5){player.path=null;player.pending=null}}else player.stuck=0}}
   if(player.pending&&!st.busy&&!st.poseLock){const it=player.pending,q=ipos(it);if(it.bug&&!bugs.includes(it.bug))player.pending=null;else if(Math.hypot(q.x-player.x,q.y-player.y)<it.r){player.path=null;player.pending=null;act(it)}else if(!player.path)player.pending=null}
@@ -10016,6 +10032,20 @@ window.Wardrobe=Wardrobe;
 <script src="./native46/neighbors.js"></script>
 
 <script src="./native46/mainworld_play.js"></script>
+
+<style id="wcOverworldVisual48">
+/* The original circular sprint overlay is replaced by joystick strength (or Shift). */
+#game #movBtns{display:none!important}
+/* Do not leave overworld pills stacked over a sheet or dialogue. */
+#game:has(#sheet.on) #misionBtn,#game:has(#sheet.on) #guiaBar,
+#game:has(#dlg.on) #misionBtn,#game:has(#choices.on) #misionBtn,
+#game:not(.playing) #misionBtn,#game:not(.playing) #guiaBar{display:none!important}
+/* The remaining mission UI borrows the game's cream, pink and ink, at HUD scale. */
+#game #misionBtn{border:1.5px solid #f5e1e9;border-radius:14px;background:linear-gradient(155deg,#fffaf2,#fbe9ed);color:#754d61;box-shadow:0 2px 0 #dbb9c7,0 4px 10px #44273a23}
+#game #guiaBar{border:1.5px solid #fff6f0;border-radius:14px;background:#654a63e8;box-shadow:0 3px 9px #35263d31}
+#game #guiaBar button{background:#fff7f0;border:1px solid #eac6d8;box-shadow:0 1px 0 #d6b0c3}
+</style>
+
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->

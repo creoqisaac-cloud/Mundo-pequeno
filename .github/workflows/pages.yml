@@ -56,6 +56,7 @@ jobs:
           test -n "$CHROME_PATH"
           CHROME_PATH="$CHROME_PATH" node tests/browser-smoke.cjs
           CHROME_PATH="$CHROME_PATH" node tests/mainworld-smoke.cjs
+          CHROME_PATH="$CHROME_PATH" node tests/expansion-smoke.cjs
       - name: Configurar Pages
         uses: actions/configure-pages@v5
         with:

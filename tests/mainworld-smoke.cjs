@@ -45,9 +45,31 @@ const server=http.createServer((req,res)=>{
    const v=World.vehSprite('auto',false,3);return {z,car:[v.c.width,v.c.height],same:World.map===World.MAIN};
   });
   assert.ok(zones.same&&zones.z.every(x=>!x.portal),JSON.stringify(zones));
-  assert.ok(zones.z[0].sand&&zones.z[0].water,JSON.stringify(zones.z[0]));
+  assert.ok(!zones.z[0].sand&&!zones.z[0].water,'No deben existir botones de construcción en el overworld');
+  const v48=await page.evaluate(async()=>{const X=Game.X,m=World.MAIN,st=m.stands.find(b=>b.id==='castillos48'),b=m.build.filter(b=>b.id.endsWith('47'));
+    if(!st||!st.spr||st.job!=='sandcastle48')return{error:'no native stall'};
+    if(b.length!==3||b.some(h=>!h.day||!h.night||h.job==='shop'))return{error:'generic new houses'};
+    const dealer=m.build.find(x=>x.id==='autosCorazon48');
+    const roads=m.roads||[];
+    if(!dealer||!dealer.city||!dealer.day||dealer.job!=='autosCorazon48')return{error:'car dealer not native city building'};
+    if(b.some(x=>x.x<1600||x.x>2700||x.y<160||x.y>1160))return{error:'new houses outside Ciudad Corazón'};
+    if(b.some(x=>x.city||x.day.c.width!==80))return{error:'houses not using original 80px watercolor sprites'};
+    const buildings=[...b,dealer];
+    if(buildings.some(x=>m.islandD(x.x,x.y)>.85))return{error:'buildings in sea'};
+    if(buildings.some(x=>buildings.some(y=>x!==y&&Math.hypot(x.x-y.x,x.y-y.y)<98)))return{error:'buildings collide'};
+    if(buildings.some(x=>m.build.some(y=>!buildings.includes(y)&&Math.hypot(x.x-y.x,x.y-y.y)<110)))return{error:'existing buildings overlap'};
+    const button=document.querySelector('#movBtns');
+    if(getComputedStyle(button).display!=='none')return{error:'old visual sprint button'};
+    const game=m.id;X.player.x=st.x;X.player.y=st.y+24;const entry=X.interactables().find(it=>it.b?.id==='castillos48');
+    if(!entry||entry.type!=='job')return{error:'stall unreachable'};
+    const prevAsk=X.ask,prevIntro=Expansion46.S.sand.intro;Expansion46.S.sand.intro=1;X.ask=async()=>0;
+    try{await X.act(entry);if(World.map.exp46!=='sand')return{error:'booth did not open minigame world'};await Expansion46.home();}
+    finally{X.ask=prevAsk;Expansion46.S.sand.intro=prevIntro;}
+    return{home:World.map.id===game,stall:!!st.spr,house:b.length};
+  });
+  assert.deepEqual(v48,{home:true,stall:true,house:3},JSON.stringify(v48));
   assert.ok(zones.car[0]>=40&&zones.car[1]>=30);
   assert.deepEqual(errors,[],'Errores de Javascript del navegador');
-  console.log('✓ v47: cuatro regiones caminables en la isla, puentes, actividades, arte nativo y mallas 3D.');
+  console.log('✓ v48: regiones caminables, casas nativas, puestito, castillos y regreso, sin botones flotantes.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r))}
 })().catch(err=>{console.error(err);process.exitCode=1});

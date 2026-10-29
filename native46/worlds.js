@@ -27,7 +27,7 @@ H.inter.push(list=>{const m=V.map;if(X.st.scene!=='out')return;
  }else{E.addPoint(list,'forestTask',m.cx-50,m.cy+35,m.exp46==='forest'?'🏮 Senderos perdidos':'🌸 Encargos del camino');E.addPoint(list,'beachGames',m.cx+80,m.cy+50,'🪁 Desafíos al aire libre')}
  for(const q of m.collect46||[]){if(q.got||Math.hypot(q.x-X.player.x,q.y-X.player.y)>110)continue;list.push({type:'exp46',key:'collect',x:q.x,y:q.y,r:18,hy:16,label:q.k==='wood'?'🪵 Recoger ramas':'🌿 Recolectar',q})}
 });
-E.actions.sand=async()=>{const m=await region('sand');await E.enter(m,m.cx,m.cy+180);if(!sand.intro){sand.intro=1;G.save();await X.say('','La bahía es tu taller: trae agua de la costa y haz tu primer castillo con las manos. Pochacco te enseñará lo demás.')}};
+E.actions.sand=async()=>{const m=await region('sand');await E.enter(m,m.cx,m.cy+180);if(!sand.intro){sand.intro=1;G.save();await X.say('Pochacco','¡Bienvenida al taller! Empieza con arena húmeda y tus manos, luego ven a mi sombrilla: te regalaré una pala y una cubeta. Aquí puedes probar olas y construir castillos enormes.')}};
 E.actions.travel=async()=>{const names=['🌲 Bosque de los Farolitos','🌸 Praderas de Mermelada','🪁 Costa de las Cometas','Volver'];const i=await X.ask('¿Qué camino recorremos?',names);if(i<3){const m=await region(['forest','meadow','coast'][i]);await E.enter(m,m.cx,m.cy+230)}};
 E.actions.home=()=>E.home();
 E.actions.water=async()=>{sand.water=Math.min(20,sand.water+5);G.save();X.toast('💧 Agua: '+sand.water+' / 20')};

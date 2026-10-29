@@ -19,7 +19,14 @@ E.free=(m,x,y,r=7)=>{if(V.map===m&&!V.blockedOut(x,y,r))return{x,y};for(let d=12
 let origin=null,travelling=false;
 E.enter=async(m,x=m.cx,y=m.cy)=>{if(travelling)return;travelling=true;X.st.busy=true;try{if(!V.map?.exp46||!origin)origin={map:V.map,x:X.player.x,y:X.player.y,scene:X.st.scene,room:X.st.room};await X.iris(()=>{V.use(m);X.st.scene='out';X.resetInput();const p=E.free(m,x,y);Object.assign(X.player,p);Object.assign(X.cam,p);X.setNPCs();X.petE.x=p.x+14;X.petE.y=p.y+8});X.placeTag(m.name)}finally{X.st.busy=false;travelling=false}};
 E.home=async()=>{if(!origin||travelling)return;travelling=true;X.st.busy=true;const o=origin;try{await X.iris(()=>{V.use(o.map);X.st.scene=o.scene;X.st.room=o.room;X.resetInput();X.player.x=o.x;X.player.y=o.y+10;X.cam.x=o.x;X.cam.y=o.y;X.setNPCs()});origin=null}finally{travelling=false;X.st.busy=false}};
-E.marker=(g,x,y,icon,color='#f9ead0')=>{E.ellipse(g,x,y,12,4,'rgba(80,50,70,.15)');E.box(g,x-8,y-25,16,22,color);E.text(g,icon,x,y-15,12)};
+// Physical scenery in the original paint vocabulary, never a floating UI box.
+E.marker=(g,x,y,icon)=>{g.save();g.translate(x,y);
+ E.ellipse(g,0,0,12,3,'rgba(70,40,55,.13)');
+ if(icon==='💧'){P.wc(g,P.E(0,-2,12,4.2),'#ecd0a3',{lw:.35});P.wc(g,P.E(0,-4,9,2.5),'#93cbd5',{lw:.3,gloss:.5});P.wc(g,P.RR(-2.4,-10,4.8,5,1),'#b1d7db',{lw:.3});}
+ else if(icon==='🏆'){P.wc(g,P.RR(-1,-21,2,19,.5),'#a78567',{lw:.35});P.wc(g,P.RR(-10,-25,20,10,2),'#fff5df',{lw:.45,hl:.3});P.wc(g,P.E(0,-20,4,3),'#e5c16e',{lw:.35,gloss:.5});}
+ else if(icon==='🏐'){P.wc(g,P.E(0,-7,8,8),'#fffaf0',{lw:.45,gloss:.3});P.ln(g,[[-5,-9],[5,-5]],'#e2a1b8',.8);P.ln(g,[[1,-14],[-1,0]],'#9bbdd2',.8);}
+ else if(icon==='🏝️'){P.wc(g,P.E(0,-4,12,3),'#f1d9aa',{lw:.3});P.wc(g,P.RR(-2,-14,4,10,1),'#c2936b',{lw:.35});}
+ g.restore()};
 E.addPoint=(list,key,x,y,label,hy=34)=>list.push({type:'exp46',key,x,y,r:24,hy,label});
 E.actions={};H.act.unshift(it=>it.type==='exp46'&&E.actions[it.key]?Promise.resolve().then(()=>E.actions[it.key](it)):null);
 const css=document.createElement('style');css.textContent='.e46-panel{width:min(440px,100%);padding:10px;border:2px solid #f4dfcf;border-radius:19px;background:#fff8edee;box-shadow:0 5px 18px #67404b33;font:800 13px Nunito,sans-serif;color:#704e5b;text-align:center}.e46-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.e46-row button{flex:1;min-width:55px;min-height:44px;padding:8px;border:1px solid #dcb7c8;border-radius:12px;background:#f9e1e9;color:#694c5b;font:800 12px Nunito,sans-serif;touch-action:manipulation}.e46-caption{margin-bottom:6px}';document.head.appendChild(css);
