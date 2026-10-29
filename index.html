@@ -1757,68 +1757,78 @@ const World=(()=>{
     Conserva PB, biomas, colisiones, sprites y partidas de Walesa.
     Sólo se genera el sector visitado; 32² sectores => 553.6 millones
     de unidades de suelo virtuales, sin reservar ese lienzo en memoria. */
+
  function makeExpanseSector(gx,gy,forest=false){
   if(!forest&&(gx<0||gx>=32||gy<0||gy>=32))return Promise.reject(Error('Sector fuera del continente'));
   if(!Number.isSafeInteger(gx)||!Number.isSafeInteger(gy)||Math.abs(gx)>1000000||Math.abs(gy)>1000000)
    return Promise.reject(Error('Coordenadas fuera de rango'));
   const MW=768,MH=704,seed=(Math.imul(gx+173,73856093)^Math.imul(gy+311,19349663)^(forest?0x5f3759df:0x2a629b))>>>0;
-  const R=rng(seed),a=vnoise((gx+11)/5,(gy+17)/5),center=Math.hypot(gx-16,gy-16);
-  const zone=forest?'silvestre':center<3.5?'centro':a>.72?'comercial':a<.28?'agrícola':a>.55?'residencial':'regional';
-  const kind=forest?'shroom':zone==='centro'||zone==='comercial'?'city':zone==='agrícola'?'town':zone==='residencial'?'candy':a>.44?'chile':'shroom';
-  const factor={centro:1.32,comercial:1.17,'agrícola':.76,residencial:1.05,regional:.94,silvestre:.7}[zone];
-  const id=(forest?'foresta':'continente')+'_'+gx+'_'+gy,build=[],plots=[],paths=[[0,352,768,352],[384,0,384,704]],stands=[];
-  const m={id,MW,MH,cx:384,cy:352,rx:420,ry:396,seed,main:false,kind,zone,
-   economy:factor,gridX:gx,gridY:gy,forest,name:forest?'Bosque sin Fin':({
-    centro:'Distrito Central',comercial:'Barrio Comercial','agrícola':'Campos del Sur',
-    residencial:'Barrio Jardín',regional:'Pueblo de la Meseta'})[zone],
-   build,stands,plots,paths,spots:{},islandD:()=>0,
-   biome:(x,y)=>{
-    if(forest){const v=vnoise((gx*MW+x)/440,(gy*MH+y)/420);
-      return v>.81?'candy':v<.13?'town':'shroom'}
-    const v=vnoise((gx*MW+x+500)/590,(gy*MH+y+500)/590);
-    if(kind==='city'&&v>.24)return'city';
-    if(v>.78)return'candy';if(v<.22)return'shroom';return kind==='city'?'town':kind;
-   }};
-  // Red vial que coincide exactamente en los cuatro bordes.
-  if(zone==='centro'||zone==='comercial')m.roads=[[0,352,768,352],[384,0,384,704],[90,184,678,184]];
+  const T=window.WalesaTopografia?.sector(gx,gy,MW,MH,forest);
+  if(!T)return Promise.reject(Error('Falta la topografía del mapa original de Procreate'));
+  const zone=T.zone,kind=T.biome(384,352),
+   priceIndex={montana:.78,meseta:1.35,administrativo:1.20,pueblo:1,valle:.85,forest:.68,costa:1.08}[zone]||1;
+  const id=(forest?'foresta':'continente')+'_'+gx+'_'+gy,build=[],plots=[],stands=[];
+  // Caminos de frontera alineados, sin teletransportadores ni mapas HTML superpuestos.
+  // Las pendientes y los zigzags locales son parte del mismo sistema de suelo World.
+  const paths=forest?[[0,352,768,352],[384,0,384,704],[85,350,270,250],[270,250,470,390],[470,390,700,285]]:
+    zone==='montana'?[[0,352,210,270],[210,270,465,425],[465,425,768,352],[384,0,310,210],[310,210,470,470],[470,470,384,704]]:
+    [[0,352,768,352],[384,0,384,704]];
+  const m={id,MW,MH,cx:384,cy:352,rx:420,ry:396,seed,
+   main:false,kind,zone,forest,gridX:gx,gridY:gy,name:T.name,
+   economy:priceIndex,topography:T,elevation:T.sample,islandD:T.coast,
+   biome:T.biome,build,stands,plots,paths,spots:{}};
+  const roads=zone==='administrativo'||zone==='meseta';
+  if(roads)m.roads=[[0,352,768,352],[384,0,384,704],[90,185,678,185],[90,565,678,565]];
   const add=(n,x,y,job,urban,colors)=>{
-   build.push({id:id+'_'+job+'_'+build.length,x,y,job,city:urban?1:0,
-    wall:colors[0],acc:colors[1],roof:colors[1],name:n,icon:colors[2],sign:'heart'});
-   paths.push([384,352,x,y+8]);
+   // La altura de una fachada se conoce desde el terreno que la soporta.
+   const b={id:id+'_'+job+'_'+build.length,x,y,job,city:urban?1:0,
+    wall:colors[0],acc:colors[1],roof:colors[1],name:n,icon:colors[2],sign:'heart',
+    altitude:T.elevationMeters(x,y)};
+   if(T.coast(x,y)>.82)return;
+   build.push(b);paths.push([384,352,x,y+8]);
   };
   if(forest){
-   // Claros estables que sirven de hitos para orientarse, no un laberinto aleatorio por fotograma.
-   if((seed%5)===0)add('Refugio del Bosque',558,234,'expLodge',false,['#e4f0da','#509d73','🌲']);
+   if(seed%4===0)add('Cabaña del Guardabosques',550,220,'expLodge',false,['#e4f0da','#509d73','🌲']);
    if(seed%7===0)stands.push({id:id+'_feria',job:'expMarket',x:208,y:258,c:['#73bd5f','#fffaf6'],icon:'cotton',name:'Mercado del claro'});
+  }else if(zone==='montana'){
+   add('Refugio de la Cordillera',195,240,'expLodge',false,['#efcfaa','#a55f47','⛰️']);
+   if(seed%3===0)add('Estación de Montaña',558,524,'expOffice',false,['#f4ead8','#a97b53','🧭']);
+  }else if(zone==='forest'){
+   add('Puesto del Bosque Profundo',188,238,'expMarket',false,['#e1f0d4','#5d9d73','🌲']);
+   if(seed%3===0)add('Casa Forestal',557,492,'expLodge',false,['#d9e9ce','#437b58','🏡']);
+  }else if(zone==='administrativo'){
+   add('Administración de Walesa Sur',185,210,'expOffice',true,['#e6eff8','#7592b6','🏛️']);
+   add('Comercio de la Avenida',565,210,'expMarket',true,['#f8e1d9','#bf857a','🛍️']);
+   add('Bloque Residencial',185,525,'expResidence',true,['#eae4ef','#b59fc2','🏘️']);
+   add('Oficina Municipal',565,525,'expOffice',true,['#f4ead8','#8da67f','📜']);
+  }else if(zone==='meseta'){
+   add('Mercado del Altiplano',185,214,'expMarket',true,['#f4e4be','#b99444','🌽']);
+   add('Oficina de la Meseta',566,214,'expOffice',true,['#eee7d1','#b19a54','📜']);
+   add('Viviendas Altas',184,528,'expResidence',true,['#fae9d2','#c0a270','🏠']);
+   add('Cooperativa del Alto',560,528,'expMarket',true,['#ebe0c6','#c69a57','🛍️']);
+  }else if(zone==='pueblo'){
+   add('Mercadito de Walesa',184,236,'expMarket',false,['#f9e3ea','#d58dac','🛍️']);
+   add('Casa del Valle',562,236,'expResidence',false,['#f4e5d6','#d19c76','🏡']);
+   add('Delegación Vecinal',560,528,'expOffice',false,['#f5ede0','#8ca582','📜']);
   }else{
-   if(zone==='centro'||zone==='comercial'){
-    add('Mercado de '+(zone==='centro'?'la Plaza':'la Avenida'),190,220,'expMarket',true,['#f6e5cc','#d29055','🛍️']);
-    add('Oficina Distrital',566,220,'expOffice',true,['#e7eeff','#668bb3','📜']);
-    add('Viviendas del Paseo',210,506,'expResidence',true,['#fde3ec','#d9869f','🏘️']);
-    add('Comercio de Barrio',560,506,'expMarket',true,['#e2f4f2','#6da5a3','☕']);
-   }else if(zone==='agrícola'){
-    add('Cooperativa de Cultivos',184,240,'expMarket',false,['#fff0d2','#d99a55','🌾']);
-    add('Casa de Campo',568,236,'expResidence',false,['#e2f0d8','#71aa62','🏡']);
-    add('Oficina Comunal',550,510,'expOffice',false,['#f3ecdc','#7e9d6c','📜']);
-   }else{
-    add('Mercado del Pueblo',184,222,'expMarket',false,['#fae8dc','#d78984','🛍️']);
-    add('Oficina Vecinal',566,224,'expOffice',false,['#e6eff8','#86a1c8','📜']);
-    add('Viviendas de la Colina',545,510,'expResidence',false,['#f8e6f3','#cc87af','🏘️']);
-   }
-   const base=Math.round(2300*factor);
-   plots.push({id:id+'_loteA',x:165,y:544,price:base},{id:id+'_loteB',x:608,y:584,price:Math.round(base*1.32)});
-   paths.push([384,352,165,555],[384,352,608,594]);
+   add('Mercado del Valle',186,222,'expMarket',false,['#f5e9dd','#d6a06f','🛍️']);
+   add('Casa entre Colinas',564,228,'expResidence',false,['#f9e6e6','#b886a3','🏠']);
+   if(seed%2===0)add('Oficina Rural',564,528,'expOffice',false,['#f5efdd','#90a57a','📜']);
   }
-  // Dentro del mismo motor: genGround, placeObjects, PB y sprites originales.
+  if(!forest&&zone!=='montana'&&zone!=='forest'){
+   const base=Math.round(2300*priceIndex);
+   plots.push({id:id+'_loteA',x:175,y:534,price:base},
+              {id:id+'_loteB',x:595,y:588,price:Math.round(base*1.28)});
+   paths.push([384,352,175,550],[384,352,595,592]);
+  }
   return runGen(m,false).then(result=>{
    for(const p of result.plots)addObj(result,plotSprite('lot'),p.x,p.y,null,{plot:p});
-   if(!forest)addObj(result,sprites().fount[0],384,324,circS(384,312,15),{fount:true});
+   if(!forest&&zone==='pueblo')addObj(result,sprites().fount[0],384,324,circS(384,312,15),{fount:true});
    if(forest&&gx===0&&gy===0)addObj(result,sprites().sign,70,350,rectS(67,346,6,4),{expMarker:true});
-   if(!forest&&gx===16&&gy===16)addObj(result,sprites().sign,67,350,rectS(64,346,6,4),{expMarker:true});
-   if(!forest&&gx===31&&gy===31)addObj(result,sprites().sign,690,604,rectS(687,600,6,4),{expMarker:true});
+   if(!forest&&gx===12&&gy===16)addObj(result,sprites().sign,70,350,rectS(67,346,6,4),{expMarker:true});
+   if(!forest&&gx>=26&&gy>=23)addObj(result,sprites().sign,690,604,rectS(687,600,6,4),{expMarker:true});
    if(forest&&seed%3===0)addObj(result,sprites().glowF[seed%3],542,534,null,{glowF:true});
-   // La navegación de cada sector genera su propia rejilla A*: no retener
-   // rejillas de sectores ya descargados durante expediciones prolongadas.
+   // Descarta rejillas de A* de sectores anteriores en expediciones prolongadas.
    for(const k in grids)if(k.startsWith('outforesta_')||k.startsWith('outcontinente_'))delete grids[k];
    return result;
   });
@@ -10156,6 +10166,7 @@ window.Wardrobe=Wardrobe;
 </script>
 <script src="./picnic_v31.js"></script>
 <script src="./native_joystick40.js"></script>
+<script src="./topografia_walesa_v2.js"></script>
 <script src="./world_expansion_v1.js"></script>
 <script>window.__ready=true</script>
 
