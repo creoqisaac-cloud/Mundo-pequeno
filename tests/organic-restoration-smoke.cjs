@@ -109,8 +109,11 @@ const server=http.createServer((req,res)=>{
   });
   assert.ok(i&&i.r>0);
   // Verify real native interaction UI without needing to complete rhythm MG.
-  await page.evaluate(()=>Game.X.act(Game.X.interactables().find(it=>
-   it.type==='note'&&it.id==='gazebo'&&it.x>2800)));
+  await page.evaluate(()=>{
+   Game.X.act(Game.X.interactables().find(it=>
+    it.type==='note'&&it.id==='gazebo'&&it.x>2800));
+   return true;
+  });
   await page.waitForTimeout(300);
   const nativeKiosk=await page.evaluate(()=>document.body.innerText.includes('Tocar una canción'));
   assert.equal(nativeKiosk,true,'Original native kiosk actions are offered here');
