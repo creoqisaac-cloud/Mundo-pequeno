@@ -9970,7 +9970,13 @@ window.Wardrobe=Wardrobe;
   bagClose.addEventListener('pointercancel',snap);
   bagClose.addEventListener('lostpointercapture',()=>{if(!done)snap()});
   // No arrastrar el broche al abrir nuevamente la bolsa.
-  const mo=new MutationObserver(()=>{if(!bagSheet.classList.contains('on')){bagSheet.classList.remove('wcZipClosing37');snap()}});
+  // El observador solo hace cambios cuando el estado realmente lo requiere.
+  // Así el cierre normal y el deslizamiento no crean un bucle de microtareas.
+  const mo=new MutationObserver(()=>{
+   if(bagSheet.classList.contains('on'))return;
+   if(bagSheet.classList.contains('wcZipClosing37'))bagSheet.classList.remove('wcZipClosing37');
+   if(pid!==null||drag!==0||done||bagClose.classList.contains('wcDragging37'))snap();
+  });
   mo.observe(bagSheet,{attributes:true,attributeFilter:['class']});
  }
  const simpleFood=new Set(['pan','manzana','fresa','pera','sandia','platano','cereza','zanahoria','champi','panque','donas','chocolate','leche','jugo','agua','onigiri','ramen','ensaladaV','pescado','limonada','paleta','pudin','sandwich','sopa','pizza','fruta','galletas','helado']);
