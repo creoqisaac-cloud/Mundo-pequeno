@@ -354,8 +354,17 @@ window.WalesaMainland=(()=>{
  function facade(sprite,b,night){
   const c=document.createElement('canvas');c.width=sprite.c.width;c.height=sprite.c.height;
   const g=c.getContext('2d');g.drawImage(sprite.c,0,0);
-  const v=b.facade,urban=!!b.city,base=urban?12:8,front=urban?58:43;
+  const v=b.facade,urban=!!b.city,front=urban?58:43;
   const accent=b.roof,light=night?'#ffe4a2':'#f8f4e5';
+  // Luz rasante sobre las pinturas nativas; source-atop conserva todas
+  // las siluetas, ventanas, chimeneas y la transparencia del pixel-art.
+  g.save();g.globalCompositeOperation='source-atop';
+  const grd=g.createLinearGradient(5,5,c.width-5,c.height);
+  grd.addColorStop(0,night?'rgba(248,224,174,.075)':'rgba(255,250,221,.15)');
+  grd.addColorStop(.53,'rgba(255,255,255,0)');
+  grd.addColorStop(1,night?'rgba(33,33,67,.13)':'rgba(66,58,76,.115)');
+  g.fillStyle=grd;g.fillRect(0,0,c.width,c.height);
+  g.restore();
   g.lineWidth=1;g.strokeStyle='#765e60';g.fillStyle=accent;
   if(v===0||v===3){ // ático y tragaluz
    g.fillRect(urban?29:24,urban?4:19,urban?21:19,urban?10:9);
@@ -398,6 +407,24 @@ window.WalesaMainland=(()=>{
    }
    g.fillRect(urban?8:9,urban?14:38,urban?58:51,2);
   }
+  // Detalles que siguen la misma escala de 76x68 y 84x94 del artista base.
+  if(urban){
+   g.fillStyle=accent;g.globalAlpha=.8;g.fillRect(7,89,68,2);
+   g.fillStyle=light;g.fillRect(8,12,60,1);
+   if(v%3===1){g.strokeStyle='#eadcc8';g.lineWidth=1;
+    for(const x of [9,70]){g.beginPath();g.moveTo(x,17);g.lineTo(x,76);g.stroke()}}
+  }else{
+   if(v%3===0){
+    g.strokeStyle=accent;g.globalAlpha=.65;
+    for(let i=0;i<5;i++){g.beginPath();g.moveTo(16+i*8,24);
+     g.lineTo(23+i*8,28);g.stroke()}
+   }
+   if(v%4===1){
+    g.fillStyle='#6c9f7a';g.fillRect(11,55,9,2);
+    g.fillStyle='#ecb2bf';g.fillRect(13,54,2,2);
+   }
+  }
+  g.globalAlpha=1;
   return {...sprite,c};
  }
  function building(id,name,x,y,type='home',job=null){
@@ -528,6 +555,65 @@ window.WalesaMainland=(()=>{
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
   normalizePlazaRoads();
   adorn();decoratePlaza();
+ }
+
+ // Un mobiliario urbano distinto en cada distrito, sin inventar nuevas
+ // colisiones ni reemplazar las estructuras ya construidas.
+ const districtDetails=[];
+ function decorateDistricts(){
+  const spr=V.spr;
+  const spots=[
+   {name:'Paseo de los Jacarandás',x:3770,y:2670,k:'pueblo',icon:'🌸'},
+   {name:'Jardines del Altiplano',x:5555,y:2520,k:'meseta',icon:'🌿'},
+   {name:'Alameda del Sur',x:3980,y:3845,k:'administrativo',icon:'🌳'},
+   {name:'Sendero de los Helechos',x:5600,y:3810,k:'forest',icon:'🍃'},
+   {name:'Descanso de la Cordillera',x:3485,y:1130,k:'montana',icon:'⛰️'}
+  ];
+  for(const area of spots){
+   let anchor=null;
+   for(let radius=0;radius<=220&&!anchor;radius+=20){
+    for(let k=0;k<20&&!anchor;k++){
+     const ang=k*Math.PI/10,
+      x=Math.round(area.x+radius*Math.cos(ang)),
+      y=Math.round(area.y+radius*Math.sin(ang));
+     if(x<=ORX+20||x>=MW-55||y<=ORY+20||y>=MH-55||
+      coast(x,y)>.8||plazaDistance(x,y)<PLAZA.edge+65||
+      houses.some(h=>Math.hypot(h.x-x,h.y-y)<82)||
+      nearbyRoad(x,y,35))continue;
+     anchor={x,y,name:area.name,icon:area.icon};
+    }
+   }
+   if(!anchor)continue;
+   districtDetails.push(anchor);
+   const {x,y}=anchor;const forest=area.k==='forest',mountain=area.k==='montana',
+     urban=area.k==='administrativo';
+   if(spr.sign)V.addObj(main,spr.sign,x+24,y-11,null);
+   if(spr.bench&&!mountain){
+    V.addObj(main,spr.bench,x-34,y+11,null);
+    V.addObj(main,spr.bench,x+36,y+10,null);
+   }
+   if(spr.bush){
+    for(let k=0;k<5;k++){
+     const ang=k*2.4+.4,x0=x+Math.cos(ang)*(forest?49:37),
+      y0=y+Math.sin(ang)*(forest?39:28);
+     V.addObj(main,spr.bush[(k+Math.floor(hash(x,y)*3))%spr.bush.length],
+       x0,y0,null);
+    }
+   }
+   if(urban&&spr.pot){
+    V.addObj(main,spr.pot[0],x-16,y-35,null);
+    V.addObj(main,spr.pot[1],x+20,y-35,null);
+   }else if(mountain&&spr.rock){
+    V.addObj(main,spr.rock[0],x-24,y+23,null);
+    V.addObj(main,spr.rock[1],x+18,y+24,null);
+   }else if(forest&&spr.tree){
+    for(const dx of [-65,65])V.addObj(main,spr.tree.green,x+dx,y-23,null);
+   }
+   if(spr.lamp){
+    V.addObj(main,spr.lamp,x+53,y+17,null);
+    main.glows.push([x+53,y-7]);
+   }
+  }
  }
 
  const scenic=[];
@@ -697,7 +783,7 @@ window.WalesaMainland=(()=>{
   ].map(([name,x,y,icon])=>({name,x,y,icon}));
   const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:b.icon||'🏪'}));
   const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:'🏡'}));
-  return [...landmarks,...scenic,...jobs,...homes];
+  return [...landmarks,...scenic,...districtDetails,...jobs,...homes];
  }
  function ensureGuideBar(){
   if(guideBar)return guideBar;
@@ -940,7 +1026,7 @@ window.WalesaMainland=(()=>{
   m.biome=(x,y,mm)=>x>=0&&y>=0&&x<oldW&&y<oldH?origBiome(x,y,mm):biome(x,y);
   m.elevation=height;
   m.mainland={draw,coast,height,biome,zone,roadAt,nearbyRoad,sampleMap,original:{width:oldW,height:oldH},extent:{width:MW,height:MH},landmarks:P};
-  structures();nativePlaces();furnishRooms();
+  structures();decorateDistricts();nativePlaces();furnishRooms();
   return m;
  }
  function moveToPreview(){
@@ -986,8 +1072,8 @@ window.WalesaMainland=(()=>{
    g.restore();
   });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
-   for(const p of scenic)list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
-  H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Una nueva parada de Walesa con el mobiliario y la vegetación del mundo original.')});
+   for(const p of [...scenic,...districtDetails])list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
+  H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Un rincón para descansar y conocer los paisajes de Walesa. Mira los jardines y sigue explorando los senderos cercanos.')});
   H.update.push(()=>{if(!main)return;updateGuide();moveToPreview();
    const m=X.M();if(m!==main||X.st.scene!=='out')return;
    const n=zone(X.player.x,X.player.y);
