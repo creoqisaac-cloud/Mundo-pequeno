@@ -73,6 +73,8 @@ const server=http.createServer((req,res)=>{
     })));
     throw err;
   });
+  // La llegada restaurada comienza en el camino y finaliza en el pueblo.
+  await page.waitForFunction(()=>WalesaMainland.arrivalRunning===false&&Game.X.st.busy===false,{timeout:35000});
   const start=await page.evaluate(()=>({main:World.map===World.MAIN,x:Game.X.player.x,y:Game.X.player.y,scene:Game.X.st.scene}));
   assert.equal(start.main,true);assert.equal(start.scene,'out');
   assert.ok(start.x>3500&&start.y>2100,'La partida aparece en el pueblo nuevo');
