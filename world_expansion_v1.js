@@ -2,7 +2,7 @@
    Integración sobre el motor World y los HOOKS originales. Sin canvas/colisiones paralelos. */
 (()=>{
 'use strict';
-if(!window.Game||!window.World||typeof World.makeExpanseSector!=='function')return;
+if(typeof Game==='undefined'||typeof World==='undefined'||typeof World.makeExpanseSector!=='function')return;
 const V=World,X=Game.X,H=X.HOOKS;
 const S=save.expansionV1||(save.expansionV1={current:'home',last:{forest:false,x:16,y:16},visited:{},discoveries:{},work:{}});
 S.visited=S.visited||{};S.discoveries=S.discoveries||{};S.work=S.work||{};
