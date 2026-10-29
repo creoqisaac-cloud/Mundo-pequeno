@@ -25,12 +25,67 @@ window.WalesaMainland=(()=>{
  [[5840,3650],[6060,3760]],[[5840,3650],[5550,3890]],[[5550,3890],[5320,4040]]
  ];
  const hash=(x,y)=>V.hash(x|0,y|0),clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+ // La zona de llegada conserva sus diez casas y comercios, pero el centro es
+ // una sola plaza circular transitable, sin cruces de senderos bajo el kiosco.
+ const PLAZA={x:P.village.x,y:P.village.y,r:186,edge:198};
+ const circleRoads=[];
+ const plazaDistance=(x,y)=>Math.hypot(x-PLAZA.x,y-PLAZA.y);
+ function plazaBrick(x,y){
+  const d=plazaDistance(x,y);if(d>PLAZA.edge)return null;
+  const angle=Math.atan2(y-PLAZA.y,x-PLAZA.x),ring=Math.floor(d/8),
+    walk=d*angle,brick=Math.floor((walk+(ring%2)*8)/16),
+    joint=((walk+(ring%2)*8)%16+16)%16;
+  // Aparejo concéntrico: cada hilada gira con la curva y evita que los
+  // ladrillos queden horizontales sobre senderos diagonales.
+  const seams=d%8<1||joint<.9;
+  const palette=[[200,142,120],[212,158,130],[223,175,146],[189,130,111],[229,186,156]];
+  let c=seams?[243,217,187]:palette[Math.floor(hash(ring,brick)*palette.length)].slice();
+  const light=(1-clamp(d/PLAZA.r,0,1))*13;
+  c=c.map(v=>v+light);
+  if(Math.abs(d-71)<2.1||Math.abs(d-145)<2.3)c=[247,219,176];
+  if(d>PLAZA.r-4){const border=(d-PLAZA.r+4)/16;
+   if(border<.5)c=c.map(v=>v*.77);
+  }
+  return {c,alpha:clamp((PLAZA.edge-d)/12,0,1)};
+ }
+ function normalizePlazaRoads(){
+  if(circleRoads.length)return;
+  const ringNodes=[],kept=[];
+  const crossing=(a,b)=>{
+   const dx=b[0]-a[0],dy=b[1]-a[1],cx=a[0]-PLAZA.x,cy=a[1]-PLAZA.y;
+   const aa=dx*dx+dy*dy,bb=2*(cx*dx+cy*dy),
+    cc=cx*cx+cy*cy-PLAZA.r*PLAZA.r,disc=bb*bb-4*aa*cc;
+   if(disc<0)return null;
+   return [-bb-Math.sqrt(disc),-bb+Math.sqrt(disc)].map(q=>q/(2*aa)).filter(t=>t>=0&&t<=1);
+  };
+  for(const [a,b] of seg){
+   const ia=plazaDistance(a[0],a[1])<PLAZA.r,ib=plazaDistance(b[0],b[1])<PLAZA.r;
+   if(ia&&ib)continue;
+   const xs=crossing(a,b);
+   if(ia!==ib&&xs?.length){
+    const t=xs[0],p=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+    ringNodes.push(p);kept.push(ia?[p,b]:[a,p]);
+   }else if(!ia&&!ib&&xs?.length===2){
+    const q=t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+    const p=q(xs[0]),r=q(xs[1]);ringNodes.push(p,r);
+    kept.push([a,p],[r,b]);
+   }else kept.push([a,b]);
+  }
+  seg.splice(0,seg.length,...kept);
+  for(let i=0;i<48;i++){
+   const a=i/48*2*Math.PI;
+   ringNodes.push([PLAZA.x+Math.cos(a)*PLAZA.r,PLAZA.y+Math.sin(a)*PLAZA.r]);
+  }
+  ringNodes.sort((a,b)=>Math.atan2(a[1]-PLAZA.y,a[0]-PLAZA.x)-
+   Math.atan2(b[1]-PLAZA.y,b[0]-PLAZA.x));
+  for(let i=0;i<ringNodes.length;i++)circleRoads.push([ringNodes[i],ringNodes[(i+1)%ringNodes.length]]);
+ }
  const distSegment=(x,y,a,b)=>{
   const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy),0,1);
   return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);
  };
- const roadAt=(x,y)=>{for(const [a,b] of seg)if(distSegment(x,y,a,b)<12)return true;return false};
- const nearbyRoad=(x,y,r=20)=>{for(const [a,b] of seg)if(distSegment(x,y,a,b)<r)return true;return false};
+ const roadAt=(x,y)=>{if(plazaDistance(x,y)<PLAZA.r)return true;for(const [a,b] of seg)if(distSegment(x,y,a,b)<12)return true;return false};
+ const nearbyRoad=(x,y,r=20)=>{if(plazaDistance(x,y)<PLAZA.r+r)return true;for(const [a,b] of seg)if(distSegment(x,y,a,b)<r)return true;return false};
  const pos=(x,y)=>[(x-ORX)/RW,(y-ORY)/RH];
  const zone=(x,y)=>{const [u,v]=pos(x,y);return T.district(u,v)};
  function coast(x,y){
@@ -122,6 +177,15 @@ window.WalesaMainland=(()=>{
       col=[99+noise*28,72+noise*20,57+noise*18];
      }
     }
+    // El suelo de ladrillo es parte del tile y de la colisión existente:
+    // no es un objeto superpuesto ni una textura estirada.
+    if(sea<.95){
+     const plaza=plazaBrick(x,y);
+     if(plaza&&plaza.alpha>0){
+      const a=plaza.alpha;col=[col[0]*(1-a)+plaza.c[0]*a,
+       col[1]*(1-a)+plaza.c[1]*a,col[2]*(1-a)+plaza.c[2]*a];
+     }
+    }
     arr[k]=clamp(col[0],0,255)|0;arr[k+1]=clamp(col[1],0,255)|0;arr[k+2]=clamp(col[2],0,255)|0;arr[k+3]=255;
    }
   }
@@ -136,12 +200,17 @@ window.WalesaMainland=(()=>{
   const strokes=(layer)=>{
    ctx.lineJoin='round';ctx.lineCap='round';
    for(const {a,b,paved} of visible){
-    ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);
     const tone=PATH[biome((a[0]+b[0])/2,(a[1]+b[1])/2)]||PATH.town;
+    const width=layer===0?35:24;
+    ctx.save();
+    ctx.translate(a[0]-x0,a[1]-y0);
+    const angle=Math.atan2(b[1]-a[1],b[0]-a[0]),len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    ctx.rotate(angle);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(len,0);
     ctx.strokeStyle=layer===0?(paved?'#d5c6b6':tone[3]):
       roadPattern(ctx,biome((a[0]+b[0])/2,(a[1]+b[1])/2),paved);
-    ctx.lineWidth=layer===0?32:layer===1?24:0;
-    ctx.stroke();
+    ctx.lineWidth=width;ctx.stroke();
+    ctx.restore();
    }
   };
   strokes(0);strokes(1);
@@ -327,6 +396,7 @@ window.WalesaMainland=(()=>{
    const a=(i/10)*Math.PI*2-Math.PI/2,r=i%2?265:225,
      x=Math.round(P.village.x+Math.cos(a)*r),y=Math.round(P.village.y+Math.sin(a)*r);
    building('radial'+i,'Casa '+colors[i],x,y,'home',null);
+   // Tramo residencial desde el anillo exterior, no un radio que atraviese la plaza.
    seg.push([[P.village.x,P.village.y],[x,y+16]]);
   }
   building('plaza-market','Mercado del Pueblo',P.village.x-100,P.village.y+140,'home','shop');
@@ -346,6 +416,7 @@ window.WalesaMainland=(()=>{
   building('forest-camp','Casa del Guardabosques',6040,3860,'home');
   building('ridge-lodge','Mirador de la Cordillera',3510,910,'home');
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
+  normalizePlazaRoads();
   adorn();
  }
 
@@ -432,6 +503,13 @@ window.WalesaMainland=(()=>{
   // Capa cartográfica adicional: red viaria, barrios y destinos, sin alterar el mundo jugable.
   ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
   for(const [a,b] of seg){ctx.beginPath();ctx.moveTo(ox+a[0]*k,oy+a[1]*k);ctx.lineTo(ox+b[0]*k,oy+b[1]*k);ctx.strokeStyle='#fff6de';ctx.lineWidth=2.7;ctx.stroke();ctx.strokeStyle='#ad956f';ctx.lineWidth=.8;ctx.stroke()}
+  // La rotonda se muestra también en el mapa de navegación.
+  const px=ox+PLAZA.x*k,py=oy+PLAZA.y*k;
+  ctx.beginPath();ctx.arc(px,py,PLAZA.r*k,0,Math.PI*2);
+  ctx.fillStyle='#dca58c';ctx.fill();ctx.strokeStyle='#f8e2bf';
+  ctx.lineWidth=Math.max(1,4*k);ctx.stroke();
+  ctx.beginPath();ctx.arc(px,py,65*k,0,Math.PI*2);
+  ctx.strokeStyle='#f5d4a6';ctx.lineWidth=Math.max(.8,2*k);ctx.stroke();
   const labels=[['PUEBLO DE WALESA',P.village.x,P.village.y],['MESETA ORIENTAL',P.plateau.x,P.plateau.y],['DISTRITO DEL SUR',P.town.x,P.town.y],['BOSQUE PROFUNDO',P.forest.x,P.forest.y],['CORDILLERA',3480,880],['CIUDAD CORAZÓN',1400,720]];
   ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   for(const [label,x,y] of labels){const px=ox+x*k,py=oy+y*k;ctx.lineWidth=2.6;ctx.strokeStyle='rgba(255,251,238,.94)';ctx.strokeText(label,px,py-7);ctx.fillStyle='#344e55';ctx.fillText(label,px,py-7);ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle='#e77972';ctx.fill()}
@@ -444,7 +522,7 @@ window.WalesaMainland=(()=>{
  function streets(){
   const previous=(main?.paths||[]).filter(p=>Array.isArray(p)&&p.length>=4&&p.every(Number.isFinite))
    .map(p=>[[p[0],p[1]],[p[2],p[3]]]);
-  return [...previous,...seg];
+  return [...previous,...seg,...circleRoads];
  }
  function graph(){
   if(streetGraph)return streetGraph;
