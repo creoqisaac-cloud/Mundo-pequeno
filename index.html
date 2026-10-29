@@ -1597,6 +1597,7 @@ const World=(()=>{
   const ASP=['#6f6b7a','#67636f','#77737f'].map(C),SWK=['#e4dccf','#d6ccbd'].map(C),LANE=C('#f6e7a0');
   const pal={};for(const k of keys){const b=BIO[k];pal[k]={g:b.g.map(C),sand:C(b.sand||'#f3e1b4'),sand2:sh(C(b.sand||'#f3e1b4'),-14),path:(b.path||['#e6d3ad','#d7c194','#f1e4c4','#c5ae82']).map(C)}}
   const pl=m.spots&&m.spots.plaza;
+  const ROCKS=['#b38d59','#b37543','#966b44','#7b503e','#553d35'].map(C);
   for(let y=0;y<MH;y++){for(let x=0;x<MW;x++){const i=y*MW+x,h=hash(x,y);let c;const dd=iD(x,y),bk=m.biome(x,y,m),P=pal[bk];bio[i]=keys.indexOf(bk);
    if(dd>1.06)c=seaPx(x,y);
    else if(dd>.975){const t=clamp((dd-.975)/.085,0,1);c=mix(SH[(x*7+y)%9===0?1:0],seaPx(x,y),t*t);if(((x+((y/3)|0)*5)%11===0)&&t<.5)c=SH[1];if(dd<.99)foamL.push(i)}
@@ -1607,6 +1608,26 @@ const World=(()=>{
     else if(pv===2){const by=(y/5)|0,bx=((x+(by%2)*4)/8)|0,mort=(y%5===0)||(((x+(by%2)*4)%8)===0);c=mort?P.path[3]:P.path[hash(bx,by)<.3?1:hash(bx,by)>.85?2:0]}
     else if(pv===1&&((x+y)&1))c=P.path[1];
     else{let v=vnoise(x/46,y/46)*.62+vnoise(x/13,y/13)*.3+(h-.5)*.05;if(dd>.84)v+=(dd-.84)*2.2;const q=clamp(v*1.25-.12,0,.999)*3,i0=q|0,tt=q-i0;c=mix(P.g[i0],P.g[Math.min(3,i0+1)],tt*tt*(3-2*tt));const bl=vnoise(x/34+9,y/34),wb=Math.abs(bl-.5);if(wb<.014)c=sh(c,-9);else if(bl>.72)c=sh(c,5)}}
+   /* Relieve nativo: altura y gradiente comparten colisiones y textura original.
+      Estratos, paredes de escarpe, sombras orientadas y rampas de senderos. */
+   if(m.elevation&&dd<.92){
+    const eh=m.elevation(x,y),nx=m.elevation(x+7,y),wx=m.elevation(x-7,y),
+     ny=m.elevation(x,y-7),sy=m.elevation(x,y+7);
+    const esc=Math.max(Math.abs(eh-nx),Math.abs(eh-wx),Math.abs(eh-ny),Math.abs(eh-sy));
+    if(eh>.30&&!pm[i]&&!(rm&&rm[i])){
+     const k0=eh>.79?4:eh>.66?3:eh>.53?2:eh>.42?1:0;
+     const rockMix=clamp((eh-.26)*.8+esc*5,0,.64);
+     c=mix(c,ROCKS[k0],rockMix);
+    }
+    // El borde de cada terraza es una arista de terreno, no una calcomanía.
+    if(!pm[i]&&!(rm&&rm[i])&&eh>.27&&Math.floor(eh*14)!==Math.floor(ny*14)){
+     c=mix(c,ROCKS[eh>.63?4:3],.68);
+    }
+    if(eh>.15){
+     const light=clamp((wx-nx)*355+(ny-sy)*228,-43,42);
+     c=sh(c,light);
+    }
+   }
    const k=i*4;d[k]=c[0];d[k+1]=c[1];d[k+2]=c[2];d[k+3]=255}
    if((y&15)===0)yield y/MH*.75}
   const put=(x,y,c)=>{x|=0;y|=0;if(x<0||y<0||x>=MW||y>=MH)return;const k=(y*MW+x)*4;d[k]=c[0];d[k+1]=c[1];d[k+2]=c[2]};
@@ -1680,7 +1701,19 @@ const World=(()=>{
  function hitList(m,x,y,r){const list=m.sg[Math.floor(x/64)+','+Math.floor(y/64)];if(list)for(const s of list){if(s.t==='r'){if(x+r>s.x&&x-r<s.x+s.w&&y+r>s.y&&y-r<s.y+s.h)return true}else if(Math.hypot(x-s.x,y-s.y)<s.r+r)return true}
   for(const s of m.ells||[])if(((x-s.x)/(s.rx+r))**2+((y-s.y)/(s.ry+r))**2<1)return true;return false}
  function onPier(m,x,y){const P=m.pier;return P&&x>P.x-1&&x<P.x+P.w+1&&y>P.y-8&&y<P.y+P.h-4}
- function blockedOutM(m,x,y,r=4){if(onPier(m,x,y))return false;if(m.islandD(x,y)>.95)return true;return hitList(m,x,y,r)}
+ function blockedOutM(m,x,y,r=4){
+  if(onPier(m,x,y))return false;
+  if(m.islandD(x,y)>.95)return true;
+  if(m.elevation&&x>=10&&y>=10&&x<m.MW-10&&y<m.MH-10){
+   const k=(y|0)*m.MW+(x|0);
+   // Carreteras, veredas y zigzags preparados son pasos transitables.
+   if(!(m.path&&m.path[k])&&!(m.road&&m.road[k])){
+    const hh=m.elevation(x,y),hx=m.elevation(x+8,y),hy=m.elevation(x,y+8);
+    if(Math.max(Math.abs(hh-hx),Math.abs(hh-hy))>.027)return true;
+   }
+  }
+  return hitList(m,x,y,r)
+ }
  function blockedIn(room,x,y,r=4){if(x<14||x>242||y<58||y>182)return true;for(const s of room.solids)if(x+r>s.x&&x-r<s.x+s.w&&y+r>s.y&&y-r<s.y+s.h)return true;return false}
 
  /* ═════════ ISLAS MISTERIOSAS (infinitas) ═════════ */
@@ -2589,7 +2622,7 @@ const Game=(()=>{
  function updPlayer(dt){let moved=false,run=false,dx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),dy=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
   const joy=window.WalesaJoystick37?.vector?.();if(joy){dx+=joy.x;dy+=joy.y}
   if(!joy&&steer&&steer.active&&!st.busy){const w=screenToWorld(steer.x,steer.y);if(w){const ddx=w.x-player.x,ddy=w.y-player.y,d=Math.hypot(ddx,ddy);if(d>5){dx=ddx/d;dy=ddy/d;run=d>70}}}
-  if(st.busy||st.poseLock||st.trans||st.menu)dx=dy=0;const m=Math.hypot(dx,dy),ox0=player.x,oy0=player.y,vm=vspeed();
+  if(st.busy||st.poseLock||st.trans||st.menu)dx=dy=0;const m=Math.hypot(dx,dy),ox0=player.x,oy0=player.y,vm=vspeed()*(window.WalesaExpansion?.terrainSpeed?.()||1);
   if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn;moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt*(joy?Math.min(1,Math.max(.32,m)):1))}
   else if(player.path&&!st.busy&&!st.poseLock){const [tx,ty]=player.path[0],d=Math.hypot(tx-player.x,ty-player.y);run=player.path.length>2||d>80||!!st.runOn;
    if(d<2.5){player.path.shift();if(!player.path.length)player.path=null}else{const ox=player.x,oy=player.y;step(player,(tx-player.x)/d,(ty-player.y)/d,Math.min(d,(run?88:60)*vm*(window.Health32?Health32.speed:1)*dt));moved=Math.hypot(player.x-ox,player.y-oy)>.05;if(!moved){player.stuck+=dt;if(player.stuck>.5){player.path=null;player.pending=null}}else player.stuck=0}}
