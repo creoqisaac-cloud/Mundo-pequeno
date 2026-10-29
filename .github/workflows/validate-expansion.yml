@@ -1,14 +1,14 @@
-name: Validar expansión del continente y bosque
+name: Validar overworld continuo de Walesa
 
 on:
   push:
-    branches: [feat/topografia-boceto-procreate]
+    branches: [feat/overworld-real-continuo-v3]
   pull_request:
     paths:
       - 'index.html'
-      - 'world_expansion_v1.js'
+      - 'walesa_mainland_v3.js'
       - 'topografia_walesa_v2.js'
-      - 'tests/expansion-smoke.cjs'
+      - 'tests/mainland-smoke.cjs'
       - 'sw.js'
 
 permissions:
@@ -22,10 +22,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Comprobar scripts del motor y expansión
         run: |
-          node --check world_expansion_v1.js
+          node --check walesa_mainland_v3.js
           node --check topografia_walesa_v2.js
           node --check sw.js
-          node --check tests/expansion-smoke.cjs
+          node --check tests/mainland-smoke.cjs
           node - <<'NODE'
           const fs=require('node:fs'),vm=require('node:vm');
           const html=fs.readFileSync('index.html','utf8');
@@ -40,7 +40,7 @@ jobs:
           test -n "$(command -v google-chrome || command -v google-chrome-stable)"
       - name: Ejecutar expansión en Chromium
         run: |
-          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/expansion-smoke.cjs
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/mainland-smoke.cjs
       - name: Verificar también la interfaz original de Walesa
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/browser-smoke.cjs
