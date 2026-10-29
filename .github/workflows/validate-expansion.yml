@@ -46,6 +46,14 @@ jobs:
       - name: Comprobar nuevas rutas y mapa interactivo
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/navigation-additive-smoke.cjs
+      - name: Guardar capturas reales de la expansión
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: overworld-aditivo-capturas
+          path: tests/proof/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Verificar también la interfaz original de Walesa
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/browser-smoke.cjs
