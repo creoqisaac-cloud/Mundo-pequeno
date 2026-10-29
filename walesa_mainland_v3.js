@@ -326,6 +326,39 @@ window.WalesaMainland=(()=>{
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
   adorn();
  }
+
+ const scenic=[];
+ // Infraestructura de plazas, jardines y descansos con sprites de World.spr:
+ // se añaden a los barrios nuevos SIN mover las actividades ni los spots antiguos.
+ function nativePlaces(){
+  const a=V.spr;
+  const definitions=[
+   ['Parque del Pueblo',P.village.x+120,P.village.y-145,'gazebo','🌷'],
+   ['Mirador de la Meseta',P.plateau.x+110,P.plateau.y-135,'sign','⛰️'],
+   ['Plaza del Sur',P.town.x+215,P.town.y+160,'fount','⛲'],
+   ['Jardín del Bosque',P.forest.x+90,P.forest.y-130,'basket','🧺']
+  ];
+  for(const [name,tx,ty,kind,icon] of definitions){
+   let chosen=null;
+   for(let radius=0;radius<=150&&!chosen;radius+=25){
+    for(let step=0;step<12&&!chosen;step++){
+     const a0=step*Math.PI/6,x=Math.round(tx+Math.cos(a0)*radius),
+       y=Math.round(ty+Math.sin(a0)*radius);
+     if(x<ORX+10||x>MW-40||y<ORY+10||y>MH-40||coast(x,y)>.84||
+      nearbyRoad(x,y,36)||houses.some(b=>Math.hypot(b.x-x,b.y-y)<90))continue;
+     chosen={name,x,y,kind,icon};
+    }
+   }
+   if(!chosen)continue;
+   scenic.push(chosen);const {x,y}=chosen;
+   if(kind==='fount'&&a.fount?.[0])V.addObj(main,a.fount[0],x,y,V.circS(x,y-2,15),{fount:true});
+   else if(a[kind])V.addObj(main,a[kind],x,y,kind==='gazebo'?V.circS(x,y-6,24):null);
+   for(const dx of [-31,31])if(a.bench)V.addObj(main,a.bench,x+dx,y+32,null);
+   if(a.bush?.[0])for(const dx of [-53,53])V.addObj(main,a.bush[0],x+dx,y-10,null);
+   if(a.lamp){V.addObj(main,a.lamp,x+49,y+21,null);main.glows.push([x+49,y-3])}
+  }
+ }
+
  // Cada vivienda usa el MISMO sistema de interiores/colisión del motor.
  // Las plantillas originales se copian sin alterar sus sprites, regalos ni partidas.
  function furnishRooms(){
@@ -451,7 +484,7 @@ window.WalesaMainland=(()=>{
   ].map(([name,x,y,icon])=>({name,x,y,icon}));
   const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:b.icon||'🏪'}));
   const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:'🏡'}));
-  return [...landmarks,...jobs,...homes];
+  return [...landmarks,...scenic,...jobs,...homes];
  }
  function ensureGuideBar(){
   if(guideBar)return guideBar;
@@ -586,7 +619,7 @@ window.WalesaMainland=(()=>{
   m.biome=(x,y,mm)=>x>=0&&y>=0&&x<oldW&&y<oldH?origBiome(x,y,mm):biome(x,y);
   m.elevation=height;
   m.mainland={draw,coast,height,biome,zone,roadAt,nearbyRoad,sampleMap,original:{width:oldW,height:oldH},extent:{width:MW,height:MH},landmarks:P};
-  structures();furnishRooms();
+  structures();nativePlaces();furnishRooms();
   return m;
  }
  function moveToPreview(){
@@ -605,6 +638,9 @@ window.WalesaMainland=(()=>{
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
   H.tab.push(navigationTab);
+  H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
+   for(const p of scenic)list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
+  H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Una nueva parada de Walesa con el mobiliario y la vegetación del mundo original.')});
   H.update.push(()=>{if(!main)return;updateGuide();moveToPreview();
    const m=X.M();if(m!==main||X.st.scene!=='out')return;
    const n=zone(X.player.x,X.player.y);
