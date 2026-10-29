@@ -1,4 +1,4 @@
-/* Regresión del joystick v43 sin navegador ni paquetes externos.
+/* Regresión del joystick v45 sin navegador ni paquetes externos.
    Ejecuta el módulo real con los objetos mínimos del juego. */
 'use strict';
 const fs=require('node:fs');
@@ -101,9 +101,8 @@ const context={window:win,document:doc,Game:{X,G},save:storage,console,
  queueMicrotask,Math,Number,String,Set,Array,Promise};
 vm.runInNewContext(fs.readFileSync('native_joystick40.js','utf8'),context,{filename:'native_joystick40.js'});
 const joy=win.WalesaJoystick43;
-assert.ok(newClose,'Se reemplazó el cierre antiguo con eventos peligrosos');
-newClose.fire('click');
-assert.equal(menuCloses,1,'El cierre vuelve a funcionar');
+// La cremallera vive en index.html, y el joystick no debe reemplazar su nodo.
+assert.equal(newClose,null,'La palanca debe conservar el cierre de cremallera original');
 assert.ok(joy,'El control debe cargarse');
 assert.equal(X.HOOKS.tab.length,1,'Opciones debe recibir un hook');
 assert.equal(joy.enabled(),false);
@@ -157,5 +156,5 @@ assert.equal(joy.vector(),null);
  assert.equal(joy.vector(),null,'Fuera del juego no hay movimiento residual');
  game.classList.add('on');
  assert.equal(joy.vector(),null);
- console.log('✓ Joystick v43: modos, opciones, arrastre, respaldo, pausa y seguridad.');
+ console.log('✓ Joystick v45: modos, opciones, arrastre, respaldo, pausa y seguridad.');
 })().catch(err=>{console.error(err);process.exitCode=1;});
