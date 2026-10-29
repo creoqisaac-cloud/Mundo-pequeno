@@ -427,11 +427,88 @@ window.WalesaMainland=(()=>{
   g.globalAlpha=1;
   return {...sprite,c};
  }
+
+ // Urbanismo real: ocupar parcelas junto a calles, nunca sobre el asfalto.
+ // Solamente recoloca edificaciones V3 y conserva intacta la isla heredada.
+ const buildClaims=[];
+ function roadClearance(x,y,urban){
+  const hw=urban?37:30,top=urban?41:32,bottom=urban?1:1;
+  let closest=Infinity;
+  for(const [a,b] of seg){
+   const paved=['administrativo','meseta'].includes(zone((a[0]+b[0])/2,(a[1]+b[1])/2));
+   const margin=paved?19:18;
+   for(const xx of [x-hw,x,x+hw])for(const yy of [y-top,y-(top+bottom)/2,y-bottom]){
+    const d=distSegment(xx,yy,a,b);closest=Math.min(closest,d);
+    if(d<margin)return {valid:false,closest:d};
+   }
+  }
+  return {valid:true,closest};
+ }
+ function freePlot(x,y,urban){
+  const sz=urban?82:66;
+  if(x<ORX+45||x>MW-45||y<ORY+65||y>MH-60)return false;
+  if(coast(x,y)>.73||coast(x-35,y-40)>.81||coast(x+35,y-40)>.81)return false;
+  if(plazaDistance(x,y)<PLAZA.edge+47)return false;
+  if(!roadClearance(x,y,urban).valid)return false;
+  for(const h of buildClaims){
+   if(Math.abs(h.x-x)<(h.sz+sz)*.5+8&&
+      Math.abs(h.y-y)<(h.sz+sz)*.47+8)return false;
+  }
+  return true;
+ }
+ function findPlot(x,y,urban){
+  if(freePlot(x,y,urban)){buildClaims.push({x,y,sz:urban?82:66});return{x,y}}
+  let best=null,score=Infinity;
+  // Se preserva el barrio de procedencia y se buscan solares ordenados
+  // en los dos lados de la calle, no coordenadas aleatorias mar adentro.
+  for(const radius of [28,45,65,85,112,145,185,230,280,335]){
+   for(let i=0;i<32;i++){
+    const angle=i/32*Math.PI*2,radiusNoise=radius+(hash(i,Math.round(x+y))-.5)*13,
+     cx=Math.round(x+Math.cos(angle)*radiusNoise),
+     cy=Math.round(y+Math.sin(angle)*radiusNoise);
+    if(!freePlot(cx,cy,urban))continue;
+    const d=Math.hypot(cx-x,cy-y),
+      road=roadClearance(cx,cy,urban).closest,
+      penalty=d+Math.abs(road-35)*.12;
+    if(penalty<score){score=penalty;best={x:cx,y:cy}}
+   }
+   if(best)break;
+  }
+  const choice=best||{x,y};
+  buildClaims.push({...choice,sz:urban?82:66});
+  return choice;
+ }
+ function addDoorPaths(){
+  // Corta en la red de caminos sólo para conectar cada puerta desde la acera.
+  // El acceso sale por debajo del edificio, jamás por el tejado.
+  const base=seg.slice();
+  for(const b of houses){
+   const exit=[b.x,b.y+19],urban=!!b.city;
+   if(nearbyRoad(exit[0],exit[1],27))continue;
+   let chosen=null,best=140;
+   for(const [a,c] of base){
+    const dx=c[0]-a[0],dy=c[1]-a[1],dt=dx*dx+dy*dy;
+    if(dt<1)continue;
+    const t=clamp(((exit[0]-a[0])*dx+(exit[1]-a[1])*dy)/dt,0,1);
+    const px=a[0]+t*dx,py=a[1]+t*dy,d=Math.hypot(px-exit[0],py-exit[1]);
+    if(d>=best||d<24)continue;
+    let clear=true;
+    for(const h of houses){
+     if(h===b)continue;
+     if(distSegment(h.x,h.y-18,exit,[px,py])<(h.city?48:41)){clear=false;break}
+    }
+    if(clear){best=d;chosen=[px,py]}
+   }
+   if(chosen)seg.push([chosen,exit]);
+  }
+ }
+
  function building(id,name,x,y,type='home',job=null){
   const v=zone(x,y),urban=type==='city'&&(!!job||hash(x+417,y-251)<.64);
   // La ciudad combina edificios de varias plantas con casas bajas originales.
   // Cada tipología conserva las colisiones, puertas y sprites del motor.
   const districtHome=type==='city'&&!urban;
+  ({x,y}=findPlot(x,y,urban));
   const styles=[
    ['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],
    ['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d'],
@@ -527,14 +604,14 @@ window.WalesaMainland=(()=>{
   }
  }
  function structures(){
+  normalizePlazaRoads();
   // Poblado radial: casas alrededor de la plaza, como el dibujo de Procreate.
   const colors=['Cinna','Melody','Purin','Rosa','Nube','Hiedra','Clavel','Estrella','Olivo','Amapola'];
   for(let i=0;i<10;i++){
    const a=(i/10)*Math.PI*2-Math.PI/2,r=i%2?265:225,
      x=Math.round(P.village.x+Math.cos(a)*r),y=Math.round(P.village.y+Math.sin(a)*r);
    building('radial'+i,'Casa '+colors[i],x,y,'home',null);
-   // Tramo residencial desde el anillo exterior, no un radio que atraviese la plaza.
-   seg.push([[P.village.x,P.village.y],[x,y+16]]);
+   // La ruta de acceso real se calcula al terminar el parcelario.
   }
   building('plaza-market','Mercado del Pueblo',P.village.x-100,P.village.y+140,'home','shop');
   building('town-hall','Oficina de Walesa',P.village.x+115,P.village.y+145,'home','papers');
@@ -549,11 +626,29 @@ window.WalesaMainland=(()=>{
     ['Taller','Edificio','Papelería','Vivienda','Comercio'][col]+' del Sur',x,y,'city',
     col===1&&row===0?'papers':col===4&&row===1?'shop':null);
   }
+  // Parcelas adicionales para activar los bloques desocupados con comercios
+  // funcionales del sistema nativo, parques pequeños y casas habitadas.
+  const civic=[
+   ['cafe-estacion','Cafetería Alameda',3550,4180,'pasteles'],
+   ['juegos-sur','Salón Recreativo del Sur',3990,3610,'arcade'],
+   ['moda-sur','Tienda de Moda del Sur',4050,3930,'moda'],
+   ['mascotas-sur','Refugio de Mascotas',3220,3810,'mascotas'],
+   ['salon-sur','Peluquería del Centro',3220,4070,'salon'],
+   ['viviendas-sur-a','Residencias Jacaranda',3920,4160,null],
+   ['viviendas-sur-b','Condominio del Prado',3520,3260,null],
+   ['viviendas-sur-c','Casas del Bulevar',4110,3260,null],
+   ['centro-candy','Tienda de Caramelos',4780,1770,'shop'],
+   ['alto-postres','Dulcería de la Meseta',6160,1980,'pasteles'],
+   ['alto-juegos','Recreativos del Altiplano',6200,2250,'arcade'],
+   ['alto-vivienda','Jardines del Altiplano',6170,2470,null],
+   ['alto-atelier','Atelier de las Nubes',5250,1880,'moda']
+  ];
+  for(const [id,name,x,y,job] of civic)building(id,name,x,y,'city',job);
   building('forest-lodge','Refugio del Bosque',5760,3575,'home');
   building('forest-camp','Casa del Guardabosques',6040,3860,'home');
   building('ridge-lodge','Mirador de la Cordillera',3510,910,'home');
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
-  normalizePlazaRoads();
+  addDoorPaths();
   adorn();decoratePlaza();
  }
 
