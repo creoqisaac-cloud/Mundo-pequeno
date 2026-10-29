@@ -1,0 +1,44 @@
+name: Validar expansión del continente y bosque
+
+on:
+  push:
+    branches: [feat/continente-y-bosque-infinito]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'world_expansion_v1.js'
+      - 'tests/expansion-smoke.cjs'
+      - 'sw.js'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar scripts del motor y expansión
+        run: |
+          node --check world_expansion_v1.js
+          node --check sw.js
+          node --check tests/expansion-smoke.cjs
+          node - <<'NODE'
+          const fs=require('node:fs'),vm=require('node:vm');
+          const html=fs.readFileSync('index.html','utf8');
+          const parts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+          if(parts.length<40)throw Error('Motor original incompleto');
+          parts.forEach((p,i)=>new vm.Script(p[1],{filename:'inline-'+i+'.js'}));
+          console.log('✓ '+parts.length+' scripts del motor preservados');
+          NODE
+      - name: Preparar Chromium y Playwright
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          test -n "$(command -v google-chrome || command -v google-chrome-stable)"
+      - name: Ejecutar expansión en Chromium
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/expansion-smoke.cjs
+      - name: Verificar también la interfaz original de Walesa
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/browser-smoke.cjs
