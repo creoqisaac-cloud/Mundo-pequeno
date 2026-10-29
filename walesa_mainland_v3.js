@@ -807,8 +807,23 @@ window.WalesaMainland=(()=>{
   const X=Game?.X;if(!X||!guide)return;
   const hud=ensureGuideBar();
   if(X.M()!==main||X.st.scene!=='out'||X.st.mode!=='play'){hud.style.display='none';return}
-  if(Date.now()-lastGuideTick<250)return;lastGuideTick=Date.now();
-  const p=X.player,pts=guide.points;
+  const now=Date.now();if(now-lastGuideTick<250)return;lastGuideTick=now;
+  const p=X.player;
+  // Recálculo automático cuando el jugador se separa de la calle marcada.
+  // En el mapa anterior la flecha seguía señalando un giro ya perdido.
+  if(guide.connected&&now-(guide.lastReroute||0)>1800){
+   let closest=Infinity;
+   for(let i=1;i<guide.points.length;i++){
+    const a=guide.points[i-1],b=guide.points[i];
+    closest=Math.min(closest,distSegment(p.x,p.y,a,b));
+   }
+   if(closest>120){
+    const r=roadRoute({x:p.x,y:p.y},guide.dest);
+    guide.points=r.points;guide.connected=r.connected;
+    guide.step=1;guide.lastReroute=now;
+   }
+  }
+  const pts=guide.points;
   if(Math.hypot(p.x-guide.dest.x,p.y-guide.dest.y)<35){
    X.toast('📍 Llegaste a '+guide.name);guide=null;hud.style.display='none';return;
   }
@@ -819,14 +834,16 @@ window.WalesaMainland=(()=>{
     all=Math.hypot(guide.dest.x-p.x,guide.dest.y-p.y),a=Math.atan2(q[1]-p.y,q[0]-p.x),
     compass=['→','↘','↓','↙','←','↖','↑','↗'],
     arrow=compass[(Math.round(a/ (Math.PI/4))+8)%8];
-  hud._label.textContent=arrow+' '+guide.name+' · '+Math.round(all)+' u · próximo giro '+Math.round(d)+' u';
+  hud._label.textContent=arrow+' '+guide.name+' · '+Math.round(all)+
+   ' u · '+(guide.connected?'siguiente punto ':'rumbo orientativo ')+Math.round(d)+' u';
   hud.style.display=X.st.menu?'none':'block';
  }
  function startGuide(target){
   if(!main||!Game?.X)return null;
   const p=Game.X.player;
   const route=roadRoute({x:p.x,y:p.y},target);
-  guide={points:route.points,connected:route.connected,dest:target,name:target.name||'Destino',step:1};
+  guide={points:route.points,connected:route.connected,dest:target,
+   name:target.name||'Destino',step:1,lastReroute:Date.now()};
   lastGuideTick=0;updateGuide();
   return guide;
  }
@@ -1142,6 +1159,38 @@ window.WalesaMainland=(()=>{
      g.fillRect(x,y,2+(i%3===0),1.3);
     }
    }
+   // Reflejos suaves del agua y halos cálidos alrededor de las farolas.
+   // Sólo se dibujan elementos cercanos para no sacrificar FPS en móvil.
+   if(atPark){
+    for(const r of [22,32,42]){
+     g.strokeStyle='rgba(169,220,229,'+(.22+.11*Math.sin(t*2+r)) +')';
+     g.lineWidth=1.1;g.beginPath();
+     g.ellipse(PLAZA.x-ox,PLAZA.y+12-oy,r,r*.36,0,0,Math.PI*2);
+     g.stroke();
+    }
+    if(evening)for(let i=0;i<12;i++){
+     const ang=i*Math.PI/6-.2,
+      x=PLAZA.x+Math.cos(ang)*170-ox,y=PLAZA.y+Math.sin(ang)*170-oy;
+     if(Math.hypot(x-(p.x-ox),y-(p.y-oy))>460)continue;
+     const lg=g.createRadialGradient(x,y,2,x,y,56);
+     lg.addColorStop(0,'rgba(255,229,159,.18)');
+     lg.addColorStop(1,'rgba(255,229,159,0)');
+     g.fillStyle=lg;g.fillRect(x-56,y-56,112,112);
+    }
+   }
+   if(regional==='costa'||regional==='forest'){
+    for(let i=0;i<22;i++){
+     const x=Math.floor(p.x/110)*110+(i%6-2)*95+hash(i+13,17)*73,
+      y=Math.floor(p.y/110)*110+(Math.floor(i/6)-1)*112+hash(i+4,65)*74,
+      cc=coast(x,y);
+     if(cc<.94||cc>1.06)continue;
+     const sx=x-ox+Math.sin(t+i)*5,sy=y-oy;
+     g.globalAlpha=.25+.12*Math.sin(t*1.4+i*2);
+     g.strokeStyle='#effcff';g.lineWidth=1;
+     g.beginPath();g.moveTo(sx-5,sy);g.lineTo(sx+5,sy);g.stroke();
+    }
+   }
+   g.globalAlpha=1;
    g.restore();
   });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
