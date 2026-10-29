@@ -25,7 +25,7 @@ const withTimeout=(ms,p)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=
  try{
   const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const errors=[];
-  page.on('pageerror',error=>{errors.push(String(error));console.error('PAGEERROR:',String(error))});
+  page.on('pageerror',error=>{errors.push(String(error));console.error('PAGEERROR:',error.stack||String(error))});
   page.setDefaultTimeout(120000);
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.__ready===true && typeof window.WalesaExpansion==='object',{timeout:90000});
@@ -77,5 +77,6 @@ const withTimeout=(ms,p)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=
   assert.equal(await page.evaluate(()=>World.map===World.MAIN),true,'Regresa al mundo original');
   assert.deepEqual(errors,[],'Sin errores JavaScript en navegador');
   console.log('✓ 1024 distritos, paso de fronteras, bosque determinista, guardado, render y Walesa original: OK');
- }finally{await browser.close();}
+ }catch(error){console.error('BROWSER REGRESSION:',error);process.exit(1)}
+ finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>server.close());
