@@ -1,13 +1,15 @@
-/* Isla de Walesa · Control nativo v41.
+/* Isla de Walesa · Control nativo v42.
    Sin dependencias: el joystick no puede detener el bucle del juego.
    Al soltarlo, tocar el suelo sigue disponible como control de respaldo. */
 (()=>{
  'use strict';
  try {
-  const X=window.Game&&window.Game.X;
-  const G=window.Game&&window.Game.G;
+  // Game y save son "const" globales del HTML, no propiedades de window.
+  // Buscar window.Game/window.save impedía cargar el control en producción.
+  const X=typeof Game!=='undefined'&&Game&&Game.X;
+  const G=typeof Game!=='undefined'&&Game&&Game.G;
   const game=document.getElementById('game');
-  if(!X||!G||!X.HOOKS||!game||!window.save)return;
+  if(!X||!G||!X.HOOKS||!game||typeof save==='undefined')return;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const cfg=save.joystick37||(save.joystick37={});
   const sizeOpts=[92,116,144];
@@ -241,7 +243,7 @@
   window.WalesaJoystick41=api;
  }catch(err){
   console.error('Palanca: control táctil de respaldo activado',err);
-  try{if(window.save&&save.joystick37)save.joystick37.enabled=false;}catch(_){}
+  try{if(typeof save!=='undefined'&&save.joystick37)save.joystick37.enabled=false;}catch(_){}
   const fallback={enabled:()=>false,vector:()=>null,release:()=>{}};
   window.WalesaJoystick37=fallback;
   window.WalesaJoystick40=fallback;
