@@ -25,7 +25,7 @@ const withTimeout=(ms,p)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=
  try{
   const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const errors=[];
-  page.on('pageerror',error=>errors.push(String(error)));
+  page.on('pageerror',error=>{errors.push(String(error));console.error('PAGEERROR:',String(error))});
   page.setDefaultTimeout(120000);
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.__ready===true && typeof window.WalesaExpansion==='object',{timeout:90000});
@@ -51,7 +51,11 @@ const withTimeout=(ms,p)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=
   assert.ok(c.entrances>=1,'Hay un regreso a Walesa');
   // Cruce natural por el borde sin teletransporte manual: HOOK update llama al motor de sectores.
   await page.evaluate(()=>{Game.X.player.x=755;Game.X.player.y=352});
-  await page.waitForFunction(()=>World.map.gridX===17&&!Game.X.st.busy,{timeout:120000});
+  await page.waitForFunction(()=>World.map.gridX===17,{timeout:20000});
+  await page.waitForTimeout(1600);
+  const crossing=await page.evaluate(()=>({busy:Game.X.st.busy,transition:Game.X.st.trans?.t,mode:Game.X.st.mode,raf:Game.X.st.raf}));
+  console.log('Sector crossing state:',JSON.stringify(crossing));
+  assert.equal(crossing.busy,false,'La transición debe liberar al personaje');
   const right=await page.evaluate(()=>World.map.gridX);
   assert.equal(right,17);
   await withTimeout(120000,page.evaluate(()=>WalesaExpansion.go(0,0,true,98,352)));
