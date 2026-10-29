@@ -8709,10 +8709,17 @@ window.Wardrobe=Wardrobe;
  function missV(){const f=F(),L=f.missions.slice().reverse();scr.innerHTML=bar()+hd('📋 Encargos')+`<div class="lst">${L.length?L.map(m=>`<div class="it"><i>${m.done?'✅':'📌'}</i><div><b>${nm(m.by)}</b><small>${m.txt}</small>${m.done?'<small>¡Listo!</small>':''}</div></div>`).join(''):'<div class="it"><i>📭</i><div><b>Sin encargos</b><small>Cuando un vecino te llame con un favor, aparecerá aquí.</small></div></div>'}</div>`;back()}
  function gamesV(){const L=X.ARCADE||[];scr.innerHTML=bar()+hd('🕹️ Juegos')+`<div class="lst">${L.map(a=>`<button class="it" data-g="${a[0]}"><i>${a[1]}</i><div><b>${a[2]}</b><small>${a[3]}</small></div></button>`).join('')}</div>`;back();
   scr.querySelectorAll('[data-g]').forEach(b=>b.onclick=e=>{e.stopPropagation();close();setTimeout(()=>X.startMG(b.dataset.g),120)})}
- function mapV(){scr.innerHTML=bar()+hd('🗺️ Mapa')+
-   '<div class="lst wcPhoneMap51"><p class="wcMapIntro51">Explora la isla con sus caminos de siempre. Acércate, arrastra y toca un lugar para marcarlo.</p><canvas id="mapC" width="280" height="248" aria-label="Mapa interactivo de la isla"></canvas></div>';back();
-  // Se reutiliza el visor de la guía original, que observa #mapC y agrega zoom y destinos.
-  if(!X.M()||!X.M().ground)X.toast('El mapa se está preparando…');
+ function mapV(){
+  // Se monta el mapa nativo del continente dentro de la aplicación del móvil.
+  // Evita el antiguo canvas de 280x248 que sólo representaba la isla original.
+  scr.innerHTML=bar()+hd('🗺️ Mapa')+
+   '<div class="lst wcPhoneMap51" style="display:block;overflow-y:auto;overscroll-behavior:contain">'+
+   '<div id="walesa-phone-map-root" style="width:100%;min-width:0"></div></div>';
+  back();
+  const root=scr.querySelector('#walesa-phone-map-root');
+  if(!window.WalesaMainland?.mountPhone?.(root,close)){
+   root.textContent='El mapa del continente se está cargando. Vuelve a abrirlo en un momento.';
+  }
  }
  function metroV(){const M=window.Metro;scr.innerHTML=bar()+hd('🚇 Metro')+`<div class="lst">${M&&M.R?M.R.ST.map(s=>{const e=M.eta(s);return`<div class="it"><i>🚉</i><div><b>${s.name}</b><small>${e===0?'¡El tren está en el andén!':'Próximo tren en ~'+e+' s'}</small></div></div>`}).join(''):'<div class="it">El metro se está preparando…</div>'}</div>`;back()}
  function todayV(){const e=typeof V5!=='undefined'&&V5.event?V5.event():null,w=X.weather;const wn={sol:'Soleado',nubes:'Nublado',lluvia:'Lluvioso',nieve:'Nevado',petalos:'Lluvia de pétalos'}[w]||w;
