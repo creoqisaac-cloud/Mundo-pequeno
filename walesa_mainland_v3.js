@@ -116,6 +116,13 @@ window.WalesaMainland=(()=>{
    }
   };
   strokes(0);strokes(1);
+  // Adoquines, juntas y desgaste dentro del trazado existente, sin reemplazar caminos.
+  for(const {a,b,paved} of visible){const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
+   ctx.save();ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);ctx.lineWidth=22;ctx.strokeStyle='#fff';ctx.stroke();ctx.clip();
+   for(let t=0;t<len;t+=11){const xx=a[0]+dx*t/len-x0,yy=a[1]+dy*t/len-y0;ctx.strokeStyle=paved?'rgba(245,239,222,.18)':'rgba(126,88,52,.23)';ctx.lineWidth=.8;
+    for(let j=-1;j<=1;j++){const q=j*8+(Math.floor(t/11)%2)*3;ctx.beginPath();ctx.moveTo(xx+nx*(q-4),yy+ny*(q-4));ctx.lineTo(xx+nx*(q+4),yy+ny*(q+4));ctx.stroke()}}
+   ctx.restore();
+  }
   // Bordes de acera, desagües y marcas viales siguiendo el mismo trazado.
   for(const {a,b,paved} of visible)if(paved){
    ctx.save();ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);
@@ -184,10 +191,10 @@ window.WalesaMainland=(()=>{
  const houses=[];
  function building(id,name,x,y,type='home',job=null){
   const v=zone(x,y),urban=type==='city',wall=urban?'#e8e5df':'#f8e9d8',roof=urban?'#9aa3b7':'#c88670';
-  const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,wall,roof,
+  const styles=[['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d']];const urbanStyles=[['#e8e5df','#9aa3b7'],['#e9e1f0','#9989b7'],['#e1edf0','#7c9fa9'],['#f2e7d7','#b9967e'],['#e6e9dd','#929c7a']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,wall:palette[0],roof:palette[1],
     acc:urban?'#9eafbc':roof,icon:urban?'🏬':'🏠'};
-  if(urban){b.day=V.cityBuilding(wall,b.acc,b.icon,false);b.night=V.cityBuilding(wall,b.acc,b.icon,true)}
-  else{b.day=V.houseSprite(wall,roof,false,{sign:job?'heart':null,noChim:!!job});b.night=V.houseSprite(wall,roof,true,{sign:job?'heart':null,noChim:!!job})}
+  if(urban){b.acc=palette[1];b.icon=job==='shop'?'🛍️':job==='papers'?'📚':job==='delivery'?'📮':'🏠';b.day=V.cityBuilding(b.wall,b.acc,b.icon,false,b.name);b.night=V.cityBuilding(b.wall,b.acc,b.icon,true,b.name)}
+  else{const opt={sign:job?'heart':null,noChim:!!job,awning:job?['#fff8e9',palette[1]]:undefined,flag:hash(x,y)>.68};b.day=V.houseSprite(b.wall,b.roof,false,opt);b.night=V.houseSprite(b.wall,b.roof,true,opt)}
   V.addObj(main,b.day,x,y,V.rectS(x-(urban?33:27),y-(urban?34:28),urban?70:54,urban?33:27),{house:b});
   main.glows.push([x-14,y-(urban?55:16)]);main.build.push(b);houses.push(b);return b;
  }
@@ -284,6 +291,13 @@ window.WalesaMainland=(()=>{
   }
   const tc=document.createElement('canvas');tc.width=190;tc.height=145;tc.getContext('2d').putImageData(img,0,0);
   ctx.drawImage(tc,ox,oy,MW*k,MH*k);
+  // Capa cartográfica adicional: red viaria, barrios y destinos, sin alterar el mundo jugable.
+  ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+  for(const [a,b] of seg){ctx.beginPath();ctx.moveTo(ox+a[0]*k,oy+a[1]*k);ctx.lineTo(ox+b[0]*k,oy+b[1]*k);ctx.strokeStyle='#fff6de';ctx.lineWidth=2.7;ctx.stroke();ctx.strokeStyle='#ad956f';ctx.lineWidth=.8;ctx.stroke()}
+  const labels=[['PUEBLO DE WALESA',P.village.x,P.village.y],['MESETA ORIENTAL',P.plateau.x,P.plateau.y],['DISTRITO DEL SUR',P.town.x,P.town.y],['BOSQUE PROFUNDO',P.forest.x,P.forest.y],['CORDILLERA',3480,880],['CIUDAD CORAZÓN',1400,720]];
+  ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const [label,x,y] of labels){const px=ox+x*k,py=oy+y*k;ctx.lineWidth=2.6;ctx.strokeStyle='rgba(255,251,238,.94)';ctx.strokeText(label,px,py-7);ctx.fillStyle='#344e55';ctx.fillText(label,px,py-7);ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle='#e77972';ctx.fill()}
+  ctx.restore();
  }
  function install(m){
   if(m.mainland)return m;
