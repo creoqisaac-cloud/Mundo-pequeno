@@ -27,6 +27,7 @@ const server=http.createServer((req,res)=>{
  try{
   browser=await chromium.launch({executablePath:chromePath,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  page.setDefaultTimeout(12000);
   const errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
   await page.goto('http://127.0.0.1:'+port+'/',{waitUntil:'domcontentloaded',timeout:45000});
@@ -80,6 +81,25 @@ const server=http.createServer((req,res)=>{
   await page.locator('#sheet .panel h3 .close').click();
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false);
 
+  // La cremallera original permanece y permite cerrar arrastrando la X.
+  await page.locator('#menuBtn').click();
+  await page.locator('#tabs button[data-t="opts"]').click();
+  await page.locator('#wcBagZipTrack37').waitFor({state:'attached'});
+  await page.evaluate(()=>{
+   const close=document.querySelector('#sheet .panel h3 .close');
+   const r=close.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+   for(const [type,dx] of [['pointerdown',0],['pointermove',-75],['pointerup',-75]]){
+    close.dispatchEvent(new PointerEvent(type,{
+     bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true,
+     pointerId:87,clientX:x+dx,clientY:y,buttons:type==='pointerup'?0:1
+    }));
+   }
+  });
+  await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'La cremallera debe cerrar con swipe');
+  assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
+  assert.deepEqual(errors,[],'Cerrar con cremallera no debe producir errores de JavaScript');
+
   // Validar que el motor siga pintando después de cerrar Opciones.
   await page.evaluate(async()=>{await Game.enter();});
   await page.waitForTimeout(850);
@@ -90,7 +110,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.ok(canvas.width>0&&canvas.height>0&&canvas.alpha>0&&canvas.visible,'La pantalla debe dibujarse, no quedar negra');
   assert.deepEqual(errors,[],'No debe haber errores JS de página');
-  console.log('✓ Chromium real: opciones, modo palanca, tamaño, área invisible, cierre, navegación y render.');
+  console.log('✓ Chromium real: joystick, tamaño, área invisible, cierre normal, cremallera, navegación y render.');
  }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));
