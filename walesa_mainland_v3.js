@@ -31,6 +31,7 @@ window.WalesaMainland=(()=>{
  const circleRoads=[];
  const plazaDistance=(x,y)=>Math.hypot(x-PLAZA.x,y-PLAZA.y);
  function plazaBrick(x,y){
+  if(Math.abs(x-PLAZA.x)>PLAZA.edge||Math.abs(y-PLAZA.y)>PLAZA.edge)return null;
   const d=plazaDistance(x,y);if(d>PLAZA.edge)return null;
   const angle=Math.atan2(y-PLAZA.y,x-PLAZA.x),ring=Math.floor(d/8),
     walk=d*angle,brick=Math.floor((walk+(ring%2)*8)/16),
@@ -319,13 +320,38 @@ window.WalesaMainland=(()=>{
    g.fillStyle=accent;g.fillRect(urban?8:10,front,urban?57:49,3);
    for(let x=urban?11:13;x<(urban?64:58);x+=7)g.fillRect(x,front-7,2,9);
    g.fillStyle=light;g.fillRect(urban?14:16,urban?53:56,urban?12:10,2);
-  }else{ // macetas y marquesinas
+  }else if(v===2||v===5){ // macetas y marquesinas
    for(const x of (urban?[12,31,52]:[15,45])){
     g.fillStyle='#956f55';g.fillRect(x,front+4,10,3);
     g.fillStyle='#518c56';g.fillRect(x+2,front,6,5);
     g.fillStyle='#f6adbf';g.fillRect(x+3,front,2,2);
    }
    g.fillStyle=accent;g.fillRect(urban?42:26,urban?57:58,urban?22:16,3);
+  }else if(v===6){ // persianas pintadas y marco de fachada
+   g.fillStyle=accent;
+   for(const x of (urban?[12,32,52]:[13,44]))for(const dx of [-3,12]){
+    g.fillRect(x+dx,urban?22:44,2,urban?13:9);
+   }
+   g.fillStyle=light;g.fillRect(urban?13:29,urban?12:38,urban?48:10,2);
+  }else if(v===7){ // baldosas florales y guirnalda
+   g.strokeStyle=accent;g.lineWidth=2;g.beginPath();
+   g.moveTo(urban?8:10,urban?18:39);g.quadraticCurveTo(40,urban?25:45,urban?69:60,urban?18:39);g.stroke();
+   for(let i=0;i<7;i++){const x=(urban?9:11)+i*8,y=(urban?19:41)+Math.sin(i*.8)*2;
+    g.fillStyle=i%2?'#fae3a4':'#ef9bad';g.fillRect(x,y,3,2);
+   }
+  }else if(v===8){ // ático con molduras y zócalo
+   g.fillStyle=accent;g.fillRect(urban?22:25,urban?2:20,urban?36:21,urban?7:7);
+   g.fillStyle=light;g.fillRect(urban?26:28,urban?4:22,urban?28:15,2);
+   g.strokeStyle=accent;g.lineWidth=2;g.strokeRect(urban?6:8,urban?61:55,urban?65:51,urban?24:7);
+  }else{ // fachada con celosías y jardineras
+   g.fillStyle=accent;
+   for(const x of (urban?[12,32,52]:[13,44])){
+    g.fillRect(x,urban?38:54,12,3);
+    g.fillStyle='#5a986c';g.fillRect(x+2,urban?36:52,8,2);
+    g.fillStyle='#f4cad0';g.fillRect(x+4,urban?35:51,2,2);
+    g.fillStyle=accent;
+   }
+   g.fillRect(urban?8:9,urban?14:38,urban?58:51,2);
   }
   return {...sprite,c};
  }
@@ -334,9 +360,19 @@ window.WalesaMainland=(()=>{
   // La ciudad combina edificios de varias plantas con casas bajas originales.
   // Cada tipología conserva las colisiones, puertas y sprites del motor.
   const districtHome=type==='city'&&!urban;
-  const styles=[['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d']];const urbanStyles=[['#e8e5df','#9aa3b7'],['#e9e1f0','#9989b7'],['#e1edf0','#7c9fa9'],['#f2e7d7','#b9967e'],['#e6e9dd','#929c7a']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
+  const styles=[
+   ['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],
+   ['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d'],
+   ['#f6e4d9','#bb7f83'],['#e0f1e9','#6eaca0'],['#f8eecf','#bc9c6e'],
+   ['#e1e9f6','#738dbe'],['#f6dfe5','#be8aa3'],['#f2eee6','#9f9fbe'],
+   ['#e6edda','#8d9b64'],['#fbe8d2','#d58c79'],['#dae8e8','#769aa4']];
+  const urbanStyles=[
+   ['#e8e5df','#9aa3b7'],['#e9e1f0','#9989b7'],['#e1edf0','#7c9fa9'],
+   ['#f2e7d7','#b9967e'],['#e6e9dd','#929c7a'],['#f1e1d8','#b87979'],
+   ['#e3e8f0','#889bb6'],['#ebe1d2','#af9876'],['#e4ebe7','#769e98'],
+   ['#f0e1e8','#af819c']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
     acc:urban?'#9eafbc':palette[1],icon:urban?'🏬':'🏠'};
-  const variant=Math.floor(hash(x+137,y-211)*6);b.facade=variant;
+  const variant=Math.floor(hash(x+137,y-211)*10);b.facade=variant;
   if(urban){b.acc=palette[1];b.icon=job==='shop'?'🛍️':job==='papers'?'📚':job==='delivery'?'📮':'🏠';
    b.day=facade(V.cityBuilding(b.wall,b.acc,b.icon,false),b,false);
    b.night=facade(V.cityBuilding(b.wall,b.acc,b.icon,true),b,true);
@@ -352,8 +388,12 @@ window.WalesaMainland=(()=>{
   if(!urban&&!job){
    if(spr.fence){V.addObj(main,spr.fence,x-40,yGarden,V.rectS(x-49,yGarden-4,18,4));
     V.addObj(main,spr.fence,x+40,yGarden,V.rectS(x+31,yGarden-4,18,4))}
-   if(seed%2===0&&spr.bush?.[0])V.addObj(main,spr.bush[0],side,yGarden,null);
+   if(seed%2===0&&spr.bush?.[seed%3])V.addObj(main,spr.bush[seed%3],side,yGarden,null);
    if(seed%3===0&&spr.bench)V.addObj(main,spr.bench,x+58,y+7,null);
+   if(spr.pot){
+    if(seed%3!==1)V.addObj(main,spr.pot[seed%2],x-32,y+6,null);
+    if(seed%3===0)V.addObj(main,spr.pot[(seed+1)%2],x+32,y+6,null);
+   }
   }else if(urban&&seed%2===0&&spr.lamp){
    V.addObj(main,spr.lamp,x+52,y+5,null);main.glows.push([x+52,y-19]);
   }
@@ -362,7 +402,7 @@ window.WalesaMainland=(()=>{
  function adorn(){
   const a=V.spr,rg=V.rng(514721);
   const clearNear=(x,y,rad)=>houses.some(b=>Math.hypot(b.x-x,b.y-y)<rad)||nearbyRoad(x,y,27)||Math.hypot(x-P.village.x,y-P.village.y)<115;
-  for(let k=0;k<3300;k++){
+  for(let k=0;k<4050;k++){
    const x=ORX+50+rg()*(RW-90),y=ORY+60+rg()*(RH-110);
    const u=(x-ORX)/RW,v=(y-ORY)/RH,z=height(x,y),b=biome(x,y),p=rg();
    if(coast(x,y)>.84||clearNear(x,y,28))continue;
@@ -378,7 +418,9 @@ window.WalesaMainland=(()=>{
    }else if(p>.37){
     V.addObj(main,a.tree[p>.88?'pink':'green'],x,y,V.circS(x,y-5,9));
    }else if(p>.18){
-    V.addObj(main,a.bush[0],x,y,null);
+    V.addObj(main,a.bush[Math.floor(hash(x+31,y+23)*a.bush.length)],x,y,null);
+   }else if(p>.12&&a.pot&&['pueblo','valle','meseta'].includes(zone(x,y))){
+    V.addObj(main,a.pot[Math.floor(hash(x,y+53)*a.pot.length)],x,y,null);
    }
   }
   // Hitos propios de la región, pero con sprites exclusivos del juego.
@@ -387,6 +429,29 @@ window.WalesaMainland=(()=>{
                       [P.village.x-52,P.village.y+52],[P.village.x+52,P.village.y+52],
                       [P.plateau.x-35,P.plateau.y-20],[P.town.x+100,P.town.y-20]]){
    V.addObj(main,a.lamp,x,y,V.rectS(x-2,y-3,4,3));main.glows.push([x,y-24]);
+  }
+ }
+ function decoratePlaza(){
+  const a=V.spr,nearHouse=(x,y)=>houses.some(b=>Math.hypot(b.x-x,b.y-y)<53);
+  // Arriates, faroles y rincones de lectura bordean el pavimento circular.
+  // Se utilizan objetos nativos, con espacios de paso despejados para puertas.
+  for(let i=0;i<24;i++){
+   const angle=i/24*Math.PI*2-.2,r=i%3===0?162:174;
+   const x=Math.round(PLAZA.x+Math.cos(angle)*r),
+    y=Math.round(PLAZA.y+Math.sin(angle)*r);
+   if(nearHouse(x,y))continue;
+   if(i%6===0&&a.lamp){
+    V.addObj(main,a.lamp,x,y,V.rectS(x-2,y-3,4,3));main.glows.push([x,y-24]);
+   }else if(i%4===0&&a.pot){
+    V.addObj(main,a.pot[i%2],x,y,null);
+   }else if(a.bush){
+    V.addObj(main,a.bush[i%3],x,y,null);
+   }
+  }
+  for(let i=0;i<8;i++){
+   const angle=i/8*Math.PI*2+.21,x=Math.round(PLAZA.x+Math.cos(angle)*119),
+    y=Math.round(PLAZA.y+Math.sin(angle)*119);
+   if(!nearHouse(x,y)&&a.bench)V.addObj(main,a.bench,x,y,null);
   }
  }
  function structures(){
@@ -417,7 +482,7 @@ window.WalesaMainland=(()=>{
   building('ridge-lodge','Mirador de la Cordillera',3510,910,'home');
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
   normalizePlazaRoads();
-  adorn();
+  adorn();decoratePlaza();
  }
 
  const scenic=[];
@@ -849,6 +914,32 @@ window.WalesaMainland=(()=>{
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
   H.tab.push(navigationTab);
+  H.ground.push((g,ox,oy,t)=>{
+   if(!main||X.M()!==main||X.st.scene!=='out')return;
+   const p=X.player,regional=zone(p.x,p.y),atPark=plazaDistance(p.x,p.y)<300;
+   if(!atPark&&!['forest','pueblo','valle'].includes(regional))return;
+   const evening=X.night(),count=evening?24:19,baseX=Math.floor(p.x/150)*150,baseY=Math.floor(p.y/150)*150;
+   g.save();
+   for(let i=0;i<count;i++){
+    const gx=baseX+(i%6-2)*75+hash(i,31)*55,
+      gy=baseY+(Math.floor(i/6)-1)*90+hash(i,51)*60;
+    if(coast(gx,gy)>.85||nearbyRoad(gx,gy,11)&&!atPark)continue;
+    const phase=i*2.37+hash(i,71)*6.28,
+     x=gx+Math.sin(t*.7+phase)*12-ox,
+     y=gy+Math.cos(t*.43+phase)*9-oy;
+    if(evening){
+     const a=.28+.27*(.5+.5*Math.sin(t*2.3+phase));
+     g.globalAlpha=a;g.fillStyle='#fff1a4';
+     g.beginPath();g.arc(x,y-6,1.3,0,Math.PI*2);g.fill();
+     g.globalAlpha=a*.21;g.beginPath();g.arc(x,y-6,6,0,Math.PI*2);g.fill();
+    }else{
+     g.globalAlpha=.24+.12*Math.sin(t+phase);
+     g.fillStyle=i%4===0?'#f5d3a3':i%3===0?'#e9bdd2':'#f5ead5';
+     g.fillRect(x,y,2+(i%3===0),1.3);
+    }
+   }
+   g.restore();
+  });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
    for(const p of scenic)list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
   H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Una nueva parada de Walesa con el mobiliario y la vegetación del mundo original.')});
