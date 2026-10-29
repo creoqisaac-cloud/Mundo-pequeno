@@ -67,6 +67,13 @@ async function slideZipper(page){
   assert.deepEqual(tabs51.names,['tasks','pets','cartas','dex','quests','partida','opts'],'Mochila: conservar Cartas, Encargos y Partida sin Mapa ni Armario');
   assert.equal(tabs51.display,'grid','Mochila: dos filas ordenadas');
   assert.equal(tabs51.columns,12,'Mochila: cuadricula de 12 columnas para dos filas 4+3');
+  const rows51=await page.locator('#tabs button').evaluateAll(buttons=>{
+   const groups=new Map();
+   for(const b of buttons){const y=Math.round(b.getBoundingClientRect().top);groups.set(y,(groups.get(y)||0)+1)}
+   return [...groups.values()];
+  });
+  assert.deepEqual(rows51,[4,3],'Se deben ver dos filas, una de cuatro y otra de tres');
+
   await page.locator('#wcControlOptions40').waitFor({state:'visible'});
   await page.locator('#wcControlOptions40 [data-mode="joy"]').click();
   await page.locator('#wcControlOptions40 [data-size="144"]').click();
@@ -149,7 +156,11 @@ async function slideZipper(page){
    const x=c.getContext('2d');x.fillStyle='#efabc9';x.fillRect(0,0,4,4);
    return c.toDataURL('image/png');
   });
-  await page.locator('#wcWallpaperInput51').setInputFiles({
+  const [wallpaperChooser]=await Promise.all([
+   page.waitForEvent('filechooser'),
+   page.locator('#wcWallpaperButton51').click()
+  ]);
+  await wallpaperChooser.setFiles({
    name:'fondo-de-prueba.png',mimeType:'image/png',
    buffer:Buffer.from(imageData.split(',')[1],'base64')
   });
@@ -180,6 +191,12 @@ async function slideZipper(page){
   assert.equal(leaving,'visible','El celular no debe desaparecer instantaneamente');
   await page.waitForTimeout(450);
   assert.equal(await page.locator('.fon').evaluate(el=>el.classList.contains('on')),false);
+  // La imagen sigue guardada al cerrar y volver a abrir el telefono.
+  await page.evaluate(()=>document.getElementById('fonBtn').click());
+  await page.locator('#game .fon.on').waitFor({state:'visible'});
+  assert.equal(await page.locator('#game .fon').evaluate(el=>el.classList.contains('has-wallpaper')),true);
+  await page.evaluate(()=>window.Fon.close());
+
 
   // Validar que el motor siga pintando después de cerrar Opciones.
   await page.evaluate(async()=>{await Game.enter();});
