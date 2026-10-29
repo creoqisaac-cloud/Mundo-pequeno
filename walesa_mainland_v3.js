@@ -633,7 +633,7 @@ window.WalesaMainland=(()=>{
    ['#f0e1e8','#af819c']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
     acc:urban?'#9eafbc':palette[1],icon:urban?'🏬':'🏠'};
   const variant=Math.floor(hash(x+137,y-211)*10);b.facade=variant;
-  if(urban){b.acc=palette[1];b.icon=job==='shop'?'🛍️':job==='papers'?'📚':job==='delivery'?'📮':'🏠';
+  if(urban){b.acc=palette[1];b.icon=({shop:'🛍️',papers:'📚',delivery:'📮',arcade:'🕹️',pasteles:'🧁',moda:'👗',mascotas:'🐾',salon:'✂️'})[job]||'🏠';
    b.day=facade(V.cityBuilding(b.wall,b.acc,b.icon,false),b,false);
    b.night=facade(V.cityBuilding(b.wall,b.acc,b.icon,true),b,true);
   }else{
@@ -1589,5 +1589,9 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,replayArrival,get arrivalRunning(){return arrivalRunning},kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,
+   destinations,startGuide,mountPhone,replayArrival,roadClearance,
+   get streetSegments(){return seg},get townResidents(){return residents.map(r=>r.id)},
+   get arrivalRunning(){return arrivalRunning},
+   kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
