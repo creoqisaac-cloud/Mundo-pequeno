@@ -1813,6 +1813,10 @@ const World=(()=>{
   return runGen(m,false).then(result=>{
    for(const p of result.plots)addObj(result,plotSprite('lot'),p.x,p.y,null,{plot:p});
    if(!forest)addObj(result,sprites().fount[0],384,324,circS(384,312,15),{fount:true});
+   if(forest&&gx===0&&gy===0)addObj(result,sprites().sign,70,350,rectS(67,346,6,4),{expMarker:true});
+   if(!forest&&gx===16&&gy===16)addObj(result,sprites().sign,67,350,rectS(64,346,6,4),{expMarker:true});
+   if(!forest&&gx===31&&gy===31)addObj(result,sprites().sign,690,604,rectS(687,600,6,4),{expMarker:true});
+   if(forest&&seed%3===0)addObj(result,sprites().glowF[seed%3],542,534,null,{glowF:true});
    return result;
   });
  }
@@ -10149,6 +10153,7 @@ window.Wardrobe=Wardrobe;
 </script>
 <script src="./picnic_v31.js"></script>
 <script src="./native_joystick40.js"></script>
+<script src="./world_expansion_v1.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
