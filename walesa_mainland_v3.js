@@ -130,7 +130,16 @@ window.WalesaMainland=(()=>{
    (V.vnoise((x+690)/57,(y-320)/57)-.5)*37;
   const bendY=(V.vnoise((x-380)/174,(y+610)/174)-.5)*96+
    (V.vnoise((x+113)/49,(y+900)/49)-.5)*32;
-  return T.classify(clamp((x+bendX-ORX)/RW,0,1),clamp((y+bendY-ORY)/RH,0,1));
+  const tx=clamp((x+bendX-ORX)/RW,0,1),
+   ty=clamp((y+bendY-ORY)/RH,0,1),
+   native=T.classify(tx,ty);
+  // Valle real de tamarindo según la franja cálida de las muestras del norte:
+  // no era visible porque el muestreo duro convertía casi toda esa franja
+  // en montaña o ciudad. Sus curvas se apoyan en ruido continuo de baja escala.
+  const warm=Math.hypot((tx-.53)/.21,(ty-.285)/.155)+
+   (V.vnoise((x+220)/185,(y-510)/185)-.5)*.29;
+  if(warm<1&&!(tx>.63&&ty>.36))return 'chile';
+  return native;
  }
  // Misma biblioteca cromática del suelo original, no una segunda paleta artificial.
  const COL={town:V.BIO.town.g,chile:V.BIO.chile.g,city:V.BIO.city.g,
