@@ -1744,19 +1744,20 @@ const World=(()=>{
  function runGen(m,sync){m.islandD=m.islandD||islandDf(m);const it=genGround(m);
   if(sync){let r;do{r=it.next()}while(!r.done);placeObjects(m);return Promise.resolve(m)}
   return new Promise(res=>{const step=()=>{const t0=performance.now();let r;do{r=it.next();if(typeof r.value==='number')progress=r.value}while(!r.done&&performance.now()-t0<12);if(r.done){placeObjects(m);progress=1;res(m)}else setTimeout(step,0)};step()})}
- function prepare(){if(!mainP){MAIN.islandD=islandDf(MAIN);mainP=runGen(MAIN).then(m=>{rooms=MAIN.build.filter(b=>b.room!==undefined).sort((a,b)=>a.room-b.room).map(b=>genRoom(b.room,b.name));if(!map)map=m;return m})}return mainP}
+ function prepare(){if(!mainP){MAIN.islandD=MAIN.islandD||islandDf(MAIN);mainP=runGen(MAIN).then(m=>{rooms=MAIN.build.filter(b=>b.room!==undefined).sort((a,b)=>a.room-b.room).map(b=>genRoom(b.room,b.name));if(!map)map=m;return m})}return mainP}
  function polaroid(cv){prepare().then(m=>{const x=cv.getContext('2d');x.imageSmoothingEnabled=false;const P=m.spots.plaza,sx=P.x-64,sy=P.y-62;x.drawImage(m.ground,sx,sy,128,96,0,0,128,96);
   const list=m.objs.filter(o=>o.x>sx-40&&o.x<sx+168&&o.y>sy-10&&o.y<sy+140).sort((a,b)=>a.y-b.y);for(const o of list)x.drawImage(o.s.c,Math.round(o.x-o.s.ax-sx),Math.round(o.y-o.s.ay-sy));
   const k=charSprite({type:'kitty',fur:'#ffffff',outfit:'sueter',oColor:'#fffaf6',acc:'bow',aColor:'#e8456f'},0,0);x.drawImage(k.c,Math.round(P.x-k.ax-sx),Math.round(P.y+44-k.ay-sy));
   const mm=charSprite(NPCDEF.melody,3,0);x.drawImage(mm.c,Math.round(P.x-26-mm.ax-sx),Math.round(P.y+42-mm.ay-sy))})}
  return{C,mk,PB,hash,vnoise,HOOK,BIO,OUTFITS,ACCS,NPCDEF,charSprite,MAIN,rng,addObj,rectS,circS,TREE_PAL,
-  CITY,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
+  CITY,landShape:islandDf,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
   get map(){return map},use(m){map=m},get spr(){return sprites()},get sea(){return seaTile()},get rooms(){return rooms},get progress(){return progress},
   prepare,polaroid,mysteryDef,makeRegion(def){return runGen(def)},makeMystery(seed){const m=mysteryDef(seed);return runGen(m,true)},makeKind(kind,seed){const m=mysteryDef(seed);m.kind=kind;m.biome=()=>kind;m.name=BIO[kind].n;m.id=kind+seed;m.pond=null;return runGen(m,true)},spawnPicks,
   blockedOut:(x,y,r)=>blockedOutM(map,x,y,r),blockedIn,findPath,islandD:(x,y)=>map.islandD(x,y),biomeAt:(x,y)=>{if(!map||!map.bio)return'town';x=clamp(x|0,0,map.MW-1);y=clamp(y|0,0,map.MH-1);return Object.keys(BIO)[map.bio[y*map.MW+x]]},treeSprite,ensure:prepare}
 })();
-World.prepare();
 </script>
+<script src="./native46/mainworld.js"></script>
+<script>World.prepare();</script>
 <script>
 /* ═════════════ ARTE PINTADO A MANO: ACUARELA, TINTA Y VOLUMEN ═════════════
    Todo se dibuja con trazos vectoriales a 3× y se guarda junto a una copia chica (ver drawImage en el núcleo). */
@@ -2558,7 +2559,7 @@ const Game=(()=>{
    else if(veh!=='auto'){const s=V.vehSprite(veh,left);g.drawImage(s.c,x-s.ax,y-s.ay+(veh==='globo'?Math.sin(st.t*3)*2:0));y-=veh==='patineta'?4:veh==='globo'?10:7}}
   /* rebote y balanceo al caminar; respiración suave quieto */
   const ef=e.emoF!=null?e.emoF:e.frame,s=V.charSprite(sp,e.emoF!=null&&e.emoF!==13?0:e.dir,ef),mv=e.frame===1||e.frame===2;g.save();g.translate(x,y-(e.frame?1:0));if(mv){const k=Math.sin(st.t*13+e.x*.07);g.rotate(k*.03);g.scale(1+Math.abs(k)*.025,1-Math.abs(k)*.035)}else if(!e.frame){const b=Math.sin(st.t*2.1+e.x*.05);g.scale(1+b*.01,1-b*.014)}g.drawImage(s.c,-s.ax,-s.ay);g.restore();
-  if(veh==='auto'){const v=V.vehSprite('auto',e.dir===2);g.drawImage(v.c,x-v.ax,y-v.ay+6)}
+  if(veh==='auto'){const v=V.vehSprite('auto',e.dir===2,e.dir);g.drawImage(v.c,x-v.ax,y-v.ay+6)}
   g.font='600 8px "Pixelify Sans",monospace';g.textAlign='center';
   if(e.emote){g.fillStyle='#fffaf6';g.fillRect(x+6,y-42,11,10);g.strokeStyle='#24472f';g.lineWidth=1;g.strokeRect(x+6.5,y-41.5,10,9);g.fillStyle=e.emote==='♥'?'#e4799b':'#24472f';g.fillText(e.emote,x+11.5,y-34)}
   if(e.bub){e.bub.t+=dt||1/60;if(e.bub.t>2.6){e.bub=null}else{const w=Math.ceil(g.measureText(e.bub.text).width)+8,by=y-42;g.globalAlpha=Math.min(1,(2.6-e.bub.t)*3,e.bub.t*6);g.fillStyle='#fffaf6';g.fillRect(Math.round(x-w/2),by-9,w,12);g.fillRect(x-1,by+3,3,2);g.strokeStyle='#3a2834';g.lineWidth=1;g.strokeRect(Math.round(x-w/2)+.5,by-8.5,w-1,11);g.fillStyle='#3a2834';g.fillText(e.bub.text,x,by);g.globalAlpha=1}}}
@@ -10009,10 +10010,12 @@ window.Wardrobe=Wardrobe;
 <script src="./native46/arcade.js"></script>
 <script src="./native46/pizza.js"></script>
 <script src="./native46/kitchen.js"></script>
+<script src="./native46/models3d.js"></script>
 <script src="./native46/transport.js"></script>
 <script src="./native46/polish.js"></script>
 <script src="./native46/neighbors.js"></script>
-<script src="./native46/scenery.js"></script>
+
+<script src="./native46/mainworld_play.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
