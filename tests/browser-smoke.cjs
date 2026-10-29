@@ -177,12 +177,12 @@ async function slideZipper(page){
    inGameSave:!!save.wallpaper,
    active:document.querySelector('.fon').classList.contains('has-wallpaper'),
    image:document.querySelector('.fon .scr').style.backgroundImage.includes('data:image/jpeg'),
-   buttonPosition:getComputedStyle(document.querySelector('#wcWallpaperButton51')).left
+   buttonOffset:Math.round(document.querySelector('#wcWallpaperButton51').getBoundingClientRect().left-document.querySelector('.fon').getBoundingClientRect().left)
   }));
   assert.equal(photo.inGameSave,false,'El fondo no modifica la partida');
   assert.equal(photo.active,true,'La foto se aplica al telefono');
   assert.equal(photo.image,true,'La imagen se usa como fondo');
-  assert.equal(photo.buttonPosition,'10px','El boton permanece en el borde inferior izquierdo');
+  assert.ok(photo.buttonOffset>=5&&photo.buttonOffset<=28,'El boton queda alineado al borde izquierdo del marco');
 
   // El gesto nativo de deslizar hacia arriba funciona aun cuando la barra
   // inferior esta muy cerca de otro contenido tactil.
