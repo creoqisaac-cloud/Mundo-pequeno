@@ -1,9 +1,0 @@
-(()=>{'use strict';const E=Expansion46,{X,G,V,P,H,S}=E;
-// Resolve generated collectibles against the live collision grid, once per map.
-H.update.push(()=>{const m=V.map;if(!m?.exp46||m.access46)return;m.access46=true;for(const q of m.collect46||[])Object.assign(q,E.free(m,q.x,q.y,10));m.motes46=Array.from({length:6},(_,i)=>({x:m.cx+Math.cos(i)*190,y:m.cy+Math.sin(i)*160,phase:i,cool:0}));});
-H.update.push(dt=>{const m=V.map;if(m?.exp46!=='forest'||X.st.scene!=='out'||X.st.busy||X.st.mg)return;for(const q of m.motes46||[]){q.phase+=dt*.5;q.cool=Math.max(0,q.cool-dt);const x=q.x+Math.sin(q.phase)*24,y=q.y+Math.cos(q.phase)*16;if(!q.cool&&Math.hypot(X.player.x-x,X.player.y-y)<15){q.cool=7;X.resetInput();const p=E.free(m,X.player.x+Math.sign(X.player.x-x||1)*20,X.player.y+20);Object.assign(X.player,p);X.toast('🍃 ¡Una ráfaga traviesa! Sigue el sendero iluminado.')}}});
-H.bill.push(bb=>{if(V.map?.exp46!=='forest'||X.st.scene!=='out')return;for(const q of V.map.motes46||[]){const x=q.x+Math.sin(q.phase)*24,y=q.y+Math.cos(q.phase)*16;bb.push({x,y,draw:g=>{for(let i=0;i<5;i++){const a=q.phase*3+i*1.25;P.wc(g,P.E(Math.cos(a)*9,-8+Math.sin(a)*5,3,1.5),'#a8c6ac',{lw:.25})}E.text(g,'✦',0,-9,8,'#fff8b8') }})}});
-// Extend the native phone catalog after the original catalog initializer.
-setTimeout(()=>{const L=X.ARCADE;if(!L)return;const piano=L.find(a=>a[0]==='simon8');if(piano)piano.splice(0,4,'piano46','🎹','Piano de melodías','Melodías variables · dificultad progresiva');for(const a of [['circulos46','🎯','Jardín Musical','Toca al ritmo de los círculos'],['saltarin46','☁️','Salto sin fin','Sube y supera tu marca']])if(!L.some(b=>b[0]===a[0]))L.push(a)},0);
-H.inter.push(l=>{if(V.map===V.MAIN&&X.st.scene==='out'){const a=V.MAIN.spots.gazebo;if(a)E.addPoint(l,'music46',a.x,a.y+10,'🎸 Ensayar en el kiosco')}});
-})();

@@ -1,4 +1,4 @@
-/* Isla de Walesa · Control nativo v46.
+/* Isla de Walesa · Control nativo v45.
    Sin dependencias: el joystick no puede detener el bucle del juego.
    Al soltarlo, tocar el suelo sigue disponible como control de respaldo. */
 (()=>{
@@ -100,9 +100,7 @@
   function position(){
    const r=game.getBoundingClientRect(),w=Math.max(1,r.width||innerWidth),h=Math.max(1,r.height||innerHeight);
    cfg.hitArea=clamp(Number(cfg.hitArea)||180,Math.max(cfg.size,120),260);
-   // Respetar la posición elegida tomando como referencia el círculo visible.
-   // La zona invisible puede extenderse hasta el borde sin mover la flor.
-   const half=cfg.size/2+10;
+   const half=cfg.hitArea/2+10;
    const xmin=Math.min(49,half/w*100),ymin=Math.min(49,half/h*100);
    stick.style.width=cfg.hitArea+'px';
    stick.style.height=cfg.hitArea+'px';
@@ -269,4 +267,69 @@
   window.WalesaJoystick40=fallback;
   window.WalesaJoystick41=fallback;
  }
+})();
+
+/* Restauracion selectiva de UI sobre el motor estable v45.
+   No modifica mapas, objetos, minijuegos, jugadores ni guardado. */
+(()=>{
+ 'use strict';
+ if(typeof document==='undefined'||typeof document.querySelector!=='function'||typeof MutationObserver!=='function')return;
+ const bag=document.querySelector('#sheet'),pull=bag&&bag.querySelector('.panel h3 .close');
+ const phone=document.querySelector('#game .fon');
+ if(!bag||!pull||!phone)return;
+
+ // La X es el tirador de la cremallera, no un boton de cierre por toque.
+ // El cierre horizontal original por pointerdown/move/up permanece intacto.
+ pull.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation()},true);
+ pull.setAttribute('aria-label','Desliza hacia la izquierda para cerrar la mochila');
+ pull.setAttribute('title','Desliza el tirador hacia la izquierda');
+
+ const style=document.createElement('style');
+ style.id='wcOnlyClosings50';
+ style.textContent=[
+  '#game #wcBagZipTrack37{box-shadow:0 1px 1px #78475b3c,inset 0 0 0 1px #fff8}',
+  '#game #sheet .panel h3 .close.wcDragging37{background:#f5c8de;border-color:#fff;box-shadow:0 1px 8px #b76e9999,inset 0 1px 1px #fff8}',
+  '#game #sheet.wcZipClosing37{background:rgba(26,16,32,0);transition:background .21s ease}',
+  '#game #sheet.wcZipClosing37 .panel{transform:translate3d(-38%,22px,0) rotate(-5deg) scale(.83);transform-origin:10% 20%;opacity:0;filter:blur(1.3px);transition:transform .21s cubic-bezier(.46,0,.72,.30),opacity .21s ease-in,filter .21s ease-in}',
+  '#game #sheet.wcBagLeaving50 .panel{transform:translateY(38px) scale(.95);opacity:0;transition:transform .22s ease-in,opacity .22s ease-in}',
+  '#game .fon{opacity:1;filter:none;transform-origin:center 85%;transition:transform .34s cubic-bezier(.22,.82,.28,1),opacity .34s ease,filter .34s ease}',
+  '#game .fon.on{transform:translate(-50%,0);opacity:1;filter:none}',
+  '#game .fon.wcPhoneLeaving50:not(.on){visibility:visible;pointer-events:none;transform:translate(-50%,113%) rotate(5deg) scale(.92);opacity:0;filter:blur(1.3px)}',
+  '@media(prefers-reduced-motion:reduce){#game #sheet.wcZipClosing37 .panel,#game #sheet.wcBagLeaving50 .panel,#game .fon{transition-duration:.01ms!important;filter:none!important}}'
+ ].join('\n');
+ document.head.appendChild(style);
+
+ // Solamente observar transiciones reales, nunca reescribir clases sin condicion.
+ let bagWasOn=bag.classList.contains('on'),zipper=false,bagTimeout=0;
+ const bagObserver=new MutationObserver(()=>{
+  const now=bag.classList.contains('on');
+  if(now){
+   if(bag.classList.contains('wcZipClosing37'))zipper=true;
+   if(bag.classList.contains('wcBagLeaving50'))bag.classList.remove('wcBagLeaving50');
+   clearTimeout(bagTimeout);
+  }else if(bagWasOn){
+   if(!zipper){
+    bag.classList.add('wcBagLeaving50');
+    bagTimeout=setTimeout(()=>bag.classList.remove('wcBagLeaving50'),245);
+   }
+   zipper=false;
+  }
+  bagWasOn=now;
+ });
+ bagObserver.observe(bag,{attributes:true,attributeFilter:['class']});
+
+ let phoneWasOn=phone.classList.contains('on'),phoneTimeout=0;
+ const phoneObserver=new MutationObserver(()=>{
+  const now=phone.classList.contains('on');
+  if(now){
+   clearTimeout(phoneTimeout);
+   if(phone.classList.contains('wcPhoneLeaving50'))phone.classList.remove('wcPhoneLeaving50');
+  }else if(phoneWasOn){
+   phone.classList.add('wcPhoneLeaving50');
+   phoneTimeout=setTimeout(()=>phone.classList.remove('wcPhoneLeaving50'),385);
+  }
+  phoneWasOn=now;
+ });
+ phoneObserver.observe(phone,{attributes:true,attributeFilter:['class']});
+ window.WalesaOnlyClosings50={zipperOnly:true,phoneTransition:true,restoredBase:'v45'};
 })();

@@ -1744,20 +1744,19 @@ const World=(()=>{
  function runGen(m,sync){m.islandD=m.islandD||islandDf(m);const it=genGround(m);
   if(sync){let r;do{r=it.next()}while(!r.done);placeObjects(m);return Promise.resolve(m)}
   return new Promise(res=>{const step=()=>{const t0=performance.now();let r;do{r=it.next();if(typeof r.value==='number')progress=r.value}while(!r.done&&performance.now()-t0<12);if(r.done){placeObjects(m);progress=1;res(m)}else setTimeout(step,0)};step()})}
- function prepare(){if(!mainP){MAIN.islandD=MAIN.islandD||islandDf(MAIN);mainP=runGen(MAIN).then(m=>{rooms=MAIN.build.filter(b=>b.room!==undefined).sort((a,b)=>a.room-b.room).map(b=>genRoom(b.room,b.name));if(!map)map=m;return m})}return mainP}
+ function prepare(){if(!mainP){MAIN.islandD=islandDf(MAIN);mainP=runGen(MAIN).then(m=>{rooms=MAIN.build.filter(b=>b.room!==undefined).sort((a,b)=>a.room-b.room).map(b=>genRoom(b.room,b.name));if(!map)map=m;return m})}return mainP}
  function polaroid(cv){prepare().then(m=>{const x=cv.getContext('2d');x.imageSmoothingEnabled=false;const P=m.spots.plaza,sx=P.x-64,sy=P.y-62;x.drawImage(m.ground,sx,sy,128,96,0,0,128,96);
   const list=m.objs.filter(o=>o.x>sx-40&&o.x<sx+168&&o.y>sy-10&&o.y<sy+140).sort((a,b)=>a.y-b.y);for(const o of list)x.drawImage(o.s.c,Math.round(o.x-o.s.ax-sx),Math.round(o.y-o.s.ay-sy));
   const k=charSprite({type:'kitty',fur:'#ffffff',outfit:'sueter',oColor:'#fffaf6',acc:'bow',aColor:'#e8456f'},0,0);x.drawImage(k.c,Math.round(P.x-k.ax-sx),Math.round(P.y+44-k.ay-sy));
   const mm=charSprite(NPCDEF.melody,3,0);x.drawImage(mm.c,Math.round(P.x-26-mm.ax-sx),Math.round(P.y+42-mm.ay-sy))})}
  return{C,mk,PB,hash,vnoise,HOOK,BIO,OUTFITS,ACCS,NPCDEF,charSprite,MAIN,rng,addObj,rectS,circS,TREE_PAL,
-  CITY,landShape:islandDf,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
+  CITY,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
   get map(){return map},use(m){map=m},get spr(){return sprites()},get sea(){return seaTile()},get rooms(){return rooms},get progress(){return progress},
-  prepare,polaroid,mysteryDef,makeRegion(def){return runGen(def)},makeMystery(seed){const m=mysteryDef(seed);return runGen(m,true)},makeKind(kind,seed){const m=mysteryDef(seed);m.kind=kind;m.biome=()=>kind;m.name=BIO[kind].n;m.id=kind+seed;m.pond=null;return runGen(m,true)},spawnPicks,
+  prepare,polaroid,mysteryDef,makeMystery(seed){const m=mysteryDef(seed);return runGen(m,true)},makeKind(kind,seed){const m=mysteryDef(seed);m.kind=kind;m.biome=()=>kind;m.name=BIO[kind].n;m.id=kind+seed;m.pond=null;return runGen(m,true)},spawnPicks,
   blockedOut:(x,y,r)=>blockedOutM(map,x,y,r),blockedIn,findPath,islandD:(x,y)=>map.islandD(x,y),biomeAt:(x,y)=>{if(!map||!map.bio)return'town';x=clamp(x|0,0,map.MW-1);y=clamp(y|0,0,map.MH-1);return Object.keys(BIO)[map.bio[y*map.MW+x]]},treeSprite,ensure:prepare}
 })();
+World.prepare();
 </script>
-<script src="./native46/mainworld.js"></script>
-<script>World.prepare();</script>
 <script>
 /* ═════════════ ARTE PINTADO A MANO: ACUARELA, TINTA Y VOLUMEN ═════════════
    Todo se dibuja con trazos vectoriales a 3× y se guarda junto a una copia chica (ver drawImage en el núcleo). */
@@ -2056,12 +2055,8 @@ const Paint=(()=>{
   /* ventanas y macetas */
   for(const wx of[13,49]){windowP(g,wx,54,10,10,night);flowerBox(g,wx,64.6,10)}
   if(opt.awning){const[c1,c2]=opt.awning;for(let i=0;i<9;i++){const x=10+i*5.6;wc(g,PL([[x,49.6],[x+5.6,49.6],[x+5.6,53.4],[x+2.8,55.4],[x,53.4]]),i%2?c1:c2,{lw:.4,hl:.25})}}
-  /* Letreros a pincel: las casas nuevas no llevan emojis flotantes. */
-  wc(g,RR(27,50,18,6,1.6),'#fbf6ee',{lw:.45,hl:.2});
-  if(opt.sign==='lantern'){wc(g,RR(34.7,50.7,2.6,3.4,.6),'#e7bf71',{lw:.28,gloss:.5});ln(g,[[34.3,51],[35.2,50.3],[37,50.3],[37.8,51]],'#6c9b87',.5);dot(g,36,52.1,.6,'#fff7c9')}
-  else if(opt.sign==='jam'){wc(g,RR(33,51.1,6,3.1,1),'#b65670',{lw:.3,gloss:.4});wc(g,RR(32.9,50.4,6.2,1.1,.35),'#f4c38e',{lw:.25});dot(g,35.2,52.3,.55,'#ffe7f0')}
-  else if(opt.sign==='kite'){wc(g,PG([[36,50.5],[39,52],[36,54.3],[33,52]]),'#8bc6d2',{lw:.3,gloss:.4});ln(g,[[36,50.5],[36,54.3]],'#fffaf2',.4);ln(g,[[36,54.3],[38,55.3]],'#b6788e',.4)}
-  else emoji(g,SIGNI[opt.sign]||'💗',36,53.2,4.6);
+  /* letrero */
+  wc(g,RR(27,50,18,6,1.6),'#fbf6ee',{lw:.45,hl:.2});emoji(g,SIGNI[opt.sign]||'💗',36,53.2,4.6);
   if(opt.flag){ln(g,[[58,2],[58,16]],'#6e4630',.7);wc(g,PL([[58.4,2.6],[66,4.4],[58.4,7.6]]),'#e4799b',{lw:.4})}
   wc(g,RR(25,78,22,2,1),'#d9c7a6',{lw:.3,flat:1});wc(g,RR(27,76.4,18,2.2,1),'#e9dcc4',{lw:.35});for(const x of[25.4,46.6]){wc(g,RR(x-.7,64,1.4,10,.6),'#4b3044',{lw:.25});wc(g,E(x,63,2,2.4),night?'#ffe08a':'#fff6d6',{lw:.35,gloss:.5})}
   for(let i=0;i<6;i++){g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=.5;g.beginPath();g.moveTo(10+i*9,46.2);g.lineTo(13+i*9,46.2);g.stroke()}},{clean:1,grain:.1});
@@ -2097,18 +2092,6 @@ const Paint=(()=>{
  HK.stand=(c1,c2,icon)=>paint(48,46,24,45,g=>{wc(g,RR(4,24,40,20,1.6),'#d39a72',{hl:.3});for(let x=6;x<44;x+=6)ln(g,[[x,26],[x,42]],'#b98058',.5,.8);for(const x of[5,41])wc(g,RR(x,8,2.4,18,1),'#a8734f',{lw:.4});
   for(let i=0;i<8;i++){const x=2+i*5.5;wc(g,PL([[x,6],[x+5.5,6],[x+5.5,12],[x+2.75,14.4],[x,12]]),i%2?c1:c2,{lw:.4,hl:.3})}wc(g,RR(2,4,44,3,1.2),tn(c1,-.2),{lw:.4});
   if(icon==='cotton')for(const[x,c]of[[14,'#f7b6d2'],[24,'#bfe3f7'],[34,'#f7b6d2']]){ln(g,[[x,30],[x,23]],'#fffaf6',1);wc(g,E(x,19.6,4.2,4),c,{hl:.5,sh:.1})}
-  else if(icon==='castle'){
-   // Puestito original de 48×46, arena húmeda, torres, pala y cubeta a pincel.
-   wc(g,E(24,25,16,4.2),'#efd7a4',{lw:.3,hl:.3});
-   wc(g,RR(18,17,12,7,1),'#e4bd80',{lw:.45,hl:.3});
-   for(const x of[18,22,26])wc(g,RR(x,14.5,3.2,4.2,.5),'#f5d7a0',{lw:.25});
-   wc(g,RR(22,20,4,4,1.8),'#aa805e',{lw:.3});
-   wc(g,PL([[8,29],[14,29],[13,36],[9,36]]),'#9cc9d0',{gloss:.45,lw:.45});
-   ln(g,[[9,29],[13,29]],'#fff9f1',.6);ln(g,[[36,35],[34,19]],'#c08f6f',1.2);
-   wc(g,E(34,18,2,3),'#fff6e6',{lw:.3});
-   wc(g,RR(10,17,4,2,1),'#f7d88f',{lw:.3});
-   for(const x of[10,38])dot(g,x,24,1.1,'#fff7e3',.8)
-  }
   else{wc(g,PL([[18,24],[20,16],[28,15],[31,20],[28,24]]),'#e8456f',{gloss:.3});for(let i=0;i<4;i++)ln(g,[[19+i*3,17],[19+i*3,24]],['#f2c230','#5a9be0','#4fa64a','#fff'][i],.8)}});
  /* Cualquier otro sprite de pixeles se repinta con pinceladas redondas, volumen y grano de papel */
  HK.paintify=(c,ax,ay)=>{const w=c.width,h=c.height,k=PK,d=c.getContext('2d').getImageData(0,0,w,h).data,hi=mk(w*k,h*k),g=hi.getContext('2d'),A=(x,y)=>x<0||y<0||x>=w||y>=h?0:d[(y*w+x)*4+3];
@@ -2346,7 +2329,7 @@ const Game=(()=>{
 
  /* ── Mascotas y criaturas ── */
  const PETS=V.PETS;let wild=[];const petE={x:0,y:0,dir:3,frame:0,anim:0,hop:0};
- const activePet=()=>{const p=save.pets.find(p=>p.uid===save.activePet)||null;return window.Expansion46&&!Expansion46.petAllowed(p)?null:p};
+ const activePet=()=>save.pets.find(p=>p.uid===save.activePet)||null;
  function petTick(){const now=Date.now(),last=save.petTick||now,h=(now-last)/36e5;for(const p of save.pets){p.hunger=clamp((p.hunger==null?80:p.hunger)-h*6,0,100);p.love=clamp((p.love==null?40:p.love)-h*1.5,0,100)}save.petTick=now;persist()}
  const POOLS={nube:['pajarito','conejito','gatito','raton'],candy:['conejito','gatito','cerdito','raton'],chile:['zorro','cerdito','mono','ardilla'],shroom:['conejito','ardilla','raton','zorro'],beach:['cerdito','pajarito','mono','gatito'],snow:['zorro','conejito','oso','ardilla'],star:['pajarito','gatito','zorro'],town:['conejito','cerdito','oso','gatito','raton','ardilla','pajarito']};
  function pickSpecies(pool,R){const w=pool.map(id=>[1,.6,.3,.14][PETS[id].r]);const tot=w.reduce((a,b)=>a+b,0);let r=R()*tot;for(let i=0;i<pool.length;i++){r-=w[i];if(r<=0)return pool[i]}return pool[0]}
@@ -2368,7 +2351,7 @@ const Game=(()=>{
   const r=await ask(P.n+' · '+V.RARITY[P.r],['💕 Ganarme su confianza','Dejarlo tranquilo']);if(r!==0)return;startMG('confianza',{sp:c.sp,wild:c})}
  async function adoptDone(sp,c){const P=PETS[sp];const name=await askName('¿Cómo se va a llamar tu '+P.n.toLowerCase()+'?',P.n);const pet={uid:'p'+Date.now(),sp,name,hunger:70,love:30,born:today()};save.pets.push(pet);if(!save.activePet)save.activePet=pet.uid;save.dex.p[sp]=1;
   if(c){wild=wild.filter(w=>w!==c);if(M().main)save.adopted.ids.push(c.id)}petE.x=player.x;petE.y=player.y+10;persist();progress('adopt');sfx.hatch();hud();toast('🐾 ¡'+name+' ahora vive contigo!')}
- async function petMenu(){if(window.Expansion46?.care)return Expansion46.care();const p=activePet();if(!p||st.busy)return;st.busy=true;try{const P=PETS[p.sp];const ride=false;
+ async function petMenu(){const p=activePet();if(!p||st.busy)return;st.busy=true;try{const P=PETS[p.sp];const ride=false;
   const opts=['💕 Acariciar','🍽 Darle de comer','🫧 Bañar','🏃 Jugar a la carrera','🎾 Juguetes y trucos','🎾 Lanzarle la pelota'];if(ride)opts.push(save.vehicle==='pet'?'⬇ Bajarme':'✨ Montar');opts.push('Nada');
   const r=await ask(`${p.name} · ${P.n} · hambre ${Math.round(100-p.hunger)}% · cariño ${Math.round(p.love)}%`,opts);
   if(r===0){p.love=clamp(p.love+6,0,100);sfx.pet();burst(petE.x,petE.y,'♥');progress('pet3');toast('💕 '+p.name+' está feliz')}
@@ -2519,11 +2502,11 @@ const Game=(()=>{
   if(!moved&&sp>0)for(const a of[.55,-.55,1.05,-1.05,1.45,-1.45]){const c=Math.cos(a),s2=Math.sin(a),tx=e.x+(dx*c-dy*s2)*sp*.85,ty=e.y+(dx*s2+dy*c)*sp*.85;if(!blocked(tx,ty,e.x,e.y)){e.x=tx;e.y=ty;moved=true;break}}if(Math.abs(dx)+Math.abs(dy)>.01)e.dir=Math.abs(dx)>Math.abs(dy)*1.1?(dx<0?2:3):(dy<0?1:0);return moved}
  const keys={};let steer=null;
  const vspeed=()=>st.scene==='in'||!save.vehicle?1:save.vehicle==='pet'?2.1:(V.VEH[save.vehicle]||{sp:1}).sp;
- function updPlayer(dt){if(typeof V5!=='undefined'&&V5.pose.k==='hug'){resetInput();player.frame=5;return}let moved=false,run=false,dx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),dy=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
+ function updPlayer(dt){let moved=false,run=false,dx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),dy=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
   const joy=window.WalesaJoystick37?.vector?.();if(joy){dx+=joy.x;dy+=joy.y}
   if(!joy&&steer&&steer.active&&!st.busy){const w=screenToWorld(steer.x,steer.y);if(w){const ddx=w.x-player.x,ddy=w.y-player.y,d=Math.hypot(ddx,ddy);if(d>5){dx=ddx/d;dy=ddy/d;run=d>70}}}
   if(st.busy||st.poseLock||st.trans||st.menu)dx=dy=0;const m=Math.hypot(dx,dy),ox0=player.x,oy0=player.y,vm=vspeed();
-  if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn||!!(joy&&Math.hypot(joy.x,joy.y)>.92);moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt*(joy?Math.min(1,Math.max(.32,m)):1))}
+  if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn;moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt*(joy?Math.min(1,Math.max(.32,m)):1))}
   else if(player.path&&!st.busy&&!st.poseLock){const [tx,ty]=player.path[0],d=Math.hypot(tx-player.x,ty-player.y);run=player.path.length>2||d>80||!!st.runOn;
    if(d<2.5){player.path.shift();if(!player.path.length)player.path=null}else{const ox=player.x,oy=player.y;step(player,(tx-player.x)/d,(ty-player.y)/d,Math.min(d,(run?88:60)*vm*(window.Health32?Health32.speed:1)*dt));moved=Math.hypot(player.x-ox,player.y-oy)>.05;if(!moved){player.stuck+=dt;if(player.stuck>.5){player.path=null;player.pending=null}}else player.stuck=0}}
   if(player.pending&&!st.busy&&!st.poseLock){const it=player.pending,q=ipos(it);if(it.bug&&!bugs.includes(it.bug))player.pending=null;else if(Math.hypot(q.x-player.x,q.y-player.y)<it.r){player.path=null;player.pending=null;act(it)}else if(!player.path)player.pending=null}
@@ -2575,7 +2558,7 @@ const Game=(()=>{
    else if(veh!=='auto'){const s=V.vehSprite(veh,left);g.drawImage(s.c,x-s.ax,y-s.ay+(veh==='globo'?Math.sin(st.t*3)*2:0));y-=veh==='patineta'?4:veh==='globo'?10:7}}
   /* rebote y balanceo al caminar; respiración suave quieto */
   const ef=e.emoF!=null?e.emoF:e.frame,s=V.charSprite(sp,e.emoF!=null&&e.emoF!==13?0:e.dir,ef),mv=e.frame===1||e.frame===2;g.save();g.translate(x,y-(e.frame?1:0));if(mv){const k=Math.sin(st.t*13+e.x*.07);g.rotate(k*.03);g.scale(1+Math.abs(k)*.025,1-Math.abs(k)*.035)}else if(!e.frame){const b=Math.sin(st.t*2.1+e.x*.05);g.scale(1+b*.01,1-b*.014)}g.drawImage(s.c,-s.ax,-s.ay);g.restore();
-  if(veh==='auto'){const v=V.vehSprite('auto',e.dir===2,e.dir);g.drawImage(v.c,x-v.ax,y-v.ay+6)}
+  if(veh==='auto'){const v=V.vehSprite('auto',e.dir===2);g.drawImage(v.c,x-v.ax,y-v.ay+6)}
   g.font='600 8px "Pixelify Sans",monospace';g.textAlign='center';
   if(e.emote){g.fillStyle='#fffaf6';g.fillRect(x+6,y-42,11,10);g.strokeStyle='#24472f';g.lineWidth=1;g.strokeRect(x+6.5,y-41.5,10,9);g.fillStyle=e.emote==='♥'?'#e4799b':'#24472f';g.fillText(e.emote,x+11.5,y-34)}
   if(e.bub){e.bub.t+=dt||1/60;if(e.bub.t>2.6){e.bub=null}else{const w=Math.ceil(g.measureText(e.bub.text).width)+8,by=y-42;g.globalAlpha=Math.min(1,(2.6-e.bub.t)*3,e.bub.t*6);g.fillStyle='#fffaf6';g.fillRect(Math.round(x-w/2),by-9,w,12);g.fillRect(x-1,by+3,3,2);g.strokeStyle='#3a2834';g.lineWidth=1;g.strokeRect(Math.round(x-w/2)+.5,by-8.5,w-1,11);g.fillStyle='#3a2834';g.fillText(e.bub.text,x,by);g.globalAlpha=1}}}
@@ -2669,7 +2652,7 @@ const Game=(()=>{
 
  /* ── HUD ── */
  function hud(){$('#memCount').textContent=save.mem.length;$('#bells').textContent=Math.round(shownBells).toLocaleString('es-MX');vehHud()}
- function vehOptions(){return save.ownedVeh||[]}
+ function vehOptions(){return[]}
  function vehHud(){const b=$('#vehBtn'),o=vehOptions();b.hidden=!o.length;const ic={bici:'🚲',patineta:'🛹',scooter:'🛵',auto:'🚗',globo:'☁️',pet:'🦄'};b.textContent=save.vehicle?ic[save.vehicle]:'🚶‍♀️';b.classList.toggle('on',!!save.vehicle)}
  $('#vehBtn').addEventListener('click',e=>{e.stopPropagation();const o=[null].concat(vehOptions()),i=o.indexOf(save.vehicle);save.vehicle=o[(i+1)%o.length];persist();sfx.sel();vehHud();if(save.vehicle){progress('ride');toast({bici:'🚲 ¡En bici!',patineta:'🛹 ¡A patinar!',scooter:'🛵 ¡Brum brum!',auto:'🚗 ¡A pasear en auto!',globo:'☁️ ¡Sobre tu nube!',pet:'🦄 ¡Montada en tu mascota!'}[save.vehicle])}else toast('🚶‍♀️ Caminando')});
  let actItem=null;function actBtn(it){const b=$('#act');if(it===actItem&&(it?b.dataset.l===it.label:true))return;actItem=it;if(!it){b.classList.remove('on');return}b.dataset.l=it.label;b.querySelector('span').textContent=it.label;b.classList.add('on')}
@@ -3853,7 +3836,7 @@ const V5=(()=>{const V=World,X=Game.X,H=X.HOOKS,P=Paint,G=Game.G,MG=Game.MG;
  const walkers=[];
  async function choosePets(){const list=save.pets.filter(p=>p.uid!==save.activePet);if(!list.length){X.toast('Solo tienes una mascota acompañándote');return}
   const i=await X.ask('¿Quién más viene a pasear? (hasta 2)',list.map(p=>(save.walk.includes(p.uid)?'✓ ':'')+p.name+' · '+V.PETS[p.sp].n).concat(['Listo']));if(i>=list.length)return;const u=list[i].uid;if(save.walk.includes(u))save.walk=save.walk.filter(x=>x!==u);else{save.walk.push(u);if(save.walk.length>2)save.walk.shift()}persist();sfx.pet();choosePets()}
- function syncWalkers(){const want=save.walk.map(u=>save.pets.find(p=>p.uid===u)).filter(p=>p&&p.uid!==save.activePet&&(!window.Expansion46||Expansion46.petAllowed(p)));for(let i=walkers.length-1;i>=0;i--)if(!want.includes(walkers[i].pet))walkers.splice(i,1);for(const p of want)if(!walkers.some(w=>w.pet===p))walkers.push({pet:p,x:X.player.x,y:X.player.y+12,dir:3,frame:0,anim:0,hop:0})}
+ function syncWalkers(){const want=save.walk.map(u=>save.pets.find(p=>p.uid===u)).filter(p=>p&&p.uid!==save.activePet);for(let i=walkers.length-1;i>=0;i--)if(!want.includes(walkers[i].pet))walkers.splice(i,1);for(const p of want)if(!walkers.some(w=>w.pet===p))walkers.push({pet:p,x:X.player.x,y:X.player.y+12,dir:3,frame:0,anim:0,hop:0})}
  const SN=[['semilla','🌱 unas semillas'],['concha','🐚 una concha'],['flor','🌸 una flor'],['hongo','🍄 un hongo'],['dulce','🍬 un caramelo'],[null,'🔔 30 campanas']];
  let sniffT=20,huntT=15,song=0;const anim={};
  function singing(){const ap=X.activePet();return(ap&&V.PETS[ap.sp].sings)||walkers.some(w=>V.PETS[w.pet.sp].sings)}
@@ -6512,17 +6495,17 @@ window.Wardrobe=Wardrobe;
    Sólo existen las especies que dibujaste. Las mascotas que no te acompañan se quedan en la
    Casita de mascotas, junto a tu casa: ahí juegan, duermen y puedes ir por la que quieras. */
 (()=>{const V=World,P=Paint,X=Game.X,H=X.HOOKS,A=window.PetsArt;
- const MINE=new Set([...A.MINE,'chocobunny46','gummy46','owlcat46']);
+ const MINE=new Set(A.MINE);
  /* fuera las especies que no son tuyas (el catálogo, la colección y los huevos sólo muestran las tuyas) */
  for(const k of Object.keys(V.PETS))if(!MINE.has(k))delete V.PETS[k];
  /* las mascotas de especies que ya no existen se vuelven una de las tuyas (conservan nombre y cariño) */
- function migrate(){if(typeof save==='undefined'||!save.pets)return;for(const p of save.pets)if(!MINE.has(p.sp)){p.sp=A.MAP[p.sp]||'conejito';p.var=null}if(save.vehicle==='pet')save.vehicle=null;for(const e of save.eggs||[])if(e.sp&&!MINE.has(e.sp))e.sp=A.MAP[e.sp]||'conejito'}
+ function migrate(){if(typeof save==='undefined'||!save.pets)return;for(const p of save.pets)if(!MINE.has(p.sp)){p.sp=A.MAP[p.sp]||'conejito';p.var=null}save.vehicle=null;for(const e of save.eggs||[])if(e.sp&&!MINE.has(e.sp))e.sp=A.MAP[e.sp]||'conejito'}
  migrate();setInterval(migrate,1500);
  H.update.push(()=>{if(X.wild.some(c=>!MINE.has(c.sp)))for(let i=X.wild.length-1;i>=0;i--)if(!MINE.has(X.wild[i].sp))X.wild.splice(i,1)});
  /* la casita: un patio con cerca junto a tu casa */
  let yard=null;const yardPos=()=>{if(yard)return yard;const m=V.MAIN,h=m.build&&m.build.find(b=>b.id==='home');if(!h)return null;for(const [dx,dy] of[[96,26],[100,60],[-96,40],[0,86],[120,0]]){const x=h.x+dx,y=h.y+dy;let ok=true;for(let a=0;a<8&&ok;a++)if(V.blockedOut(x+Math.cos(a*.79)*30,y+Math.sin(a*.79)*16,4))ok=false;if(ok)return yard={x,y}}return yard={x:h.x+96,y:h.y+26}};
  let houseS=null;const house=()=>houseS||(houseS=P.paint(34,30,17,28,g=>{const{wc,PG,RR,E,dot}=P;wc(g,RR(5,11,24,16,2),'#f6e3c8',{lw:.6});wc(g,PG([[2,13],[17,2],[32,13]]),'#e8708f',{lw:.6});wc(g,E(17,21,4.2,5),'#5a3a3a',{lw:.4});wc(g,RR(12.6,24,8.8,3,1),'#f4abc8',{lw:.3});P.heart(g,17,8.6,1.6,'#fffaf3');dot(g,9,16,1,'#f6d04d');dot(g,25,16,1,'#f6d04d')},{clean:1,grain:.08}));
- const home=()=>{const ap=X.activePet(),w=save.walk||[];return save.pets.filter(p=>p!==ap&&!w.includes(p.uid)&&(!window.Expansion46||Expansion46.petAllowed(p)))};
+ const home=()=>{const ap=X.activePet(),w=save.walk||[];return save.pets.filter(p=>p!==ap&&!w.includes(p.uid))};
  H.ground.push((g,ox,oy,t)=>{const m=X.M();if(!m||!m.main)return;const y=yardPos();if(!y)return;const x0=y.x-ox,y0=y.y-oy;if(x0<-60||x0>X.W+260||y0<-40||y0>500)return;
   g.save();g.fillStyle='rgba(176,214,140,.55)';g.beginPath();g.ellipse(x0,y0,34,16,0,0,7);g.fill();g.strokeStyle='#b98a5a';g.lineWidth=1;g.beginPath();g.ellipse(x0,y0,34,16,0,0,7);g.stroke();
   g.fillStyle='#c99a66';for(let a=0;a<18;a++){const q=a/18*Math.PI*2;g.fillRect(Math.round(x0+Math.cos(q)*34)-.5,Math.round(y0+Math.sin(q)*16)-3,1,3)}g.restore()});
@@ -7999,7 +7982,7 @@ window.Wardrobe=Wardrobe;
  /* el pelo de Doki vuelve a crecer en tres días */
  H.update.push(()=>{for(const p of save.pets)if(p.sp==='doki'&&p.var===1&&p.cutAt){const d=(Date.now()-p.cutAt)/864e5;if(d>=3){p.var=0;p.cutAt=null}}});
  let unicornMap=null;
- H.update.push(()=>{if(window.Expansion46)return;const m=X.M();if(!m||!m.main||X.st.scene!=='out'||unicornMap===m)return;unicornMap=m;
+ H.update.push(()=>{const m=X.M();if(!m||!m.main||X.st.scene!=='out'||unicornMap===m)return;unicornMap=m;
   if(save.pets.some(p=>p.sp==='unicornio')||X.wild.some(c=>c.sp==='unicornio'))return;
   const center=m.centers&&m.centers.shroom;if(!center)return;const id='main:unicornio';if(save.adopted.ids.includes(id))return;
   for(let r=24;r<180;r+=16)for(let a=0;a<Math.PI*2;a+=.45){const x=center[0]+Math.cos(a)*r,y=center[1]+Math.sin(a)*r;
@@ -8264,7 +8247,6 @@ window.Wardrobe=Wardrobe;
   for(const st of R.ST){if(st.px<x0||st.px>x1||st.py<y0||st.py>y1)continue;g.save();g.translate(st.px-ox,st.py-oy);g.rotate(st.ang);g.fillStyle='#d9cfc0';g.fillRect(-34,-8,68,16);g.fillStyle='#f6d26b';const e=(st.nx*Math.cos(st.ang+Math.PI/2)+st.ny*Math.sin(st.ang+Math.PI/2))>0?-8:6.5;g.fillRect(-34,e,68,1.5);g.fillStyle='rgba(60,40,50,.12)';for(let k=-30;k<34;k+=8)g.fillRect(k,-8,1,16);g.restore()}
   /* trenes (tres vagones que siguen la vía) */
   for(const tr of trains){for(let c=0;c<3;c++){const p=at(tr.s-c*27);if(p.x<x0||p.x>x1||p.y<y0||p.y>y1)continue;g.save();g.translate(p.x-ox,p.y-oy);g.rotate(p.ang);
-    if(window.Expansion46?.drawTrain46){Expansion46.drawTrain46(g,c);g.restore();continue}
     g.fillStyle='rgba(40,30,50,.22)';g.beginPath();g.ellipse(1,3,14,7,0,0,TAU);g.fill();
     const body=c===0?'#f490b4':'#fde3ea',trim=c===0?'#e8456f':'#f490b4';g.fillStyle=trim;g.beginPath();g.roundRect?g.roundRect(-13,-6.5,26,13,c===0?[3,6,6,3]:3):g.rect(-13,-6.5,26,13);g.fill();
     g.fillStyle=body;g.beginPath();g.roundRect?g.roundRect(-12,-8.5,24,12,c===0?[3,6,6,3]:3):g.rect(-12,-8.5,24,12);g.fill();g.strokeStyle='#3a2630';g.lineWidth=.6;g.stroke();
@@ -8450,8 +8432,8 @@ window.Wardrobe=Wardrobe;
  .playing.mg #fonBtn,#game:not(.playing) #fonBtn{opacity:0;pointer-events:none}
  #fonBanner{position:absolute;z-index:31;left:50%;top:calc(env(safe-area-inset-top) + 66px);transform:translateX(-50%);background:#3a2630;color:#fffaf3;border-radius:18px;padding:9px 14px;font:800 13px Nunito,sans-serif;display:none;gap:10px;align-items:center;white-space:nowrap;box-shadow:0 6px 18px #0005}
  #fonBanner.on{display:flex}#fonBanner button{border:0;border-radius:12px;padding:6px 10px;font:900 12px Nunito,sans-serif;background:#8bd18b;color:#fff}
- .fon{position:absolute;z-index:44;left:50%;bottom:calc(env(safe-area-inset-bottom) + 12px);transform:translate(-50%,118%) rotate(5deg) scale(.93);transform-origin:50% 100%;opacity:0;width:min(86vw,330px);height:min(78vh,560px);border-radius:38px;background:#f490b4;box-shadow:0 0 0 3px #3a2630,0 18px 40px #0006;padding:12px 10px 16px;transition:transform .46s cubic-bezier(.2,.83,.2,1.1),opacity .3s ease,visibility 0s linear .46s;display:flex;flex-direction:column;will-change:transform,opacity}
- .fon.on{transform:translate(-50%,0) rotate(0) scale(1);opacity:1;transition:transform .47s cubic-bezier(.18,1.17,.28,1),opacity .27s ease,visibility 0s}
+ .fon{position:absolute;z-index:44;left:50%;bottom:calc(env(safe-area-inset-bottom) + 12px);transform:translate(-50%,110%);width:min(86vw,330px);height:min(78vh,560px);border-radius:38px;background:#f490b4;box-shadow:0 0 0 3px #3a2630,0 18px 40px #0006;padding:12px 10px 16px;transition:transform .35s cubic-bezier(.3,1.3,.5,1);display:flex;flex-direction:column}
+ .fon.on{transform:translate(-50%,0)}
  .fon .scr{flex:1;border-radius:28px;background:linear-gradient(170deg,#fff6fa,#e6f3ff);overflow:hidden;display:flex;flex-direction:column;font-family:Nunito,sans-serif;color:#3a2630}
  .fon .bar{display:flex;justify-content:space-between;padding:8px 16px 4px;font:900 11px Nunito,sans-serif;color:#7a5a68}
  .fon .hd{display:flex;align-items:center;gap:8px;padding:4px 12px 8px;font:900 15px Nunito,sans-serif}.fon .hd button{border:0;background:#fff;border-radius:12px;width:30px;height:30px;font:900 14px Nunito,sans-serif;box-shadow:0 2px 0 #e6d7c5}
@@ -8466,7 +8448,6 @@ window.Wardrobe=Wardrobe;
  .fon .home:active{background:#ffffff44}
  .fon:not(.on){pointer-events:none;visibility:hidden}
  .fon.on{visibility:visible}
- @media(prefers-reduced-motion:reduce){.fon,.fon.on{transition-duration:.01s}}
  .fon .call{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}.fon .call .av{width:96px;height:96px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 4px #f490b4}.fon .call canvas{width:84px;height:84px}
  #game.fon-on #dlg{z-index:46}#game.fon-on #choices{z-index:47}#game.fon-on #toast{z-index:48}
  .fon .call b{font:900 18px Nunito,sans-serif}.fon .call small{color:#8a6a78;font:800 12px Nunito,sans-serif}.fon .call .row{display:flex;gap:26px;margin-top:10px}.fon .call .row button{width:58px;height:58px;border-radius:50%;border:0;font-size:24px;color:#fff}`;document.head.appendChild(css);
@@ -8604,8 +8585,8 @@ window.Wardrobe=Wardrobe;
  const nm=id=>(Talk.P[id]||{name:id}).name;
  const guest=()=>typeof V5!=='undefined'&&V5.companion&&V5.companion.id;
  const called=()=>{const L=save.fon&&save.fon.meetups||[];return L.find(q=>q.zone==='arcade'&&q.day===X.today())?.id};
- const contenders=()=>window.Expansion46?.arcadeVisitors?.()||['badtz'];
- async function rivalSelect(){const friend=guest();if(friend&&contenders().includes(friend))return friend;const pool=['badtz',...contenders().filter(x=>x!=='badtz')];let off=0;for(;;){const page=pool.slice(off,off+4),opts=page.map(id=>'🏒 '+nm(id));if(off+4<pool.length)opts.push('Más rivales ▶');if(off)opts.push('◀ Volver');opts.push('Cancelar');const choice=await X.ask('¿A quién retas? Solo aparecen los vecinos que están aquí ahora.',opts);if(choice<page.length)return page[choice];if(choice===page.length&&off+4<pool.length){off+=4;continue}if(off&&opts[choice]==='◀ Volver'){off=Math.max(0,off-4);continue}return null}}
+ const contenders=()=>Object.keys(Talk.P).filter(id=>id!=='isaac'&&!Talk.P[id].static&&V.NPCDEF[id]);
+ async function rivalSelect(){const friend=guest(),meet=called();if(friend)return friend;if(meet)return meet;const pool=['badtz',...contenders().filter(x=>x!=='badtz')];let off=0;for(;;){const page=pool.slice(off,off+4),opts=page.map(id=>'🏒 '+nm(id));if(off+4<pool.length)opts.push('Más rivales ▶');if(off)opts.push('◀ Volver');opts.push('Cancelar');const choice=await X.ask('¿A quién retas? Los acompañantes juegan contigo automáticamente.',opts);if(choice<page.length)return page[choice];if(choice===page.length&&off+4<pool.length){off+=4;continue}if(off&&opts[choice]==='◀ Volver'){off=Math.max(0,off-4);continue}return null}}
  async function playHockey(){const id=await rivalSelect();if(!id)return;await X.say(nm(id),id==='badtz'?(lvl(id)?'¿Revancha? Nivel '+(lvl(id)+1)+'.':'El primero que meta cinco goles gana. Tú abajo, yo arriba.'):'¡Acepto el reto! Que gane quien mejor juegue.',Talk.P[id]&&Talk.P[id].voice);X.startMG('hockey',{rival:id})}
  function pay(){if(save.bells<COST){G.sfx.bad&&G.sfx.bad();X.toast('Te faltan '+(COST-save.bells)+' 🔔 para la garra');return false}G.addBells(-COST,true);G.sfx.coin&&G.sfx.coin();return true}
  /* ── el Salón: quien atiende y las máquinas ── */
@@ -8613,7 +8594,7 @@ window.Wardrobe=Wardrobe;
   for(;;){const i=await X.ask(nm+': «'+pick(['Hmph. A ver si me ganas hoy.','Dicen que la garra está de buenas hoy. Dicen.','¿Hockey? Te aviso que soy el campeón de la isla.'])+'»',['🧸 Máquina de garra · '+COST+' 🔔','🏒 Hockey de aire contra '+nm,'🕹️ ¿Y las maquinitas de 8 bits?','Nada, gracias']);
    if(i===0){X.startMG('garra');return}
    if(i===1){await playHockey();return}
-   if(i===2){await X.say(nm,'Las viejitas se mudaron a tu teléfono, a la app Juegos. Aquí cada maquinita tiene su propio juego: Arena de las Nubes, Aventuras por turnos, Carrera costera y Lanzamientos. La pista central es para bailar. Nomás acércate y tócala.',v);
+   if(i===2){await X.say(nm,'Las viejitas se mudaron a tu teléfono, a la app Juegos. Aquí cada maquinita tiene su propio juego: Topos, Corta frutas, Fuegos artificiales y Trineo. Nomás acércate y tócala.',v);
     const j=await X.ask('¿Abrir los juegos del teléfono?',['📱 Sí, ábrelos','Luego']);if(j===0&&window.Fon&&Fon.games)Fon.games();return}
    return}}
  const hockeyTalk=()=>X.say(KP(),lvl()?'¿Revancha? Esta vez no me voy a contener. Nivel '+(lvl()+1)+'.':'El primero que meta 5 goles gana. Tú abajo, yo arriba. Y nada de trampas, eh.',KV());
@@ -8629,7 +8610,7 @@ window.Wardrobe=Wardrobe;
   P.wc(g,P.E(15,14.4,2.8,1.9),'#e8456f',{lw:.3,gloss:.4});P.wc(g,P.E(39,13.4,2.8,1.9),'#3a3540',{lw:.3,gloss:.3});P.wc(g,P.E(25,15,1.3,.9),'#2e2230',{lw:.2});
   P.wc(g,P.RR(3,22,48,4,1.4),'#c45d8a',{lw:.35})},{clean:1}));
  /* las cuatro maquinitas: cada una tiene su propio juego (y su pantallita y su letrero se iluminan con su color) */
- const CABS=[[36,104,'combate46','🥊','Arena de las Nubes','#e8456f'],[62,104,'turnos46','🛡️','Aventuras por turnos','#8bd18b'],[194,104,'carrera46','🏁','Carrera costera','#7ad0e6'],[220,104,'lanzamiento46','🎯','Lanzamientos','#f6d26b']];
+ const CABS=[[36,104,'topos','🔨','Topos de Kuromi','#e8456f'],[62,104,'frutas','🍓','Corta frutas','#8bd18b'],[194,104,'fuegos','🎆','Fuegos artificiales','#7ad0e6'],[220,104,'trineo','🛷','Trineo de nieve','#f6d26b']];
  H.update.push(()=>{if(!inArc())return;const Rm=V.rooms[Interiores.cur.key];if(Rm._hockey)return;Rm._hockey=1;Rm.objs.push({s:tableSpr(),x:HX,y:HY});Rm.solids.push({t:'r',x:HX-25,y:HY-6,w:50,h:7});
   for(const [x,y,g0,ic,n,c] of CABS)Rm.objs.push({y:y+.6,draw:(g,ox,oy,t)=>{const sx=Math.round(x-ox),sy=Math.round(y-oy);g.save();g.globalAlpha=.5+.3*Math.sin(t*3+x);g.fillStyle=c;g.fillRect(sx-7,sy-33,14,11);g.globalAlpha=1;g.font='7px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(ic,sx,sy-27.5);g.fillStyle=c;g.fillRect(sx-9,sy-44,18,4);g.fillStyle='rgba(255,255,255,.7)';g.fillRect(sx-9+((Math.floor(t*6)+x)%18),sy-44,2,4);g.restore()}})});
  H.inter.push(l=>{if(!inArc())return;for(let i=l.length-1;i>=0;i--)if(l[i].type==='inLook')l.splice(i,1);
@@ -8725,7 +8706,7 @@ window.Wardrobe=Wardrobe;
  /* ═════ HOCKEY DE AIRE CONTRA BADTZ-MARU ═════ */
  const TX0=16,TX1=184,TY0=114,TY1=390,MID=(TY0+TY1)/2,GW=84,GC=100,PR=8,MR=14,WIN=5;
  /* Cámara del minijuego: cancha íntegra en vertical y horizontal, incluso con barras del navegador. */
- const rinkView=()=>{const x0=TX0-8,y0=TY0-30,w=TX1-TX0+16,h=TY1-TY0+55,top=Math.min(36,G.H*.12),area=Math.max(80,G.H-top-9),sc=Math.max(.1,Math.min((G.W-12)/w,area/h));return {sc,ox:(G.W-w*sc)/2-x0*sc,oy:top+(area-h*sc)/2-y0*sc}};
+ const rinkView=()=>{const x0=TX0-16,y0=TY0-76,w=TX1-TX0+32,h=TY1-TY0+113,top=Math.min(65,G.H*.23),area=Math.max(80,G.H-top-9),sc=Math.max(.1,Math.min((G.W-12)/w,area/h));return {sc,ox:(G.W-w*sc)/2-x0*sc,oy:top+(area-h*sc)/2-y0*sc}};
  const fromScreen=(x,y)=>{const v=rinkView();return {x:(x-v.ox)/v.sc,y:(y-v.oy)/v.sc}};
  const toScreen=(x,y)=>{const v=rinkView();return {x:v.ox+x*v.sc,y:v.oy+y*v.sc}};
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -8960,7 +8941,7 @@ window.Wardrobe=Wardrobe;
  let pillI=0;function refreshPill(){if(Game.st.mode!=='play'||X.st.scene==='in'&&!objectives().length){misBtn.classList.remove('on');return}const L=objectives();if(!L.length){misBtn.querySelector('span').textContent='Misiones';misBtn.classList.add('on');return}pillI%=L.length;misBtn.querySelector('span').textContent=L[pillI].txt+(L.length>1?'  ('+(pillI+1)+'/'+L.length+')':'');misBtn.classList.add('on')}
  misBtn.addEventListener('click',async e=>{e.stopPropagation();if(!free())return;const L=objectives();X.st.busy=true;
   try{const extra=['❓ ¿Cómo consigo misiones?','🐾 ¿Dónde encuentro a los animales?','Cerrar'];const i=await X.ask(L.length?'Tus misiones':'Todavía no tienes misiones',L.map(x=>x.txt).concat(extra));
-   if(i===L.length){await X.say('','Platica con los vecinos: a veces te piden un favor (sale con ❗). También te llaman por teléfono 📱 con encargos, y en las islas misteriosas siempre hay alguien acampando que necesita ayuda. Aquí arriba verás qué sigue y te puedo guiar con una flecha.');return}if(i===L.length+1){await X.say('','Doki aparece en las islas misteriosas: camina despacito y lleva un premio crujiente de la tienda de mascotas. Papu vive en lo alto del sueño de nubes; entra durmiendo en tu cama. El unicornio vive en el sueño de nubes. Un puente de luciérnagas puede traerlo a la isla. Los gatos prefieren pescado; los osos y ratones, galletas; las ardillas y los pajaritos, fruta.');return}if(i>=L.length+2)return;const o=L[i];pillI=i;
+   if(i===L.length){await X.say('','Platica con los vecinos: a veces te piden un favor (sale con ❗). También te llaman por teléfono 📱 con encargos, y en las islas misteriosas siempre hay alguien acampando que necesita ayuda. Aquí arriba verás qué sigue y te puedo guiar con una flecha.');return}if(i===L.length+1){await X.say('','Doki aparece en las islas misteriosas: camina despacito y lleva un premio crujiente de la tienda de mascotas. Papu vive en lo alto del sueño de nubes; entra durmiendo en tu cama. El unicornio está en el Bosque de Hongos y come algodón de azúcar. Los gatos prefieren pescado; los osos y ratones, galletas; las ardillas y los pajaritos, fruta.');return}if(i>=L.length+2)return;const o=L[i];pillI=i;
    const p=plan(o);const r=await X.ask(o.txt,['📍 Guíame','❓ ¿Cómo lo hago?','Cerrar']);
    if(r===1){await X.say('',p.how||'Habla con quien te lo pidió.');const r2=await X.ask('',['📍 Guíame','Listo']);if(r2!==0)return}else if(r!==0)return;
    if(p.t){guide(p.t);if(p.t.mid&&X.M()&&p.t.mid!==X.M().id)X.toast('📍 Está en la isla principal; regresa en barco o en el tren');}else X.toast(p.how||'Habla con quien te lo pidió')}finally{X.st.busy=false}});
@@ -9350,7 +9331,7 @@ window.Wardrobe=Wardrobe;
    pm:['¡Buenas tardes! Acabo de ganar un partido. Contra mí mismo, pero gané.','Buenas tardes. Hace calorcito; vamos por un helado.'],
    nt:['¡Buenas noches! Todavía tengo energía. Mucha. Demasiada.','Ya es noche, pero yo podría correr otra vuelta.'],
    bye:['¡Me voy corriendo! ¡Literal!','¡Nos vemos! Si ves una pelota sola, avísame.','¡Adiós! Voy a echarme al agua.','¡Wuf! ¡Hasta luego!']},
-  keroppi:{t:['Hoy conté cuarenta gotas cayendo de una hoja. La número cuarenta y uno se me escapó.','En el Bosque de Hongos crecen hongos tiraditos en el pasto. Si caminas encima, se recogen solitos. Kero.','Compuse una canción que dura lo que tarda en hervir el agua. La canto mientras hago té.','Los pajaritos salvajes vuelan cuando llegas corriendo. Si caminas despacio, a veces se quedan a escucharte cantar.','Mi estanque tiene una piedra con forma de corazón. No se la enseño a nadie. Bueno, a ti sí.','Hoy salté de hoja en hoja y me caí al agua. Igual llegué. Mojado, pero llegué.','Kero kero. Eso no significa nada, solo me dieron ganas de decirlo.','Las ranitas del estanque me corrigen cuando desafino. Son muy estrictas.','Pinté un cuadro del atardecer, pero me salió del color de un mango. Me gusta igual.','Cuando llueve, el bosque huele a tierra y a hongos. Es mi olor favorito.','Si se te dificulta pescar, toca el agua suavecito, sin desesperarte. Los peces sienten las prisas.','El unicornio pasea por el sueño de nubes. Acércate caminando; le asustan las carreras.'],
+  keroppi:{t:['Hoy conté cuarenta gotas cayendo de una hoja. La número cuarenta y uno se me escapó.','En el Bosque de Hongos crecen hongos tiraditos en el pasto. Si caminas encima, se recogen solitos. Kero.','Compuse una canción que dura lo que tarda en hervir el agua. La canto mientras hago té.','Los pajaritos salvajes vuelan cuando llegas corriendo. Si caminas despacio, a veces se quedan a escucharte cantar.','Mi estanque tiene una piedra con forma de corazón. No se la enseño a nadie. Bueno, a ti sí.','Hoy salté de hoja en hoja y me caí al agua. Igual llegué. Mojado, pero llegué.','Kero kero. Eso no significa nada, solo me dieron ganas de decirlo.','Las ranitas del estanque me corrigen cuando desafino. Son muy estrictas.','Pinté un cuadro del atardecer, pero me salió del color de un mango. Me gusta igual.','Cuando llueve, el bosque huele a tierra y a hongos. Es mi olor favorito.','Si se te dificulta pescar, toca el agua suavecito, sin desesperarte. Los peces sienten las prisas.','El unicornio pasea por el Bosque de Hongos. Llévale algodón de azúcar y acércate caminando; le asustan las carreras.'],
    hi:['¡Kero! Hola.','Hola, hola. Estaba ensayando una canción.','¡Kero kero! Qué gusto… digo, hola.'],
    am:['Buenos días. El rocío de hoy está precioso, todo brilla.','Buenos días. Ya canté con las ranitas. Ahora toca desayunar moscas. Es broma. Pan.'],
    pm:['Buenas tardes. A esta hora el estanque se pone tibiecito.','Buenas tardes. ¿Escuchas? Las chicharras ya empezaron.'],
@@ -9919,11 +9900,7 @@ window.Wardrobe=Wardrobe;
  #game #sheet .panel h3 .close.wcDragging37{transition:none;background:#f8cfe1;box-shadow:0 2px 12px #bf7b9e88}
  #game #wcBagZipTrack37{position:absolute;right:42px;top:50%;transform:translateY(-50%);height:5px;width:102px;border-radius:7px;background:repeating-linear-gradient(90deg,#d6a2b9 0 5px,#ffe2ef 5px 10px);opacity:.75;pointer-events:none}
  #game #wcBagZipTip37{font-size:10px;letter-spacing:.02em;font-weight:900;color:#b9849c;margin-left:auto;opacity:.88;pointer-events:none}
- /* Cremallera: un cierre de tela, con giro suave y sombra que se recoge. */
- #game #sheet.wcZipClosing37{background:transparent;transition:background .34s ease,opacity .4s ease}
- #game #sheet.wcZipClosing37 .panel{transform:translateX(-108%) rotate(-4deg) scale(.94);transform-origin:10% 90%;opacity:0;filter:blur(2px);box-shadow:0 4px 18px #0002;transition:transform .4s cubic-bezier(.47,0,.82,.28),opacity .31s ease,filter .3s ease,box-shadow .4s ease}
- #game #sheet.wcZipClosing37 #wcBagZipTrack37{opacity:0;transition:opacity .3s ease}
- @media(prefers-reduced-motion:reduce){#game #sheet.wcZipClosing37 .panel{transition-duration:.01s;filter:none}#game #sheet.wcZipClosing37{transition-duration:.01s}}
+ #game #sheet.wcZipClosing37 .panel{transform:translateX(-115%) scaleX(.90);opacity:0;transition:transform .23s ease-in,opacity .22s}
  @media(max-width:390px){#game #wcBagZipTrack37{width:75px}#game #wcBagZipTip37{font-size:9px}}
  `;document.head.appendChild(css);
  let chosen=null;
@@ -9952,16 +9929,16 @@ window.Wardrobe=Wardrobe;
  }
  H.tab.push(bagUI);
  // La ✕ de la mochila funciona como tirador de un broche de izquierda a derecha.
- // Swipe desde ✕ hacia la IZQUIERDA: cierra. Un toque simple NO cierra.
+ // Swipe desde ✕ hacia la IZQUIERDA: cierra; el toque normal sigue cerrando.
  const bagSheet=document.querySelector('#sheet'),bagClose=bagSheet?.querySelector('h3 .close');
  if(bagSheet&&bagClose){
   const h=bagClose.closest('h3'),track=document.createElement('span'),hint=document.createElement('span');
   track.id='wcBagZipTrack37';hint.id='wcBagZipTip37';hint.textContent='← cerrar';
-  h.insertBefore(hint,bagClose);h.appendChild(track);bagClose.setAttribute('aria-label','Arrastra a la izquierda para cerrar la mochila');bagClose.title='Desliza ← para cerrar';
+  h.insertBefore(hint,bagClose);h.appendChild(track);
   let pid=null,originX=0,originY=0,drag=0,swipedAt=-Infinity,done=false;
   function snap(){drag=0;pid=null;done=false;bagClose.classList.remove('wcDragging37');bagClose.style.transform='';}
-  // El manejador antiguo cierra con un clic: anularlo, sin reemplazar la X ni su cremallera.
-  bagClose.onclick=e=>{e.preventDefault();e.stopPropagation();};
+  const normal=bagClose.onclick;
+  bagClose.onclick=e=>{if(performance.now()-swipedAt<500){e.preventDefault();e.stopPropagation();return;}if(normal)normal.call(bagClose,e)};
   bagClose.addEventListener('pointerdown',e=>{
    if(!bagSheet.classList.contains('on')||pid!==null)return;
    pid=e.pointerId;originX=e.clientX;originY=e.clientY;drag=0;done=false;
@@ -9987,7 +9964,7 @@ window.Wardrobe=Wardrobe;
     swipedAt=performance.now();done=true;
     e.preventDefault();e.stopPropagation();
     bagSheet.classList.add('wcZipClosing37');
-    setTimeout(()=>{if(bagSheet.classList.contains('on'))X.closeMenu();if(bagSheet.classList.contains('wcZipClosing37'))bagSheet.classList.remove('wcZipClosing37');},410);
+    setTimeout(()=>{if(bagSheet.classList.contains('on'))X.closeMenu();bagSheet.classList.remove('wcZipClosing37');},220);
    }
   });
   bagClose.addEventListener('pointercancel',snap);
@@ -10019,33 +9996,6 @@ window.Wardrobe=Wardrobe;
 </script>
 <script src="./picnic_v31.js"></script>
 <script src="./native_joystick40.js"></script>
-<script src="./native46/core.js"></script>
-<script src="./native46/worlds.js"></script>
-<script src="./native46/games.js"></script>
-<script src="./native46/pets.js"></script>
-<script src="./native46/arcade.js"></script>
-<script src="./native46/pizza.js"></script>
-<script src="./native46/kitchen.js"></script>
-<script src="./native46/models3d.js"></script>
-<script src="./native46/transport.js"></script>
-<script src="./native46/polish.js"></script>
-<script src="./native46/neighbors.js"></script>
-
-<script src="./native46/mainworld_play.js"></script>
-
-<style id="wcOverworldVisual48">
-/* The original circular sprint overlay is replaced by joystick strength (or Shift). */
-#game #movBtns{display:none!important}
-/* Do not leave overworld pills stacked over a sheet or dialogue. */
-#game:has(#sheet.on) #misionBtn,#game:has(#sheet.on) #guiaBar,
-#game:has(#dlg.on) #misionBtn,#game:has(#choices.on) #misionBtn,
-#game:not(.playing) #misionBtn,#game:not(.playing) #guiaBar{display:none!important}
-/* The remaining mission UI borrows the game's cream, pink and ink, at HUD scale. */
-#game #misionBtn{border:1.5px solid #f5e1e9;border-radius:14px;background:linear-gradient(155deg,#fffaf2,#fbe9ed);color:#754d61;box-shadow:0 2px 0 #dbb9c7,0 4px 10px #44273a23}
-#game #guiaBar{border:1.5px solid #fff6f0;border-radius:14px;background:#654a63e8;box-shadow:0 3px 9px #35263d31}
-#game #guiaBar button{background:#fff7f0;border:1px solid #eac6d8;box-shadow:0 1px 0 #d6b0c3}
-</style>
-
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->

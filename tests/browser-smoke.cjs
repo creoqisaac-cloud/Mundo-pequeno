@@ -9,6 +9,9 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
  '.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.css':'text/css'};
+const snapshot=fs.readFileSync(path.resolve(root,'index.html'),'utf8');
+assert.ok(!snapshot.includes('native46/'),'No deben quedar expansiones de Codex');
+assert.ok(snapshot.includes('wcBagZipTrack37'),'Debe conservarse la cremallera original');
 const server=http.createServer((req,res)=>{
  let name;try{name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch(_){res.writeHead(400).end();return;}
  const full=path.resolve(root,'.'+(name==='/'?'/index.html':name));
@@ -19,6 +22,16 @@ const server=http.createServer((req,res)=>{
   res.end(data);
  });
 });
+async function slideZipper(page){
+ await page.evaluate(()=>{
+  const close=document.querySelector('#sheet .panel h3 .close');
+  const rect=close.getBoundingClientRect(),x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+  for(const [type,dx] of [['pointerdown',0],['pointermove',-78],['pointerup',-78]]){
+   close.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true,pointerId:87,clientX:x+dx,clientY:y,buttons:type==='pointerup'?0:1}));
+  }
+ });
+ await page.waitForFunction(()=>!document.getElementById('sheet').classList.contains('on'),null,{timeout:4000});
+}
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const port=server.address().port;
@@ -71,14 +84,10 @@ const server=http.createServer((req,res)=>{
   assert.equal(a.cap,false,'La palanca sin presionar no debe secuestrar la pantalla');
 
   await page.locator('#sheet .panel h3 .close').click();
-  assert.equal(await page.evaluate(()=>Game.X.st.menu),true,'Un toque simple sobre la X NO debe cerrar la mochila');
-  await page.evaluate(()=>{
-   const b=document.querySelector('#sheet .panel h3 .close'),r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
-   for(const [type,dx] of [['pointerdown',0],['pointermove',-80],['pointerup',-80]])b.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true,pointerId:97,clientX:x+dx,clientY:y,buttons:type==='pointerup'?0:1}));
-  });
-  await page.waitForTimeout(480);
-  assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'Arrastrar la cremallera SÍ debe cerrar');
-  assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
+  assert.equal(await page.evaluate(()=>Game.X.st.menu),true,'Tocar la X NO debe cerrar');
+  assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),true);
+  await slideZipper(page);
+  assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'Solo el arrastre debe cerrar');
 
   // Probar pestañas de la mochila sin depender del HUD de hambre superpuesto en la simulación.
   await page.evaluate(()=>Game.X.openMenu('tasks'));
@@ -86,7 +95,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#tabs button[data-t="opts"]').click();
   await page.locator('#oTime').click();
   await page.locator('#wcControlOptions40').waitFor({state:'visible'});
-  await page.evaluate(()=>Game.X.closeMenu());
+  await slideZipper(page);
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false);
 
   // La cremallera original permanece y permite cerrar arrastrando la X.
@@ -103,10 +112,20 @@ const server=http.createServer((req,res)=>{
     }));
    }
   });
-  await page.waitForTimeout(470);
+  await page.waitForTimeout(400);
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'La cremallera debe cerrar con swipe');
   assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
   assert.deepEqual(errors,[],'Cerrar con cremallera no debe producir errores de JavaScript');
+
+  // El celular debe mantener visible su transicion despues de cerrar.
+  await page.evaluate(()=>document.getElementById('fonBtn').click());
+  await page.locator('#game .fon.on').waitFor({state:'visible'});
+  await page.locator('#game .fon .home').click();
+  await page.waitForFunction(()=>document.querySelector('.fon')?.classList.contains('wcPhoneLeaving50'));
+  const leaving=await page.evaluate(()=>getComputedStyle(document.querySelector('.fon')).visibility);
+  assert.equal(leaving,'visible','El celular no debe desaparecer instantaneamente');
+  await page.waitForTimeout(450);
+  assert.equal(await page.locator('.fon').evaluate(el=>el.classList.contains('on')),false);
 
   // Validar que el motor siga pintando después de cerrar Opciones.
   await page.evaluate(async()=>{await Game.enter();});
@@ -118,7 +137,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.ok(canvas.width>0&&canvas.height>0&&canvas.alpha>0&&canvas.visible,'La pantalla debe dibujarse, no quedar negra');
   assert.deepEqual(errors,[],'No debe haber errores JS de página');
-  console.log('✓ Chromium real: joystick, tamaño, área invisible, cierre únicamente por cremallera, navegación y render.');
+  console.log('✓ Chromium real: joystick, tamaño, área invisible, cierre solo cremallera y telefono, navegación y render.');
  }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

@@ -1,0 +1,23 @@
+name: Validar restauracion de Isla de Walesa
+on:
+  push:
+    branches: [fix/restore-v45-zipper-phone]
+permissions:
+  contents: read
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Garantizar mapa original sin expansiones
+        run: |
+          test "$(git hash-object index.html)" = "59e780500434c53592078b855a6b705c33eb8a39"
+          ! grep -q 'native46/' index.html
+          node --check native_joystick40.js
+          node --check sw.js
+          node tests/joystick-smoke.cjs
+      - name: Probar cremallera y celular en Chromium movil
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)"
+          CHROME_PATH="$CHROME_PATH" node tests/browser-smoke.cjs
