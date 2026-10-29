@@ -76,7 +76,7 @@ function height(u,v,forest=false){
   ridge(u,v,.87,.10,.88,.29,.031,.19);
  const plateau=u>.63&&v>.35&&v<.70 ? .04:0;
  // El valle entre el barrio central y las montañas baja de forma continua.
- const valley=.11*Math.exp(-((u-.53)/.07)**2-((v-.53)/.23)**2);
+ const valley=.11*Math.exp(-(((u-.53)/.07)**2)-(((v-.53)/.23)**2));
  return cap(v0*.83+N+plateau-valley,.0,1);
 }
 function coast(u,v){
