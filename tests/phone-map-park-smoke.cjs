@@ -55,6 +55,9 @@ const server=http.createServer((req,res)=>{
    Game.X.cam.x=3770;Game.X.cam.y=2395;
    Game.X.st.busy=false;
   });
+  // El tour de llegada ahora es una secuencia animada; termina antes de abrir UI.
+  await page.waitForFunction(()=>save.mainlandV3Welcome===1&&!WalesaMainland.arrivalRunning&&
+   Game.X.st.busy===false,{timeout:35000});
   await page.waitForTimeout(750);
   fs.mkdirSync(path.join(root,'tests','proof'),{recursive:true});
   await page.screenshot({path:path.join(root,'tests','proof','plaza-circular-ladrillos-v57.png')});
