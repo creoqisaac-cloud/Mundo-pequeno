@@ -1,97 +1,250 @@
-/* Isla de Walesa v40 | Palanca integrada en Opciones, sin pantallas extra */
-(()=>{'use strict';
-try{
- const X=window.Game?.X,G=window.Game?.G,H=X?.HOOKS,game=document.getElementById('game');
- if(!X||!G||!H||!game||!window.save)return;
- const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
- const cfg=save.joystick37||(save.joystick37={});
- if(cfg.ready40!==true){cfg.enabled=false;cfg.x=19;cfg.y=76;cfg.size=116;cfg.ready40=true;}
- cfg.x=clamp(Number(cfg.x)||19,15,85);
- cfg.y=clamp(Number(cfg.y)||76,23,87);
- cfg.size=[92,116,144].reduce((a,b)=>Math.abs(b-cfg.size)<Math.abs(a-cfg.size)?b:a,116);
- const css=document.createElement('style');
- css.textContent=[
- '#game #wcJoystick40{position:absolute;z-index:24;width:116px;height:116px;left:19%;top:76%;transform:translate(-50%,-50%);display:none;touch-action:none;user-select:none;border-radius:50%;pointer-events:auto}',
- '#game #wcJoystick40.wcOn40{display:block}',
- '#game #wcJoystick40 .wcJ40Well{width:100%;height:100%;box-sizing:border-box;border-radius:50%;background:#fff2f0ac;border:3px solid #f9e4f0;box-shadow:0 2px 12px #54395060,inset 0 0 0 2px #bd88a477;display:grid;place-items:center}',
- '#game #wcJoystick40 .wcJ40Ball{width:41%;height:41%;box-sizing:border-box;border-radius:50%;background:#f2bbd6;border:3px solid #fff9fc;box-shadow:0 3px 6px #49304255;display:grid;place-items:center;color:#925470;font:bold 23px Nunito,sans-serif;pointer-events:none}',
- '#game #wcControlOptions40{padding:14px;margin:12px 0 15px;border:2px solid #f3dce7;border-radius:19px;background:linear-gradient(155deg,#fffbf8,#fff0f4);box-shadow:0 4px 13px #9d64801f;color:#6e4961}',
- '#game #wcControlOptions40 strong{display:block;font:900 16px Nunito,sans-serif;margin-bottom:5px}',
- '#game #wcControlOptions40 p{font:700 12px/1.45 Nunito,sans-serif;margin:5px 0 9px;color:#927386}',
- '#game #wcControlOptions40 .wcModes40,#game #wcControlOptions40 .wcSizes40{display:flex;gap:7px;margin:8px 0;align-items:center}',
- '#game #wcControlOptions40 button{border:2px solid #ead5e0;border-radius:12px;min-height:36px;padding:7px 6px;flex:1;background:#fff;color:#875b73;font:800 12px Nunito,sans-serif;touch-action:manipulation}',
- '#game #wcControlOptions40 button.wcChosen40{border-color:#c76f99;background:#fce5f0;color:#a94f7d}',
- '#game #wcControlOptions40 button.wcSave40{background:#bd648c;color:#fff;border-color:#bd648c;width:100%;margin-top:8px;font-size:14px}',
- '#game #wcControlOptions40 .wcPreview40{position:relative;touch-action:none;height:166px;max-width:340px;margin:8px auto 12px;overflow:hidden;border:2px solid #e6bfd0;border-radius:15px;background:repeating-linear-gradient(0deg,#e6efdf 0 25px,#d9ead4 25px 50px)}',
- '#game #wcControlOptions40 .wcPreview40:before{content:"🌳　🌼　🏠";position:absolute;top:10px;left:12px;font-size:24px;opacity:.7;pointer-events:none}',
- '#game #wcControlOptions40 .wcPreview40:after{content:"🐾　🌷";position:absolute;right:22px;bottom:19px;font-size:20px;opacity:.5;pointer-events:none}',
- '#game #wcControlOptions40 .wcPreviewHandle40{position:absolute;width:56px;height:56px;transform:translate(-50%,-50%);touch-action:none;border-radius:50%;border:3px solid #fff9fa;background:#e7a6c6dc;box-shadow:0 2px 8px #75506978,inset 0 0 0 6px #f9d8e9;display:grid;place-items:center;font:900 24px Nunito,sans-serif;color:#fff;user-select:none;z-index:2}',
- '#game #wcControlOptions40 .wcPreviewHandle40:before{content:"✿";pointer-events:none}',
- '#game #wcControlOptions40 .wcPreviewLabel40{position:absolute;bottom:5px;left:9px;background:#fff9;border-radius:8px;padding:2px 7px;font:bold 10px Nunito,sans-serif;color:#8b5372;pointer-events:none}'
- ].join('\n');
- document.head.appendChild(css);
- const stick=document.createElement('div');stick.id='wcJoystick40';stick.setAttribute('aria-label','Palanca de movimiento');
- stick.innerHTML='<div class="wcJ40Well"><div class="wcJ40Ball">✿</div></div>';
- game.appendChild(stick);
- const ball=stick.querySelector('.wcJ40Ball');
- let pointer=null,vx=0,vy=0,shown=false;
- function release(){pointer=null;vx=vy=0;ball.style.transform='translate(0,0)';}
- function enabled(){const s=X.st;return cfg.enabled===true&&s&&s.mode==='play'&&!s.menu&&!s.busy&&!s.mg&&!s.trans&&!s.poseLock;}
- function position(){const r=game.getBoundingClientRect(),w=r.width||innerWidth,h=r.height||innerHeight;
-  const ex=Math.min(49,(cfg.size/2+12)*100/w),ey=Math.min(49,(cfg.size/2+12)*100/h);
-  stick.style.width=cfg.size+'px';stick.style.height=cfg.size+'px';
-  stick.style.left=clamp(cfg.x,ex,100-ex)+'%';stick.style.top=clamp(cfg.y,ey,100-ey)+'%';}
- function visible(){const on=enabled();if(shown!==on){stick.classList.toggle('wcOn40',on);shown=on;if(!on)release();}}
- function vector(){visible();return enabled()?{x:vx,y:vy}:null;}
- function point(e){const r=stick.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2;
-  const d=Math.hypot(dx,dy),rad=cfg.size*.31,k=d?Math.min(1,rad/d):0;
-  ball.style.transform='translate('+Math.round(dx*k)+'px,'+Math.round(dy*k)+'px)';
-  const strength=Math.min(1,Math.max(0,(d/rad-.15)/.85));vx=d?dx/d*strength:0;vy=d?dy/d*strength:0;}
- stick.addEventListener('pointerdown',e=>{if(!enabled()||pointer!==null)return;
-  e.preventDefault();e.stopPropagation();pointer=e.pointerId;
-  try{stick.setPointerCapture(pointer)}catch(_){}
-  X.player.path=null;X.player.pending=null;point(e);});
- stick.addEventListener('pointermove',e=>{if(pointer===e.pointerId){e.preventDefault();e.stopPropagation();point(e)}});
- for(const ev of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(ev,e=>{if(e.pointerId===pointer)release()});
- window.addEventListener('blur',release);
- document.addEventListener('visibilitychange',()=>{if(document.hidden)release()});
- window.addEventListener('resize',()=>{position();release()});
- function mode(v){cfg.enabled=!!v;release();visible();try{G.save()}catch(_){}}
- H.tab.push((tab,box)=>{
-  if(tab!=='opts')return;
-  queueMicrotask(()=>{
-   if(!box.isConnected||X.st.tab!=='opts')return;
-   const section=document.createElement('section');section.id='wcControlOptions40';
-   section.innerHTML='<strong>🕹️ Cómo caminar</strong><p>Elige cómo mover a tu personaje.</p><div class="wcModes40"><button type="button" data-mode="tap">👆 Tocar suelo</button><button type="button" data-mode="joy">🕹️ Palanca</button></div><div class="wcEditor40"><p>Arrastra la flor a tu lugar favorito:</p><div class="wcPreview40"><div class="wcPreviewHandle40"></div><div class="wcPreviewLabel40">Vista previa del juego</div></div><div class="wcSizes40"><button type="button" data-size="92">Pequeña</button><button type="button" data-size="116">Normal</button><button type="button" data-size="144">Grande</button></div><button type="button" class="wcSave40">✓ Guardar y activar</button></div>';
-   box.prepend(section);
-   const editor=section.querySelector('.wcEditor40'),preview=section.querySelector('.wcPreview40'),handle=section.querySelector('.wcPreviewHandle40');
-   let choice=!!cfg.enabled,draft={x:cfg.x,y:cfg.y,size:cfg.size},drag=null;
-   const paint=()=>{handle.style.left=draft.x+'%';handle.style.top=draft.y+'%';
-    const d=Math.round(draft.size*.45);handle.style.width=d+'px';handle.style.height=d+'px';
-    section.querySelectorAll('[data-size]').forEach(b=>b.classList.toggle('wcChosen40',Number(b.dataset.size)===draft.size));};
-   const update=()=>{section.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('wcChosen40',(b.dataset.mode==='joy')===choice));editor.hidden=!choice;};
-   section.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{
-    if(b.dataset.mode==='tap'){choice=false;mode(false);}else choice=true;
-    update();paint();});
-   section.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{draft.size=Number(b.dataset.size);paint()});
-   const move=e=>{const r=preview.getBoundingClientRect();if(!r.width||!r.height)return;
-    draft.x=clamp((e.clientX-r.left)/r.width*100,15,85);
-    draft.y=clamp((e.clientY-r.top)/r.height*100,23,87);paint();};
-   handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();drag=e.pointerId;
-    try{handle.setPointerCapture(drag)}catch(_){}move(e)});
-   handle.addEventListener('pointermove',e=>{if(drag===e.pointerId){e.preventDefault();move(e)}});
-   for(const ev of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(ev,e=>{if(e.pointerId===drag)drag=null});
-   section.querySelector('.wcSave40').onclick=()=>{cfg.x=draft.x;cfg.y=draft.y;cfg.size=draft.size;
-    position();mode(true);choice=true;update();X.toast('🕹️ Palanca activada');};
-   paint();update();
+/* Isla de Walesa · Control nativo v41.
+   Sin dependencias: el joystick no puede detener el bucle del juego.
+   Al soltarlo, tocar el suelo sigue disponible como control de respaldo. */
+(()=>{
+ 'use strict';
+ try {
+  const X=window.Game&&window.Game.X;
+  const G=window.Game&&window.Game.G;
+  const game=document.getElementById('game');
+  if(!X||!G||!X.HOOKS||!game||!window.save)return;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const cfg=save.joystick37||(save.joystick37={});
+  const sizeOpts=[92,116,144];
+  cfg.enabled=cfg.enabled===true;
+  cfg.x=clamp(Number.isFinite(Number(cfg.x))?Number(cfg.x):19,15,85);
+  cfg.y=clamp(Number.isFinite(Number(cfg.y))?Number(cfg.y):76,23,87);
+  cfg.size=sizeOpts.reduce((best,n)=>Math.abs(n-Number(cfg.size))<Math.abs(best-Number(cfg.size))?n:best,116);
+  cfg.ready40=true;
+  cfg.native41=true;
+
+  const style=document.createElement('style');
+  style.id='wcJoystickStyle41';
+  style.textContent=[
+   '#game #wcJoystick40{position:absolute;z-index:44;left:19%;top:76%;width:116px;height:116px;transform:translate(-50%,-50%);display:none;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:50%;pointer-events:auto;overscroll-behavior:contain;filter:drop-shadow(0 4px 10px #53394e55)}',
+   '#game #wcJoystick40.wcOn40{display:block}',
+   '#game:not(.on) #wcJoystick40,#game.mg #wcJoystick40,#game:has(#sheet.on) #wcJoystick40,#game:has(#shop.on) #wcJoystick40{display:none!important}',
+   '#game #wcJoystick40 .wcJ40Well{box-sizing:border-box;width:100%;height:100%;display:grid;place-items:center;border-radius:50%;border:3px solid #fff9f1dc;background:radial-gradient(circle at 34% 28%,#fffcf3de,#f7cadeaa 72%,#df91b57a);box-shadow:inset 0 0 0 3px #c481a69a,0 2px 7px #694b6077}',
+   '#game #wcJoystick40 .wcJ40Ball{width:42%;height:42%;box-sizing:border-box;display:grid;place-items:center;border:3px solid #fffdfb;border-radius:50%;background:linear-gradient(145deg,#fff5fa,#e6a5c8);box-shadow:0 3px 9px #61435d6b,inset 0 1px 3px #fff8;color:#ab5e89;font:900 24px Nunito,sans-serif;pointer-events:none;will-change:transform}',
+   '#game #wcJoystick40.wcTouching41 .wcJ40Well{border-color:#fff;box-shadow:inset 0 0 0 3px #bf6b9699,0 0 0 3px #f6d6e564}',
+   '#game #wcControlOptions40{padding:14px;margin:12px 0 15px;border:2px solid #efd1e0;border-radius:19px;background:linear-gradient(155deg,#fffcf8,#fff0f5);box-shadow:0 4px 13px #9d64801f;color:#704a62;font-family:Nunito,sans-serif}',
+   '#game #wcControlOptions40 strong{display:block;font:900 16px Nunito,sans-serif;margin-bottom:4px}',
+   '#game #wcControlOptions40 p{font:700 12px/1.5 Nunito,sans-serif;margin:5px 0 10px;color:#93758a}',
+   '#game #wcControlOptions40 .wcModes40,#game #wcControlOptions40 .wcSizes40{display:flex;align-items:center;gap:7px;margin:9px 0}',
+   '#game #wcControlOptions40 button{min-height:38px;flex:1;padding:7px 6px;border:2px solid #ead5e0;border-radius:12px;background:#fff;color:#80546f;font:800 12px Nunito,sans-serif;touch-action:manipulation}',
+   '#game #wcControlOptions40 button.wcChosen40{background:#ffe1ed;border-color:#c76f99;color:#a84d80;box-shadow:inset 0 0 0 1px #fff8}',
+   '#game #wcControlOptions40 .wcSave40{display:block;width:100%;margin-top:9px;background:linear-gradient(135deg,#d47aa5,#b95986);border-color:#b95986;color:white;font-size:14px}',
+   '#game #wcControlOptions40 .wcPreview40{position:relative;max-width:340px;height:160px;overflow:hidden;margin:9px auto 12px;border:2px solid #dfbad0;border-radius:16px;touch-action:none;background:linear-gradient(180deg,#e7f4f5,#e4f1db 68%,#d5e5c9);box-shadow:inset 0 2px 8px #7a9b9c24}',
+   '#game #wcControlOptions40 .wcPreview40:before{content:"☁️　🌳　🌼";position:absolute;top:9px;left:9px;opacity:.65;font-size:24px;pointer-events:none}',
+   '#game #wcControlOptions40 .wcPreview40:after{content:"🏠　🌷　🐾";position:absolute;bottom:12px;right:12px;opacity:.6;font-size:19px;pointer-events:none}',
+   '#game #wcControlOptions40 .wcPreviewHandle40{position:absolute;display:grid;place-items:center;transform:translate(-50%,-50%);border:3px solid #fffdfb;border-radius:50%;background:linear-gradient(135deg,#ffd9e8,#d67caa);box-shadow:0 2px 10px #88587980,inset 0 0 0 5px #ffe8f1;touch-action:none;user-select:none;-webkit-user-select:none;z-index:2;color:#fff;font:900 24px Nunito,sans-serif}',
+   '#game #wcControlOptions40 .wcPreviewHandle40:before{content:"✿";pointer-events:none}',
+   '#game #wcControlOptions40 .wcPreviewLabel40{position:absolute;bottom:6px;left:8px;border-radius:9px;padding:3px 7px;background:#fffcf0c9;color:#99617e;font:800 10px Nunito,sans-serif;pointer-events:none}',
+   '#game #wcControlOptions40 .wcBackup41{font-size:11px;color:#977d8c;margin:8px 0 0}',
+   '@media(prefers-reduced-motion:reduce){#game #wcJoystick40,#game #wcJoystick40 *{transition:none!important;animation:none!important}}'
+  ].join('\n');
+  document.head.appendChild(style);
+
+  const stick=document.createElement('div');
+  stick.id='wcJoystick40';
+  stick.setAttribute('role','group');
+  stick.setAttribute('aria-label','Palanca táctil para caminar');
+  stick.innerHTML='<div class="wcJ40Well"><div class="wcJ40Ball">✿</div></div>';
+  game.appendChild(stick);
+  const ball=stick.querySelector('.wcJ40Ball');
+  let pointer=null,vx=0,vy=0,shown=false,lastError=false;
+  const canPlay=()=>{
+   const s=X.st;
+   return !!(s&&game.classList.contains('on')&&s.mode==='play'&&!s.menu&&!s.mg&&!s.busy&&!s.trans&&!s.poseLock&&!document.hidden);
+  };
+  function release(){
+   pointer=null;vx=0;vy=0;
+   stick.classList.remove('wcTouching41');
+   ball.style.transform='translate3d(0px,0px,0)';
+  }
+  function visible(){
+   const on=cfg.enabled===true&&canPlay();
+   if(on!==shown){
+    shown=on;
+    stick.classList.toggle('wcOn40',on);
+    if(!on)release();
+   }
+   return on;
+  }
+  // El motor consulta "enabled" para decidir si debe bloquear el toque del
+  // suelo. Sólo se bloquea mientras el dedo realmente sostiene la palanca.
+  function enabled(){
+   try{return pointer!==null&&cfg.enabled===true&&canPlay();}
+   catch(_){return false;}
+  }
+  function vector(){
+   try{
+    if(!visible()||pointer===null)return null;
+    if(!Number.isFinite(vx)||!Number.isFinite(vy)){release();return null;}
+    return Math.hypot(vx,vy)>.02?{x:vx,y:vy}:null;
+   }catch(err){
+    // Ningún error del control debe romper requestAnimationFrame del juego.
+    if(!lastError){console.warn('Palanca recuperada; se mantiene tocar suelo.',err);lastError=true;}
+    cfg.enabled=false;
+    try{release();shown=false;stick.classList.remove('wcOn40');G.save();}
+    catch(_){}
+    return null;
+   }
+  }
+  function position(){
+   const r=game.getBoundingClientRect(),w=Math.max(1,r.width||innerWidth),h=Math.max(1,r.height||innerHeight);
+   const half=cfg.size/2+10;
+   const xmin=Math.min(49,half/w*100),ymin=Math.min(49,half/h*100);
+   stick.style.width=cfg.size+'px';
+   stick.style.height=cfg.size+'px';
+   stick.style.left=clamp(cfg.x,xmin,100-xmin)+'%';
+   stick.style.top=clamp(cfg.y,ymin,100-ymin)+'%';
+  }
+  function sample(e){
+   const r=stick.getBoundingClientRect();
+   if(!r.width||!r.height){release();return;}
+   const dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2;
+   const dist=Math.hypot(dx,dy),rad=Math.max(10,r.width*.30);
+   const amount=dist?Math.min(rad,dist)/dist:0;
+   ball.style.transform='translate3d('+Math.round(dx*amount)+'px,'+Math.round(dy*amount)+'px,0)';
+   const strength=clamp((dist/rad-.14)/.86,0,1);
+   vx=dist?dx/dist*strength:0;
+   vy=dist?dy/dist*strength:0;
+  }
+  stick.addEventListener('pointerdown',e=>{
+   if(pointer!==null||!cfg.enabled||!canPlay())return;
+   e.preventDefault();e.stopPropagation();
+   pointer=e.pointerId;
+   stick.classList.add('wcTouching41');
+   try{stick.setPointerCapture(pointer);}catch(_){}
+   X.player.path=null;X.player.pending=null;
+   sample(e);
   });
- });
- position();visible();
- window.WalesaJoystick37={enabled,vector,release,config:cfg};
- window.WalesaJoystick40={enabled,vector,release,config:cfg};
-}catch(err){
- console.error('Joystick v40: recuperación segura',err);
- try{if(window.save?.joystick37)save.joystick37.enabled=false}catch(_){}
- window.WalesaJoystick37={enabled:()=>false,vector:()=>null,release:()=>{}};
-}
+  stick.addEventListener('pointermove',e=>{
+   if(e.pointerId!==pointer)return;
+   e.preventDefault();e.stopPropagation();
+   sample(e);
+  });
+  for(const name of ['pointerup','pointercancel','lostpointercapture']){
+   stick.addEventListener(name,e=>{if(e.pointerId===pointer)release();});
+  }
+  window.addEventListener('blur',release);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)release();});
+  window.addEventListener('resize',()=>{release();position();});
+  window.addEventListener('orientationchange',()=>{release();position();});
+  function mode(on){
+   cfg.enabled=!!on;
+   cfg.native41=true;
+   release();
+   try{visible();G.save();}catch(err){console.warn('No se pudo guardar la preferencia de movimiento',err);}
+  }
+
+  X.HOOKS.tab.push((tab,box)=>{
+   if(tab!=='opts')return;
+   // showTab() invoca los hooks antes de dibujar las Opciones originales.
+   // Montar tras el render evita que su innerHTML borre nuestros controles.
+   queueMicrotask(()=>{
+    try{
+     if(!box.isConnected||X.st.tab!=='opts'||box.querySelector('#wcControlOptions40'))return;
+     const panel=document.createElement('section');
+     panel.id='wcControlOptions40';
+     panel.innerHTML=[
+      '<strong>🕹️ Cómo caminar</strong>',
+      '<p>Escoge el movimiento que te resulte más cómodo.</p>',
+      '<div class="wcModes40">',
+      '<button type="button" data-mode="tap">👆 Tocar suelo</button>',
+      '<button type="button" data-mode="joy">🕹️ Palanca</button>',
+      '</div>',
+      '<div class="wcEditor40">',
+      '<p>Mueve la flor para elegir dónde va tu palanca:</p>',
+      '<div class="wcPreview40" aria-label="Vista previa de la posición del control">',
+      '<div class="wcPreviewHandle40" role="img" aria-label="Arrastrar palanca"></div>',
+      '<div class="wcPreviewLabel40">Tu espacio de juego ♡</div></div>',
+      '<div class="wcSizes40">',
+      '<button type="button" data-size="92">Pequeña</button>',
+      '<button type="button" data-size="116">Normal</button>',
+      '<button type="button" data-size="144">Grande</button>',
+      '</div>',
+      '<button type="button" class="wcSave40">✓ Guardar posición</button>',
+      '<p class="wcBackup41">Puedes seguir tocando el suelo aunque uses la palanca.</p>',
+      '</div>'
+     ].join('');
+     box.prepend(panel);
+     const editor=panel.querySelector('.wcEditor40');
+     const preview=panel.querySelector('.wcPreview40');
+     const handle=panel.querySelector('.wcPreviewHandle40');
+     let chosen=cfg.enabled===true;
+     const draft={x:cfg.x,y:cfg.y,size:cfg.size};
+     let dragging=null;
+     const paint=()=>{
+      handle.style.left=draft.x+'%';handle.style.top=draft.y+'%';
+      handle.style.width=Math.round(draft.size*.45)+'px';
+      handle.style.height=Math.round(draft.size*.45)+'px';
+      panel.querySelectorAll('[data-size]').forEach(b=>b.classList.toggle('wcChosen40',Number(b.dataset.size)===draft.size));
+     };
+     const paintMode=()=>{
+      panel.querySelectorAll('[data-mode]').forEach(b=>{
+       const chosenButton=(b.dataset.mode==='joy')===chosen;
+       b.classList.toggle('wcChosen40',chosenButton);
+       b.setAttribute('aria-pressed',String(chosenButton));
+      });
+      editor.hidden=!chosen;
+     };
+     panel.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      chosen=b.dataset.mode==='joy';
+      mode(chosen);
+      paintMode();
+     }));
+     panel.querySelectorAll('[data-size]').forEach(b=>b.addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      draft.size=Number(b.dataset.size);paint();
+     }));
+     const move=e=>{
+      const r=preview.getBoundingClientRect();
+      if(!r.width||!r.height)return;
+      draft.x=clamp((e.clientX-r.left)/r.width*100,15,85);
+      draft.y=clamp((e.clientY-r.top)/r.height*100,23,87);
+      paint();
+     };
+     preview.addEventListener('pointerdown',e=>{
+      if(!chosen||dragging!==null)return;
+      e.preventDefault();e.stopPropagation();
+      dragging=e.pointerId;
+      try{preview.setPointerCapture(dragging);}catch(_){}
+      move(e);
+     });
+     preview.addEventListener('pointermove',e=>{
+      if(dragging!==e.pointerId)return;
+      e.preventDefault();e.stopPropagation();move(e);
+     });
+     for(const name of ['pointerup','pointercancel','lostpointercapture']){
+      preview.addEventListener(name,e=>{if(e.pointerId===dragging)dragging=null;});
+     }
+     panel.querySelector('.wcSave40').addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      cfg.x=draft.x;cfg.y=draft.y;cfg.size=draft.size;
+      chosen=true;mode(true);position();paintMode();paint();
+      X.toast('🕹️ Palanca guardada. ¡A pasear!');
+     });
+     paint();paintMode();
+    }catch(err){
+     console.warn('Las opciones de palanca no pudieron dibujarse',err);
+    }
+   });
+  });
+  position();
+  visible();
+  const api={enabled,vector,release,config:cfg,mode,position};
+  window.WalesaJoystick37=api;
+  window.WalesaJoystick40=api;
+  window.WalesaJoystick41=api;
+ }catch(err){
+  console.error('Palanca: control táctil de respaldo activado',err);
+  try{if(window.save&&save.joystick37)save.joystick37.enabled=false;}catch(_){}
+  const fallback={enabled:()=>false,vector:()=>null,release:()=>{}};
+  window.WalesaJoystick37=fallback;
+  window.WalesaJoystick40=fallback;
+  window.WalesaJoystick41=fallback;
+ }
 })();
