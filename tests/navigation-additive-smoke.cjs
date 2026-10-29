@@ -41,12 +41,17 @@ const server=http.createServer((req,res)=>{
   assert.ok(visuals.noGifts&&visuals.roomCanvas&&visuals.legacyTexture&&visuals.biomeColors);
   assert.ok(visuals.viaRoads&&visuals.viaPlateau,'Grafo de calles conecta regiones');
   assert.ok(visuals.landmarks,'Destinos antiguos y nuevos visibles');
-  await page.evaluate(async()=>{await Game.enter();Game.X.st.mode='play';document.querySelector('#titleCov')?.classList.remove('on');Game.X.openMenu('map')});
+  await page.evaluate(async()=>{await Game.enter();Game.X.st.mode='play';document.querySelector('#titleCov')?.classList.remove('on')});
+  fs.mkdirSync(path.join(root,'tests','proof'),{recursive:true});
+  await page.waitForTimeout(500);
+  await page.screenshot({path:path.join(root,'tests','proof','overworld-v56.png')});
+  await page.evaluate(()=>Game.X.openMenu('map'));
   await page.waitForSelector('#walesa-streets-map');
   const options=await page.locator('select[aria-label="Elegir destino"] option').count();
   assert.ok(options>=20,'Buscador de puntos de interés y casas');
   await page.locator('[data-nav="plus"]').click();
   await page.locator('select[aria-label="Elegir destino"]').selectOption('0');
+  await page.screenshot({path:path.join(root,'tests','proof','mapa-navegacion-v56.png')});
   assert.match(await page.locator('[data-nav="status"]').innerText(),/Plaza de Walesa/);
   await page.locator('[data-nav="route"]').click();
   await page.waitForFunction(()=>document.querySelector('#walesa-route-hud')?.style.display==='block',{timeout:10000});
