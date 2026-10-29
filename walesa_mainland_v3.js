@@ -256,7 +256,7 @@ window.WalesaMainland=(()=>{
   return true;
  }
  function register(){
-  if(!window.Game?.X?.HOOKS)return;
+  if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
   H.update.push(()=>{if(!main)return;moveToPreview();
    const m=X.M();if(m!==main||X.st.scene!=='out')return;
