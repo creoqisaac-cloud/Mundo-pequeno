@@ -120,7 +120,16 @@ async function slideZipper(page){
   // El celular debe mantener visible su transicion despues de cerrar.
   await page.evaluate(()=>document.getElementById('fonBtn').click());
   await page.locator('#game .fon.on').waitFor({state:'visible'});
-  await page.locator('#game .fon .home').click();
+  // El gesto nativo de deslizar hacia arriba funciona aun cuando la barra
+  // inferior esta muy cerca de otro contenido tactil.
+  await page.evaluate(()=>{
+   const gm=document.querySelector('#game'),fon=document.querySelector('.fon');
+   const r=fon.getBoundingClientRect(),x=(r.left+r.right)/2,y=r.bottom-12;
+   const t=(yy)=>new Touch({identifier:41,target:gm,clientX:x,clientY:yy});
+   gm.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[t(y)],targetTouches:[t(y)],changedTouches:[t(y)]}));
+   gm.dispatchEvent(new TouchEvent('touchmove',{bubbles:true,cancelable:true,touches:[t(y-104)],targetTouches:[t(y-104)],changedTouches:[t(y-104)]}));
+   gm.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,touches:[],targetTouches:[],changedTouches:[t(y-104)]}));
+  });
   await page.waitForFunction(()=>document.querySelector('.fon')?.classList.contains('wcPhoneLeaving50'));
   const leaving=await page.evaluate(()=>getComputedStyle(document.querySelector('.fon')).visibility);
   assert.equal(leaving,'visible','El celular no debe desaparecer instantaneamente');
