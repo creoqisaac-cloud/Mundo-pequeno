@@ -80,10 +80,7 @@ window.WalesaMainland=(()=>{
     let col;
     if(sea>1.07)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
     else if(sea>.91)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
-    else if(nearbyRoad(x,y,11)){
-     const road=zone(x,y)==='administrativo'||zone(x,y)==='meseta';
-     col=road?[111+noise*15,108+noise*13,118+noise*14]:[208+noise*18,185+noise*17,140+noise*18];
-    }else{
+    else{
      const f=clamp(((noise*.60+hash(x>>4,y>>4)*.4)*3.8)|0,0,3);
      col=pal[f].slice();
      // Barrancos y estratos de altura: tonos de la paleta existente.
@@ -102,6 +99,18 @@ window.WalesaMainland=(()=>{
    }
   }
   ctx.putImageData(im,0,0);
+  // La red vial real se pinta EN EL SUELO (no encima del atlas).
+  // Sólo se procesan segmentos que intersectan esta tesela.
+  for(const [a,b] of seg){
+   if(Math.max(a[0],b[0])<x0-24||Math.min(a[0],b[0])>x0+SZ+24||
+      Math.max(a[1],b[1])<y0-24||Math.min(a[1],b[1])>y0+SZ+24)continue;
+   const urban=zone((a[0]+b[0])/2,(a[1]+b[1])/2);
+   const paved=urban==='administrativo'||urban==='meseta';
+   ctx.lineJoin='round';ctx.lineCap='round';
+   ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);
+   ctx.strokeStyle=paved?'#cbbda6':'#c2aa80';ctx.lineWidth=28;ctx.stroke();
+   ctx.strokeStyle=paved?'#77717a':'#e8ce9c';ctx.lineWidth=20;ctx.stroke();
+  }
   // Sombreado de montaña vectorial: crea bordes/terrazas en el mismo suelo.
   if(x0>ORX&&y0<1570){
     ctx.lineWidth=1;
