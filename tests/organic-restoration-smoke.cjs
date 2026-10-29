@@ -1,0 +1,123 @@
+/* Walesa v59: no lost gameplay, organic terrain, street-safe houses, restored kiosk and NPCs. */
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+const {chromium}=require('playwright'),root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{
+ const name=new URL(req.url,'http://127.0.0.1').pathname,
+   file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
+ if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
+ fs.readFile(file,(e,b)=>e?res.writeHead(404).end():res.writeHead(200,{
+  'Content-Type':file.endsWith('.js')?'application/javascript':'text/html'}).end(b));
+});
+(async()=>{
+ await new Promise(ok=>server.listen(0,'127.0.0.1',ok));let browser;
+ try{
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',
+   headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const errors=[];page.on('pageerror',e=>{errors.push(String(e));console.error('PAGEERROR',String(e))});
+  await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.__ready===true&&World.MAIN.mainland,{timeout:120000});
+  const result=await page.evaluate(()=>{
+   const m=World.MAIN,L=WalesaMainland,homes=m.build.filter(b=>b.id.startsWith('v3_')),
+     k=L.kioskAt,legacy=m.build.filter(b=>!b.id.startsWith('v3_')&&b.room!==undefined);
+   const invalid=homes.filter(b=>!L.roadClearance(b.x,b.y,!!b.city).valid).map(b=>b.id);
+   const collide=homes.flatMap((b,i)=>homes.slice(i+1).filter(h=>
+     Math.abs(b.x-h.x)<(b.city||h.city?75:60)&&Math.abs(b.y-h.y)<(b.city||h.city?64:52)
+   ).map(h=>b.id+'/'+h.id));
+   const reg=['town','candy','city','chile','shroom'].reduce((acc,type)=>{
+    let n=0;for(let j=0;j<26;j++)for(let i=0;i<35;i++){
+     const x=2875+i*99,y=200+j*157;
+     if(L.coast(x,y)<.78&&L.biome(x,y)===type)n++;
+    }
+    acc[type]=n;return acc;
+   },{});
+   return {
+    extent:[m.MW,m.MH],legacy:legacy.map(x=>x.room),houses:homes.length,
+    invalid,collide,invalidDiag:invalid.map(id=>{
+     const b=homes.find(h=>h.id===id);let best={d:Infinity,index:-1};
+     const lines=L.streetSegments,hw=b.city?37:30,top=b.city?41:32;
+     lines.forEach(([a,c],index)=>{
+      for(const xx of [b.x-hw,b.x,b.x+hw])for(const yy of [b.y-top,b.y-(top+1)/2,b.y-1]){
+       const dx=c[0]-a[0],dy=c[1]-a[1],
+       t=Math.max(0,Math.min(1,((xx-a[0])*dx+(yy-a[1])*dy)/(dx*dx+dy*dy||1))),
+       d=Math.hypot(xx-a[0]-t*dx,yy-a[1]-t*dy);
+       if(d<best.d)best={d:+d.toFixed(1),index,arterial:index<38};
+      }
+     });return{id,x:b.x,y:b.y,...best};
+    }),reg,roadConnections:L.streetSegments.length,
+    garden:m.objs.some(o=>o.s===World.spr.gazebo&&o.x>2800&&Math.abs(o.x-k.x)<5),
+    nativePicnic:m.objs.some(o=>o.s===World.spr.basket&&o.x>2800),
+    contacts:L.townResidents.length,
+    businesses:homes.filter(b=>b.job).map(b=>b.job),
+    candyNorth:WalesaTopografia.classify(.4,.21),
+    oldKiosk:m.spots.gazebo.x<1500
+   };
+  });
+  console.log('RESTORATION V59',JSON.stringify(result));
+  assert.deepEqual(result.extent,[6800,4630]);
+  assert.deepEqual(result.legacy,[0,1,2,3],'All original rooms preserved');
+  assert.ok(result.houses>=45,'Expanded city populated with additional native businesses');
+  assert.equal(result.invalid.length,0,'No house footprint should intersect a road');
+  assert.equal(result.collide.length,0,'Expanded houses should not overlap');
+  for(const t of ['town','candy','city','chile','shroom'])assert.ok(result.reg[t]>=1,t+' is represented');
+  assert.equal(result.garden,true,'Native kiosk sprite restored on main village');
+  assert.equal(result.nativePicnic,true,'Native picnic sprite restored in plaza');
+  assert.ok(result.contacts>=10,'New region has distinct NPCs');
+  assert.ok(result.businesses.includes('arcade')&&result.businesses.includes('pasteles'));
+  assert.equal(result.oldKiosk,true,'Old kiosk remains untouched');
+  await page.evaluate(async()=>{
+   await Game.enter();
+   Game.X.st.mode='play';document.querySelector('#titleCov')?.classList.remove('on');
+  });
+  await page.waitForFunction(()=>save.mainlandV3Welcome===1,{timeout:30000});
+  await page.waitForFunction(()=>WalesaMainland.arrivalRunning===false&&Game.X.st.busy===false,{timeout:30000});
+  const life=await page.evaluate(()=>{
+   const X=Game.X,m=World.MAIN,L=WalesaMainland;
+   return{
+    originalNpcs:X.NPCS.filter(n=>!n.id.startsWith('walesa_')).length,
+    newNpcs:X.NPCS.filter(n=>n.id.startsWith('walesa_')).length,
+    newNearVillage:X.NPCS.filter(n=>n.id.startsWith('walesa_')&&Math.hypot(n.x-L.plaza.x,n.y-L.plaza.y)<290).length,
+    tourist:save.walesaArrivalV59===1,
+    arrivalEnd:[X.player.x,X.player.y],
+    kioskInteract:X.interactables().some(it=>it.type==='note'&&it.id==='gazebo'&&it.x>2800),
+    picnicInteract:X.interactables().some(it=>it.type==='note'&&it.id==='picnic'&&it.x>2800),
+    originalKioskInteract:X.interactables().some(it=>it.type==='note'&&it.id==='gazebo'&&it.x<1800),
+    gameScene:X.st.scene
+   };
+  });
+  console.log('RESTORED GAMEPLAY',life);
+  assert.equal(life.tourist,true,'Initial arrival is replayable and persisted');
+  assert.ok(life.originalNpcs>=5,'Original story NPCs still exist');
+  assert.ok(life.newNpcs>=10,'New NPCs are live and dialog-capable');
+  assert.ok(life.newNearVillage>=2,'There are actual neighbours near the start');
+  assert.ok(life.arrivalEnd[0]>3700&&life.arrivalEnd[1]>2200,'Arrival ends at plaza');
+  assert.equal(life.kioskInteract,true,'Kiosk is interactable in expanded village');
+  assert.equal(life.picnicInteract,true,'Picnic is interactable in expanded village');
+  assert.equal(life.originalKioskInteract,true,'Kiosk remains in original map');
+  assert.equal(life.gameScene,'out');
+  fs.mkdirSync(path.join(root,'tests','proof'),{recursive:true});
+  await page.screenshot({path:path.join(root,'tests','proof','v59-kiosk-restored.png')});
+  await page.evaluate(()=>{
+   const X=Game.X,L=WalesaMainland;
+   X.player.x=L.kioskAt.x;X.player.y=L.kioskAt.y+31;
+   X.cam.x=X.player.x;X.cam.y=X.player.y;
+  });
+  const i=await page.evaluate(()=>{
+   const X=Game.X;
+   return X.interactables().find(it=>it.type==='note'&&it.id==='gazebo'&&it.x>2800);
+  });
+  assert.ok(i&&i.r>0);
+  // Verify real native interaction UI without needing to complete rhythm MG.
+  await page.evaluate(()=>{
+   Game.X.act(Game.X.interactables().find(it=>
+    it.type==='note'&&it.id==='gazebo'&&it.x>2800));
+   return true;
+  });
+  await page.waitForTimeout(300);
+  const nativeKiosk=await page.evaluate(()=>document.body.innerText.includes('Tocar una canción'));
+  assert.equal(nativeKiosk,true,'Original native kiosk actions are offered here');
+  assert.deepEqual(errors,[],'No browser JS exceptions');
+  console.log('✓ v59 full world continuity, organic biomes, urban occupancy, residents, arrival and kiosk');
+ }finally{await browser?.close();await new Promise(ok=>server.close(ok))}
+})().catch(e=>{console.error('RESTORATION FAIL',e);process.exitCode=1;server.close()});

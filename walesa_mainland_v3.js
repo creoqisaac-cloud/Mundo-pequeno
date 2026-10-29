@@ -29,6 +29,9 @@ window.WalesaMainland=(()=>{
  // una sola plaza circular transitable, sin cruces de senderos bajo el kiosco.
  const PLAZA={x:P.village.x,y:P.village.y,r:186,edge:198};
  const circleRoads=[];
+ const kioskAt={x:P.village.x,y:P.village.y-107};
+ const picnicAt={x:P.village.x+107,y:P.village.y+98};
+ const mailAt={x:P.village.x-106,y:P.village.y+102};
  const plazaDistance=(x,y)=>Math.hypot(x-PLAZA.x,y-PLAZA.y);
  function plazaBrick(x,y){
   if(Math.abs(x-PLAZA.x)>PLAZA.edge||Math.abs(y-PLAZA.y)>PLAZA.edge)return null;
@@ -121,16 +124,95 @@ window.WalesaMainland=(()=>{
  function biome(x,y){
   const [u,v]=pos(x,y);
   if(u<0||u>1||v<0||v>1)return 'town';
-  return T.classify(u,v);
+  // Distorsión continua en coordenadas mundiales. Ni una sola celda usa
+  // bordes cuadrados del atlas de 32x32 de Procreate.
+  const bendX=(V.vnoise(x/150,y/150)-.5)*125+
+   (V.vnoise((x+690)/57,(y-320)/57)-.5)*37;
+  const bendY=(V.vnoise((x-380)/174,(y+610)/174)-.5)*96+
+   (V.vnoise((x+113)/49,(y+900)/49)-.5)*32;
+  const tx=clamp((x+bendX-ORX)/RW,0,1),
+   ty=clamp((y+bendY-ORY)/RH,0,1),
+   native=T.classify(tx,ty);
+  // Valle real de tamarindo según la franja cálida de las muestras del norte:
+  // no era visible porque el muestreo duro convertía casi toda esa franja
+  // en montaña o ciudad. Sus curvas se apoyan en ruido continuo de baja escala.
+  const warm=Math.hypot((tx-.53)/.21,(ty-.285)/.155)+
+   (V.vnoise((x+220)/185,(y-510)/185)-.5)*.29;
+  if(warm<1&&!(tx>.63&&ty>.36))return 'chile';
+  return native;
  }
  // Misma biblioteca cromática del suelo original, no una segunda paleta artificial.
  const COL={town:V.BIO.town.g,chile:V.BIO.chile.g,city:V.BIO.city.g,
-   shroom:V.BIO.shroom.g,candy:V.BIO.candy.g};
+   shroom:V.BIO.shroom.g,candy:V.BIO.candy.g,beach:V.BIO.beach.g};
  const SEA=[95,172,193],SAND=[232,219,188],W=SZ,H=SZ;
  const rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]};
  const PAL={};for(const [k,v] of Object.entries(COL))PAL[k]=v.map(rgb);
  // Las veredas heredan las cuatro tintas del mismo bioma del motor base.
  const PATH={};for(const [k,v] of Object.entries(V.BIO))PATH[k]=(v.path||['#e6d3ad','#d7c194','#f1e4c4','#c5ae82']);
+
+ // Mezcla orgánica MATERIAL por MATERIAL (no gradiente cúbico universal).
+ // La arena difumina polvo sobre el pasto, el dulce deja confeti, el asfalto
+ // se desvanece en adoquines y el valle de tamarindo aporta tierra rojiza.
+ const MAT=['town','chile','city','shroom','candy','beach'];
+ const TRANS={
+  'beach|town':{hue:[240,217,175],grain:'tuft',edge:.13},
+  'beach|candy':{hue:[245,224,194],grain:'sugar',edge:.20},
+  'beach|chile':{hue:[225,173,119],grain:'clay',edge:.12},
+  'candy|town':{hue:[230,207,177],grain:'petal',edge:.21},
+  'candy|city':{hue:[227,211,211],grain:'tile',edge:.16},
+  'candy|chile':{hue:[210,161,128],grain:'sugar',edge:.17},
+  'chile|city':{hue:[202,164,137],grain:'clay',edge:.12},
+  'chile|town':{hue:[166,159,109],grain:'tuft',edge:.15},
+  'chile|shroom':{hue:[145,129,114],grain:'spore',edge:.11},
+  'city|town':{hue:[195,202,176],grain:'tile',edge:.15},
+  'city|shroom':{hue:[166,184,176],grain:'spore',edge:.16},
+  'shroom|town':{hue:[137,171,139],grain:'spore',edge:.19},
+  'candy|shroom':{hue:[203,173,199],grain:'petal',edge:.17},
+  'beach|city':{hue:[224,206,187],grain:'tile',edge:.12}
+ };
+ const materialPair=(a,b)=>TRANS[[a,b].sort().join('|')]||
+  {hue:[190,181,151],grain:'tuft',edge:.12};
+ function organicNodes(x0,y0){
+  const step=20,n=Math.ceil(SZ/step)+2,weights=new Float32Array(n*n*MAT.length);
+  const stamps=[[0,0,3],[-35,0,1.3],[35,0,1.3],[0,-35,1.3],[0,35,1.3],
+    [-29,-29,.68],[29,-29,.68],[-29,29,.68],[29,29,.68],
+    [-57,0,.42],[57,0,.42],[0,-57,.42],[0,57,.42]];
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){
+   const x=x0+i*step,y=y0+j*step,off=(j*n+i)*MAT.length;
+   let total=0;
+   for(const [dx,dy,w] of stamps){
+    const k=MAT.indexOf(biome(x+dx,y+dy));
+    if(k>=0){weights[off+k]+=w;total+=w}
+   }
+   for(let k=0;k<MAT.length;k++)weights[off+k]/=total||1;
+  }
+  return {weights,n,step};
+ }
+ const biomeMix=(nodes,x,y)=>{
+  const {weights,n,step}=nodes,
+    u=clamp(x/step,0,n-1.0001),v=clamp(y/step,0,n-1.0001),
+    i=Math.floor(u),j=Math.floor(v),tx=u-i,ty=v-j,dom=[];
+  let first=0,second=1,w1=-1,w2=-1;
+  for(let k=0;k<MAT.length;k++){
+   const p=(j*n+i)*MAT.length+k,
+     q=p+MAT.length,r=p+n*MAT.length,
+     w=((weights[p]*(1-tx)+weights[q]*tx)*(1-ty)+
+       (weights[r]*(1-tx)+weights[r+MAT.length]*tx)*ty);
+   if(w>w1){second=first;w2=w1;first=k;w1=w}
+   else if(w>w2){second=k;w2=w}
+  }
+  return {a:MAT[first],b:MAT[second],wa:w1,wb:Math.max(0,w2)};
+ };
+ const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+ function tintTransition(col,pair,dominance,small){
+  const at=smooth(clamp((.55-dominance)/.35,0,1));
+  if(at<=0)return col;
+  const h=pair.hue,w=at*pair.edge;
+  return [col[0]*(1-w)+h[0]*w+small*1.8,
+    col[1]*(1-w)+h[1]*w+small*1.5,
+    col[2]*(1-w)+h[2]*w+small*1.1];
+ }
+
  const surfaceCache=new Map();
  function roadPattern(ctx,kind,paved){
   const key=(paved?'paved:':'stone:')+kind;let src=surfaceCache.get(key);
@@ -159,7 +241,7 @@ window.WalesaMainland=(()=>{
  function tile(tx,ty){
   const key=tx+','+ty;if(cache.has(key)){const v=cache.get(key);cache.delete(key);cache.set(key,v);return v}
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d'),im=ctx.createImageData(W,H),arr=im.data;
-  const x0=tx*SZ,y0=ty*SZ;
+  const x0=tx*SZ,y0=ty*SZ,materials=organicNodes(tx*SZ,ty*SZ);
   // Calculamos la altitud una vez por celda, para evitar millones de ruidos por fotograma.
   const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N),F=new Float32Array(N*N);
   for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=x0+i*step,y=y0+j*step,k=j*N+i;E[k]=height(x,y);SEA_MASK[k]=coast(x,y);F[k]=clamp(V.vnoise(x/52,y/52)*.67+V.vnoise((x+83)/19,(y-55)/19)*.33,0,1)}
@@ -172,12 +254,10 @@ window.WalesaMainland=(()=>{
     const k=(j*W+i)*4,noise=hash(x>>2,y>>2),small=hash(x,y),
       // El bioma se lee a través de una frontera irregular de microparcelas.
       // Mantiene los colores nativos y elimina el corte geométrico por regiones.
-      drift=hash(x>>3,y>>3),bk=biome(x+(drift-.5)*48,y+(hash((x>>3)+93,(y>>3)-61)-.5)*48),
-      pal=PAL[bk]||PAL.town;
+      mix=biomeMix(materials,i,j),bk=mix.a,pal=PAL[bk]||PAL.town;
     let col;
     // Lo que se ve como agua tiene EXACTAMENTE el umbral de colisión del motor (.95).
     if(sea>.95)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
-    else if(sea>.84)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
     else{
      // Transiciones cromáticas suaves, sin ruido de "parches cuadrados".
      // Se interpola la paleta del motor base, con grano mínimo de pixel-art.
@@ -189,6 +269,21 @@ window.WalesaMainland=(()=>{
       pal[lo][1]*(1-weight)+pal[Math.min(3,lo+1)][1]*weight,
       pal[lo][2]*(1-weight)+pal[Math.min(3,lo+1)][2]*weight
      ];
+     const bp=PAL[mix.b]||PAL.town,
+      other=[bp[lo][0]*(1-weight)+bp[Math.min(3,lo+1)][0]*weight,
+       bp[lo][1]*(1-weight)+bp[Math.min(3,lo+1)][1]*weight,
+       bp[lo][2]*(1-weight)+bp[Math.min(3,lo+1)][2]*weight];
+     // Frontera curvada: ruido de baja frecuencia + granulado del material.
+     const pair=materialPair(mix.a,mix.b),
+      jitter=(V.vnoise((x+390)/38,(y-156)/38)-.5)*.095+
+        (noise-.5)*.029,
+      blend=smooth(clamp(mix.wb/(mix.wa+mix.wb+.0001)+jitter,0,.54));
+     col=[
+      col[0]*(1-blend)+other[0]*blend,
+      col[1]*(1-blend)+other[1]*blend,
+      col[2]*(1-blend)+other[2]*blend
+     ];
+     col=tintTransition(col,pair,mix.wa-mix.wb,small);
      // Barrancos y estratos de altura: tonos de la paleta existente.
      if(elev>.36){
       const t=clamp((elev-.3)*1.3,0,.84);
@@ -200,6 +295,16 @@ window.WalesaMainland=(()=>{
      if(elev>.31&&(Math.floor(elev*13)!==Math.floor((elev+(c-a)*(1-ti)/8)*13))){
       col=[99+noise*28,72+noise*20,57+noise*18];
      }
+    }
+    // Orilla de arena a pasto, caramelo, ciudad o tamarindo, con anchura
+    // distinta según el material y frontera rizada, no una línea de píxeles.
+    if(sea<=.95&&sea>.63){
+     const pair=materialPair('beach',bk),surf=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11],
+      wave=(V.vnoise((x+51)/71,(y-39)/71)-.5)*.07,
+      shore=smooth((sea-.65+wave)/.255),tone=pair.grain==='clay'?[222,190,143]:
+        pair.grain==='sugar'?[248,225,191]:pair.grain==='tile'?[226,209,185]:surf;
+     col=[col[0]*(1-shore)+tone[0]*shore,
+       col[1]*(1-shore)+tone[1]*shore,col[2]*(1-shore)+tone[2]*shore];
     }
     // El suelo de ladrillo es parte del tile y de la colisión existente:
     // no es un objeto superpuesto ni una textura estirada.
@@ -293,10 +398,25 @@ window.WalesaMainland=(()=>{
   // coherente entre tiles: flores, hierbas, piedritas y sombras de senderos.
   for(let yy=0;yy<SZ;yy+=12)for(let xx=0;xx<SZ;xx+=12){
    const gx=x0+xx,gy=y0+yy,h=hash(gx>>2,gy>>2);
-   if(h<.44||coast(gx,gy)>.84||nearbyRoad(gx,gy,19))continue;
-   const bi=biome(gx,gy),e=height(gx,gy);
+   if(h<.44||coast(gx,gy)>.92||nearbyRoad(gx,gy,19))continue;
+   const blend=biomeMix(materials,xx,yy),bi=blend.a,e=height(gx,gy),
+    pair=materialPair(blend.a,blend.b),
+    boundary=blend.wb>.17&&blend.wa<.74;
    const px=xx+Math.floor(hash(gx+71,gy)*9),py=yy+Math.floor(hash(gx,gy+93)*9);
-   if(bi==='city'){
+   if(boundary&&h>.64){
+    const hue=pair.hue,ink='rgba('+hue.map(Math.round).join(',')+',.88)';
+    ctx.fillStyle=ink;
+    if(pair.grain==='sugar'||pair.grain==='petal'){
+     ctx.fillRect(px,py,3,2);ctx.fillRect(px+5,py-2,2,2);
+     ctx.fillStyle='rgba(255,239,225,.82)';ctx.fillRect(px+2,py-2,1,1);
+    }else if(pair.grain==='tile'){ctx.fillRect(px,py,5,3);
+     ctx.fillStyle='rgba(255,255,237,.72)';ctx.fillRect(px+1,py+1,3,1);
+    }else if(pair.grain==='clay'){
+     ctx.fillRect(px,py,4,2);ctx.fillRect(px+7,py+3,2,1);
+    }else if(pair.grain==='spore'){
+     ctx.fillRect(px,py,2,2);ctx.fillRect(px+4,py-3,1,1);
+    }else{ctx.fillRect(px,py,1,5);ctx.fillRect(px+3,py-2,2,4)}
+   }else if(bi==='city'){
     ctx.fillStyle=h>.91?'rgba(106,91,76,.20)':'rgba(248,238,219,.20)';
     ctx.fillRect(px,py,2+(h>.94?2:0),1);
    }else if(e>.53){
@@ -427,11 +547,98 @@ window.WalesaMainland=(()=>{
   g.globalAlpha=1;
   return {...sprite,c};
  }
+
+ // Urbanismo real: ocupar parcelas junto a calles, nunca sobre el asfalto.
+ // Solamente recoloca edificaciones V3 y conserva intacta la isla heredada.
+ const buildClaims=[];
+ function roadClearance(x,y,urban){
+  const hw=urban?37:30,top=urban?41:32,bottom=urban?1:1;
+  let closest=Infinity;
+  for(const [a,b] of seg){
+   const paved=['administrativo','meseta'].includes(zone((a[0]+b[0])/2,(a[1]+b[1])/2));
+   const margin=paved?19:18;
+   for(const xx of [x-hw,x,x+hw])for(const yy of [y-top,y-(top+bottom)/2,y-bottom]){
+    const d=distSegment(xx,yy,a,b);closest=Math.min(closest,d);
+    if(d<margin)return {valid:false,closest:d};
+   }
+  }
+  return {valid:true,closest};
+ }
+ function freePlot(x,y,urban){
+  const sz=urban?82:66;
+  if(x<ORX+45||x>MW-45||y<ORY+65||y>MH-60)return false;
+  // La función topográfica devuelve .80 incluso en tierra firme.
+  // Sólo la franja costera sobre .88 y el agua impiden construir.
+  if(coast(x,y)>.88||coast(x-35,y-40)>.89||coast(x+35,y-40)>.89)return false;
+  if(plazaDistance(x,y)<PLAZA.edge+47)return false;
+  if(!roadClearance(x,y,urban).valid)return false;
+  for(const h of buildClaims){
+   if(Math.abs(h.x-x)<(h.sz+sz)*.5+8&&
+      Math.abs(h.y-y)<(h.sz+sz)*.47+8)return false;
+  }
+  return true;
+ }
+ function findPlot(x,y,urban){
+  if(freePlot(x,y,urban)){buildClaims.push({x,y,sz:urban?82:66});return{x,y}}
+  let best=null,score=Infinity;
+  // Se preserva el barrio de procedencia y se buscan solares ordenados
+  // en los dos lados de la calle, no coordenadas aleatorias mar adentro.
+  for(const radius of [28,45,65,85,112,145,185,230,280,335]){
+   for(let i=0;i<32;i++){
+    const angle=i/32*Math.PI*2,radiusNoise=radius+(hash(i,Math.round(x+y))-.5)*13,
+     cx=Math.round(x+Math.cos(angle)*radiusNoise),
+     cy=Math.round(y+Math.sin(angle)*radiusNoise);
+    if(!freePlot(cx,cy,urban))continue;
+    const d=Math.hypot(cx-x,cy-y),
+      road=roadClearance(cx,cy,urban).closest,
+      penalty=d+Math.abs(road-35)*.12;
+    if(penalty<score){score=penalty;best={x:cx,y:cy}}
+   }
+   if(best)break;
+  }
+  const choice=best||{x,y};
+  buildClaims.push({...choice,sz:urban?82:66});
+  return choice;
+ }
+ function addDoorPaths(){
+  // Corta en la red de caminos sólo para conectar cada puerta desde la acera.
+  // El acceso sale por debajo del edificio, jamás por el tejado.
+  const base=seg.slice();
+  for(const b of houses){
+   const exit=[b.x,b.y+19],urban=!!b.city;
+   if(nearbyRoad(exit[0],exit[1],27))continue;
+   let chosen=null,best=140;
+   for(const [a,c] of base){
+    const dx=c[0]-a[0],dy=c[1]-a[1],dt=dx*dx+dy*dy;
+    if(dt<1)continue;
+    const t=clamp(((exit[0]-a[0])*dx+(exit[1]-a[1])*dy)/dt,0,1);
+    const px=a[0]+t*dx,py=a[1]+t*dy,d=Math.hypot(px-exit[0],py-exit[1]);
+    if(d>=best||d<24||py<b.y+11)continue;
+    // Acceso exclusivamente delante de la fachada, nunca bajo un tejado,
+    // incluida la propia casa y las construidas anteriormente.
+    let clear=true;
+    for(const h of houses){
+     const half=h.city?37:30,top=h.city?41:32,limit=18;
+     for(const xx of [h.x-half,h.x,h.x+half]){
+      for(const yy of [h.y-top,h.y-(top+1)/2,h.y-1]){
+       if(distSegment(xx,yy,exit,[px,py])<limit){clear=false;break}
+      }
+      if(!clear)break;
+     }
+     if(!clear)break;
+    }
+    if(clear){best=d;chosen=[px,py]}
+   }
+   if(chosen)seg.push([chosen,exit]);
+  }
+ }
+
  function building(id,name,x,y,type='home',job=null){
   const v=zone(x,y),urban=type==='city'&&(!!job||hash(x+417,y-251)<.64);
   // La ciudad combina edificios de varias plantas con casas bajas originales.
   // Cada tipología conserva las colisiones, puertas y sprites del motor.
   const districtHome=type==='city'&&!urban;
+  ({x,y}=findPlot(x,y,urban));
   const styles=[
    ['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],
    ['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d'],
@@ -445,7 +652,7 @@ window.WalesaMainland=(()=>{
    ['#f0e1e8','#af819c']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
     acc:urban?'#9eafbc':palette[1],icon:urban?'🏬':'🏠'};
   const variant=Math.floor(hash(x+137,y-211)*10);b.facade=variant;
-  if(urban){b.acc=palette[1];b.icon=job==='shop'?'🛍️':job==='papers'?'📚':job==='delivery'?'📮':'🏠';
+  if(urban){b.acc=palette[1];b.icon=({shop:'🛍️',papers:'📚',delivery:'📮',arcade:'🕹️',pasteles:'🧁',moda:'👗',mascotas:'🐾',salon:'✂️'})[job]||'🏠';
    b.day=facade(V.cityBuilding(b.wall,b.acc,b.icon,false),b,false);
    b.night=facade(V.cityBuilding(b.wall,b.acc,b.icon,true),b,true);
   }else{
@@ -497,6 +704,10 @@ window.WalesaMainland=(()=>{
   }
   // Hitos propios de la región, pero con sprites exclusivos del juego.
   V.addObj(main,a.fount[0],P.village.x,P.village.y+11,V.circS(P.village.x,P.village.y,15),{fount:true});
+  // Kiosco jugable con el sprite y el minijuego musical ORIGINALES.
+  V.addObj(main,a.gazebo,kioskAt.x,kioskAt.y,V.circS(kioskAt.x,kioskAt.y-12,21),{landmark:'walesa-kiosk'});
+  V.addObj(main,a.basket,picnicAt.x,picnicAt.y,null,{landmark:'walesa-picnic'});
+  V.addObj(main,a.mail,mailAt.x,mailAt.y,V.rectS(mailAt.x-6,mailAt.y-7,12,12),{landmark:'walesa-mail'});
   for(const [x,y] of [[P.village.x-52,P.village.y-52],[P.village.x+52,P.village.y-52],
                       [P.village.x-52,P.village.y+52],[P.village.x+52,P.village.y+52],
                       [P.plateau.x-35,P.plateau.y-20],[P.town.x+100,P.town.y-20]]){
@@ -527,14 +738,14 @@ window.WalesaMainland=(()=>{
   }
  }
  function structures(){
+  normalizePlazaRoads();
   // Poblado radial: casas alrededor de la plaza, como el dibujo de Procreate.
   const colors=['Cinna','Melody','Purin','Rosa','Nube','Hiedra','Clavel','Estrella','Olivo','Amapola'];
   for(let i=0;i<10;i++){
    const a=(i/10)*Math.PI*2-Math.PI/2,r=i%2?265:225,
      x=Math.round(P.village.x+Math.cos(a)*r),y=Math.round(P.village.y+Math.sin(a)*r);
    building('radial'+i,'Casa '+colors[i],x,y,'home',null);
-   // Tramo residencial desde el anillo exterior, no un radio que atraviese la plaza.
-   seg.push([[P.village.x,P.village.y],[x,y+16]]);
+   // La ruta de acceso real se calcula al terminar el parcelario.
   }
   building('plaza-market','Mercado del Pueblo',P.village.x-100,P.village.y+140,'home','shop');
   building('town-hall','Oficina de Walesa',P.village.x+115,P.village.y+145,'home','papers');
@@ -549,11 +760,29 @@ window.WalesaMainland=(()=>{
     ['Taller','Edificio','Papelería','Vivienda','Comercio'][col]+' del Sur',x,y,'city',
     col===1&&row===0?'papers':col===4&&row===1?'shop':null);
   }
+  // Parcelas adicionales para activar los bloques desocupados con comercios
+  // funcionales del sistema nativo, parques pequeños y casas habitadas.
+  const civic=[
+   ['cafe-estacion','Cafetería Alameda',3550,4180,'pasteles'],
+   ['juegos-sur','Salón Recreativo del Sur',3990,3610,'arcade'],
+   ['moda-sur','Tienda de Moda del Sur',4050,3930,'moda'],
+   ['mascotas-sur','Refugio de Mascotas',3220,3810,'mascotas'],
+   ['salon-sur','Peluquería del Centro',3220,4070,'salon'],
+   ['viviendas-sur-a','Residencias Jacaranda',3920,4160,null],
+   ['viviendas-sur-b','Condominio del Prado',3520,3260,null],
+   ['viviendas-sur-c','Casas del Bulevar',4110,3260,null],
+   ['centro-candy','Tienda de Caramelos',4780,1770,'shop'],
+   ['alto-postres','Dulcería de la Meseta',6160,1980,'pasteles'],
+   ['alto-juegos','Recreativos del Altiplano',6200,2250,'arcade'],
+   ['alto-vivienda','Residencias Nubes del Altiplano',6170,2470,null],
+   ['alto-atelier','Atelier de las Nubes',5250,1880,'moda']
+  ];
+  for(const [id,name,x,y,job] of civic)building(id,name,x,y,'city',job);
   building('forest-lodge','Refugio del Bosque',5760,3575,'home');
   building('forest-camp','Casa del Guardabosques',6040,3860,'home');
   building('ridge-lodge','Mirador de la Cordillera',3510,910,'home');
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
-  normalizePlazaRoads();
+  addDoorPaths();
   adorn();decoratePlaza();
  }
 
@@ -730,7 +959,11 @@ window.WalesaMainland=(()=>{
      den=rx*sy-ry*sx;if(Math.abs(den)<1e-6)continue;
     const qx=c[0]-a[0],qy=c[1]-a[1],
      t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
-    if(t>0&&t<1&&u>0&&u<1){cuts[i].push(t);cuts[j].push(u)}
+    // Una entrada se une a la calle por su EXTREMO (u=0 o u=1).
+    // Excluir extremos aislaba los accesos y rompía el GPS del teléfono.
+    if(t>=-1e-7&&t<=1+1e-7&&u>=-1e-7&&u<=1+1e-7){
+     cuts[i].push(clamp(t,0,1));cuts[j].push(clamp(u,0,1));
+    }
    }
   }
   const nodes=[],adj=[],lookup=new Map();
@@ -775,6 +1008,8 @@ window.WalesaMainland=(()=>{
   if(!main)return[];
   const landmarks=[
    ['Plaza de Walesa',P.village.x,P.village.y,'⛲'],
+   ['Kiosco musical',kioskAt.x,kioskAt.y,'🎵'],
+   ['Picnic del Pueblo',picnicAt.x,picnicAt.y,'🧺'],
    ['Cordilleras del Norte',3500,900,'⛰️'],
    ['Altiplano Dorado',P.plateau.x,P.plateau.y,'🏔️'],
    ['Ciudad del Sur',P.town.x,P.town.y,'🏙️'],
@@ -868,6 +1103,7 @@ window.WalesaMainland=(()=>{
    '<div style="display:flex;gap:5px;margin:7px 0;align-items:center;flex-wrap:wrap">'+
    '<button data-nav="minus" aria-label="Alejar mapa">−</button><button data-nav="plus" aria-label="Acercar mapa">＋</button>'+
    '<button data-nav="me">📍 Mi ubicación</button><button data-nav="all">🌍 Isla completa</button>'+
+   '<button data-nav="tour" aria-label="Revivir recorrido de llegada">🧳 Llegada</button>'+
    '<button data-nav="style" aria-label="Cambiar estilo del mapa">🌿 Relieve</button>'+
    '</div><div data-nav="filters" role="group" aria-label="Categorías de lugares" style="display:flex;gap:5px;overflow-x:auto;'+
    'padding:3px 1px 6px;scrollbar-width:thin">'+
@@ -1019,6 +1255,10 @@ window.WalesaMainland=(()=>{
   controls('minus').onclick=()=>zoomAt(1/1.5);
   controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
   controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
+  controls('tour').onclick=()=>{
+   if(phone&&closePhone)closePhone();else X.closeMenu();
+   requestAnimationFrame(()=>replayArrival());
+  };
   controls('style').onclick=()=>{
    terrainMode=!terrainMode;
    controls('style').textContent=terrainMode?'🗺️ Plano':'🌿 Relieve';
@@ -1119,21 +1359,177 @@ window.WalesaMainland=(()=>{
   structures();decorateDistricts();nativePlaces();furnishRooms();
   return m;
  }
- function moveToPreview(){
-  if(!main||!Game?.X||!save||save.mainlandV3Welcome)return false;
+
+ // Llegada jugable de la expansión: mismo personaje, cámara y recorrido.
+ // El viaje en barco y su repetición en el teléfono original se CONSERVAN.
+ let arrivalRunning=false,arrivalCancel=false,arrivalSkip=null;
+ async function arrivalTour(replay=false){
+  if(arrivalRunning||!main||!Game?.X)return false;
   const X=Game.X;
-  if(X.st.mode!=='play'||X.st.scene!=='out'||X.M()!==main||X.st.busy||X.st.mg)return false;
-  // La primera visita abre EN EL OVERWORLD EXPANDIDO: no en una tabla ni un menú.
-  X.player.x=P.village.x;X.player.y=P.village.y+85;X.player.dir=0;
-  X.cam.x=X.player.x;X.cam.y=X.player.y;
-  save.mainlandV3Welcome=1;
-  Game.G.save();
-  X.toast('🏞 ¡Estás dentro del nuevo overworld! Camina hacia montañas, ciudad o bosque.');
+  if(X.M()!==main||X.st.scene!=='out'||X.st.mg||X.st.mode!=='play')return false;
+  if(X.st.busy&&!replay)return false;
+  if(X.st.busy&&replay)return false;
+  if(!replay){
+   save.mainlandV3Welcome=1;
+   save.walesaArrivalV59=1;
+   Game.G.save();
+  }
+  arrivalRunning=true;arrivalCancel=false;
+  const p=X.player,st=X.st;
+  const button=document.createElement('button');
+  button.id='walesa-tour-skip';
+  button.type='button';button.textContent='Saltar recorrido ✕';
+  Object.assign(button.style,{
+   position:'absolute',right:'12px',top:'56px',zIndex:'96',
+   background:'rgba(255,247,230,.94)',border:'2px solid #b99681',
+   borderRadius:'12px',padding:'7px 10px',color:'#765a51',
+   font:'bold 12px system-ui',cursor:'pointer',touchAction:'manipulation'
+  });
+  button.onclick=()=>{arrivalCancel=true};
+  arrivalSkip=button;
+  document.querySelector('#game')?.append(button);
+  st.busy=true;X.st.focus={x:3440,y:2015};
+  p.x=3440;p.y=2015;p.dir=3;
+  X.cam.x=p.x;X.cam.y=p.y;
+  X.toast('🧳 Llegando a Walesa… sigue el camino hacia el pueblo');
+  const stops=[
+   [3440,2015],[3505,2070],[3580,2130],
+   [3655,2195],[3730,2250],[PLAZA.x,PLAZA.y+92]
+  ];
+  try{
+   // Recorrido por carretera con vista de las montañas, las casas y la plaza.
+   // La secuencia puede omitirse en cualquier momento, sin perder la partida.
+   for(let i=1;i<stops.length&&!arrivalCancel;i++){
+    const [ax,ay]=stops[i-1],[bx,by]=stops[i],steps=22;
+    for(let k=1;k<=steps&&!arrivalCancel;k++){
+     const t=k/steps,soft=t*t*(3-2*t),prevX=p.x,prevY=p.y;
+     p.x=ax+(bx-ax)*soft;p.y=ay+(by-ay)*soft;
+     p.dir=Math.abs(bx-ax)>Math.abs(by-ay)?(bx>ax?3:2):(by>ay?1:0);
+     p.frame=1+Math.floor(k/5)%2;
+     X.st.focus={x:p.x,y:p.y-18};
+     // Mantiene el movimiento físico original, sin teletransportes entre tomas.
+     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)){
+      p.x=prevX;p.y=prevY;break;
+     }
+     await new Promise(resolve=>requestAnimationFrame(resolve));
+    }
+   }
+   p.x=PLAZA.x;p.y=PLAZA.y+92;p.dir=0;p.frame=0;
+   X.cam.x=p.x;X.cam.y=p.y;
+   X.toast('🎵 Bienvenida a la plaza. El kiosco, el picnic y los vecinos te esperan.');
+  }finally{
+   button.remove();arrivalSkip=null;arrivalCancel=false;
+   X.st.focus=null;st.busy=false;arrivalRunning=false;
+  }
   return true;
  }
+ function moveToPreview(){
+  if(!main||!Game?.X||!save||arrivalRunning)return false;
+  const X=Game.X;
+  if(X.st.mode!=='play'||X.st.scene!=='out'||X.M()!==main||X.st.busy||X.st.mg)return false;
+  const first=!save.mainlandV3Welcome;
+  const nearVillage=Math.hypot(X.player.x-PLAZA.x,X.player.y-PLAZA.y)<325;
+  if(!first&&(save.walesaArrivalV59||!nearVillage))return false;
+  if(!first&&save.walesaArrivalV59)return false;
+  // La animación vuelve para partidas antiguas que ya llegaron a la plaza,
+  // pero no interrumpe a quienes exploran muy lejos de ella.
+  arrivalTour(false);
+  return true;
+ }
+ function replayArrival(){
+  return arrivalTour(true);
+ }
+ // Residentes propios de la expansión, construidos con sprites y la
+ // conversación, amistad, encargos y movimiento del MOTOR ORIGINAL.
+ // No se mueven ni se borran los NPC originales de Ciudad Corazón.
+ const residents=[
+  {id:'walesa_iris',name:'Iris',base:'melody',x:3685,y:2205,fur:'#fff9ed',wear:'#bb8eb8',voice:526,
+   first:'¡Bienvenida al pueblo! El kiosco vuelve a tener música, y puedes venir a bailar cuando quieras.',
+   lines:['Pintamos las macetas para que cada calle tenga personalidad.','La fuente está rodeada de mosaicos hechos por los vecinos.'],
+   gossip:'siempre deja una flor junto al camino'},
+  {id:'walesa_nico',name:'Nico',base:'pochacco',x:3870,y:2240,fur:'#f8f5e8',wear:'#729fc8',voice:445,
+   first:'Estoy cuidando los caminos. En Walesa las carreteras tienen su sitio y las casas el suyo.',
+   lines:['Si te pierdes, el mapa del celular tiene un buscador de lugares.','Me gusta caminar junto al parque cuando cae la tarde.'],
+   gossip:'conoce cada vuelta de la carretera'},
+  {id:'walesa_luma',name:'Luma',base:'cinna',x:3825,y:2410,fur:'#f0f5fa',wear:'#acbddd',voice:552,
+   first:'¡Aquí nos juntamos para el picnic! Puedes invitar a los vecinos y compartir un bocadillo.',
+   lines:['Hay jardines que florecen todo el año.','El kiosco está precioso cuando empiezan a encenderse las farolas.'],
+   gossip:'sabe hacer tartas de colores'},
+  {id:'walesa_fede',name:'Fede',base:'keroppi',x:3560,y:3655,fur:'#83cc8c',wear:'#c8926f',voice:390,
+   first:'¡Bienvenido a la Ciudad del Sur! Tenemos tiendas, talleres y jardines para pasear.',
+   lines:['La Alameda del Sur es un buen sitio para descansar.','Trabajo cerca de las oficinas y siempre me escapo a ver los escaparates.'],
+   gossip:'organiza paseos por la alameda'},
+  {id:'walesa_mara',name:'Mara',base:'melody',x:3870,y:3875,fur:'#fff2e9',wear:'#d8a2c0',voice:485,
+   first:'Las calles del sur están llenas de negocios. También hay zonas de vivienda, no sólo edificios.',
+   lines:['En el mercado hay algo distinto cada día.','Las calles se ven de otro color después de la lluvia.'],
+   gossip:'siempre lleva un cuaderno de dibujos'},
+  {id:'walesa_timo',name:'Timo',base:'badtz',x:3990,y:4020,fur:'#514b5d',wear:'#d1a2a5',voice:367,
+   first:'¿Ya viste el salón recreativo? Pásate a jugar cuando termines tu paseo.',
+   lines:['Dicen que me sé todos los atajos. Tal vez.','A veces me siento en la plaza a escuchar la música.'],
+   gossip:'no deja de hablar de sus videojuegos'},
+  {id:'walesa_cira',name:'Cira',base:'tuxedo',x:5530,y:2150,fur:'#6178a4',wear:'#e6c78f',voice:410,
+   first:'La Meseta Oriental tiene comercios, casas, miradores y un montón de caminos.',
+   lines:['Las nubes pasan bajito por el mirador.','En el mapa puedes activar el relieve para orientarte.'],
+   gossip:'le encanta coleccionar postales'},
+  {id:'walesa_oli',name:'Oli',base:'pom',x:5970,y:2410,fur:'#e4d4a1',wear:'#aad39d',voice:510,
+   first:'Trabajo en los jardines del altiplano. ¿Has visto nuestras flores?',
+   lines:['El viento de la meseta huele a tierra húmeda.','Quisiera plantar un árbol en cada esquina.'],
+   gossip:'le pone nombre a todas las plantas'},
+  {id:'walesa_bimba',name:'Bimba',base:'chococat',x:5730,y:3500,fur:'#45424d',wear:'#8baa74',voice:398,
+   first:'Yo cuido los senderos del bosque. Busca las luciérnagas cuando anochezca.',
+   lines:['El bosque se vuelve azulito cuando cae la tarde.','La naturaleza siempre encuentra un huequito para crecer.'],
+   gossip:'conoce el nombre de cada hongo'},
+  {id:'walesa_tara',name:'Tara',base:'kuromi',x:5960,y:3820,fur:'#665977',wear:'#d9a2b9',voice:445,
+   first:'Hay nuevos senderos por el Bosque Profundo. Mira bien entre los helechos.',
+   lines:['Me encantan las sombras violetas de los árboles.','Nunca salgas del sendero sin mirar el mapa.'],
+   gossip:'colecciona piedras con formas raras'},
+  {id:'walesa_roco',name:'Roco',base:'hangyo',x:3490,y:1120,fur:'#79b6bb',wear:'#b9937b',voice:355,
+   first:'La cordillera tiene cuestas de verdad. Camina por la ruta marcada.',
+   lines:['Arriba sopla viento, pero el paisaje merece la subida.','Los barrancos tienen sombras distintas cada mañana.'],
+   gossip:'siempre vuelve de las montañas con una historia'}
+ ];
+ function enableResidents(){
+  for(const r of residents){
+   if(!Talk.P[r.id]){
+    Talk.P[r.id]={
+     name:r.name,voice:r.voice,home:[r.x,r.y],map:'main',static:false,
+     where:'paseando por Walesa',likes:['flor','fruta','galleta','dulce'],
+     first:r.first,hi:['¡Qué alegría verte!','¡Buenas!','¡Qué bonito día!'],
+     lines:r.lines,ask:['¿Dónde paseamos hoy?',
+       ['Al kiosco','Al parque','Por los caminos'],
+       ['¡Vamos a oír música!','Me encantan los jardines.','Hay mucho que descubrir.']],
+     gossip:r.gossip,chat:['¡Buenas!','♡','¿Vamos a pasear?']
+    };
+    const base=V.NPCDEF[r.base];
+    V.NPCDEF[r.id]={...base,fur:r.fur,oColor:r.wear,aColor:r.wear};
+   }
+  }
+ }
+ function neighborSpot(x,y){
+  for(const r of [0,14,28,42,56,75,95]){
+   for(let k=0;k<16;k++){
+    const theta=k*Math.PI/8,tx=Math.round(x+Math.cos(theta)*r),
+      ty=Math.round(y+Math.sin(theta)*r);
+    if(coast(tx,ty)<.85&&!V.blockedOut(tx,ty,9)&&
+     !houses.some(b=>Math.hypot(b.x-tx,b.y-ty)<38))return[tx,ty];
+   }
+  }
+  return [x,y];
+ }
+
  function register(){
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
+  enableResidents();
+  H.npcs.push((list,m)=>{
+   if(m!==main)return;
+   for(const r of residents){
+    if(list.some(n=>n.id===r.id))continue;
+    const at=neighborSpot(r.x,r.y),n=X.mkNPC(r.id,at[0],at[1]);
+    Talk.P[r.id].home=[at[0],at[1]];n.hx=at[0];n.hy=at[1];
+    list.push(n);
+   }
+  });
   H.tab.push(navigationTab);
   H.ground.push((g,ox,oy,t)=>{
    if(!main||X.M()!==main||X.st.scene!=='out')return;
@@ -1194,6 +1590,9 @@ window.WalesaMainland=(()=>{
    g.restore();
   });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
+   list.push({type:'note',id:'gazebo',x:kioskAt.x,y:kioskAt.y+8,r:34,hy:70,label:'🎵 Subir al kiosco y tocar música'});
+   list.push({type:'note',id:'picnic',x:picnicAt.x,y:picnicAt.y+4,r:26,hy:28,label:'🧺 Hacer un picnic'});
+   list.push({type:'note',id:'mail',x:mailAt.x,y:mailAt.y+7,r:20,hy:32,label:'💌 Abrir el buzón'});
    for(const p of [...scenic,...districtDetails])list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
   H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Un rincón para descansar y conocer los paisajes de Walesa. Mira los jardines y sigue explorando los senderos cercanos.')});
   H.update.push(()=>{if(!main)return;updateGuide();moveToPreview();
@@ -1213,5 +1612,9 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,plaza:PLAZA,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,
+   destinations,startGuide,mountPhone,replayArrival,roadClearance,
+   get streetSegments(){return seg},get roadGraph(){return graph()},get townResidents(){return residents.map(r=>r.id)},
+   get arrivalRunning(){return arrivalRunning},
+   kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
