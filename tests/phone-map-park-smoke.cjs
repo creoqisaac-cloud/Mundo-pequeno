@@ -71,6 +71,12 @@ const server=http.createServer((req,res)=>{
   });
   assert.ok(current.width>=400&&current.height>=350&&current.alpha>0,'Mapa continental visible en teléfono');
   await phone.locator('[data-nav="plus"]').click();
+  await phone.locator('[data-nav="style"]').click();
+  assert.equal(await phone.locator('[data-nav="style"]').getAttribute('aria-pressed'),'true',
+    'Vista de relieve del mapa disponible');
+  await phone.locator('[data-nav="style"]').click();
+  assert.ok(await phone.locator('[data-filter="parks"]').count(),
+    'Filtros de parques disponibles dentro del teléfono');
   await phone.locator('input[aria-label="Buscar destino"]').fill('Altiplano');
   await phone.locator('[data-result="Altiplano Dorado"]').click();
   assert.match(await phone.locator('[data-nav="status"]').innerText(),/Altiplano Dorado/);
