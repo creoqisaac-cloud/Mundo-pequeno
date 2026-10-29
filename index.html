@@ -1584,6 +1584,7 @@ const World=(()=>{
   for(const b of CITY.build)MAIN.build.push(Object.assign({},b,{x:b.x+o[0],y:b.y+o[1]}));MAIN.plots=CITY.plots.map(p=>Object.assign({},p,{x:p.x+o[0],y:p.y+o[1]}));MAIN.centers.city=[2140,560];
   const bio=MAIN.biome;MAIN.biome=(x,y,m)=>x>1580||(x>1380&&Math.abs(y-662)<70&&Math.hypot((x-750)/700,(y-660)/620)>.86)?'city':bio(x,y,m)}
  MAIN.paths.push([1110,602,1110,650]);
+ MAIN.paths.push([2340,912,2550,950]); /* conexión sureste con los nuevos caminos */
  function islandDf(m){const so=m.seed%997;if(m.cityOff){const isl=(x,y)=>Math.hypot((x-m.cx)/m.rx,(y-m.cy)/m.ry)+(vnoise((x+so)/70,y/70)-.5)*.13+(vnoise(x/22,(y+so)/22)-.5)*.035,cty=(x,y)=>Math.pow(Math.pow(Math.abs(x-2140)/530,6)+Math.pow(Math.abs(y-660)/480,6),1/6)+(vnoise((x+so)/60,y/60)-.5)*.05,brg=(x,y)=>Math.pow(Math.pow(Math.abs(x-1540)/210,6)+Math.pow(Math.abs(y-662)/48,6),1/6)*.95;return(x,y)=>Math.min(isl(x,y),cty(x,y),brg(x,y))}if(m.square)return(x,y)=>{const nx=Math.abs(x-m.cx)/m.rx,ny=Math.abs(y-m.cy)/m.ry;return Math.pow(Math.pow(nx,6)+Math.pow(ny,6),1/6)+(vnoise((x+so)/60,y/60)-.5)*.05};return(x,y)=>Math.hypot((x-m.cx)/m.rx,(y-m.cy)/m.ry)+(vnoise((x+so)/70,y/70)-.5)*.13+(vnoise(x/22,(y+so)/22)-.5)*.035}
 
  /* Genera el suelo en rebanadas (generador) para que la pantalla nunca se congele */
@@ -1751,7 +1752,71 @@ const World=(()=>{
   const list=m.objs.filter(o=>o.x>sx-40&&o.x<sx+168&&o.y>sy-10&&o.y<sy+140).sort((a,b)=>a.y-b.y);for(const o of list)x.drawImage(o.s.c,Math.round(o.x-o.s.ax-sx),Math.round(o.y-o.s.ay-sy));
   const k=charSprite({type:'kitty',fur:'#ffffff',outfit:'sueter',oColor:'#fffaf6',acc:'bow',aColor:'#e8456f'},0,0);x.drawImage(k.c,Math.round(P.x-k.ax-sx),Math.round(P.y+44-k.ay-sy));
   const mm=charSprite(NPCDEF.melody,3,0);x.drawImage(mm.c,Math.round(P.x-26-mm.ax-sx),Math.round(P.y+42-mm.ay-sy))})}
- return{C,mk,PB,hash,vnoise,HOOK,BIO,OUTFITS,ACCS,NPCDEF,charSprite,MAIN,rng,addObj,rectS,circS,TREE_PAL,
+
+ /* ═════════════ CONTINENTE NATIVO: SECTORES DE 768 × 704 ═════════════
+    Conserva PB, biomas, colisiones, sprites y partidas de Walesa.
+    Sólo se genera el sector visitado; 32² sectores => 553.6 millones
+    de unidades de suelo virtuales, sin reservar ese lienzo en memoria. */
+ function makeExpanseSector(gx,gy,forest=false){
+  if(!forest&&(gx<0||gx>=32||gy<0||gy>=32))return Promise.reject(Error('Sector fuera del continente'));
+  if(!Number.isSafeInteger(gx)||!Number.isSafeInteger(gy)||Math.abs(gx)>1000000||Math.abs(gy)>1000000)
+   return Promise.reject(Error('Coordenadas fuera de rango'));
+  const MW=768,MH=704,seed=(Math.imul(gx+173,73856093)^Math.imul(gy+311,19349663)^(forest?0x5f3759df:0x2a629b))>>>0;
+  const R=rng(seed),a=vnoise((gx+11)/5,(gy+17)/5),center=Math.hypot(gx-16,gy-16);
+  const zone=forest?'silvestre':center<3.5?'centro':a>.72?'comercial':a<.28?'agrícola':a>.55?'residencial':'regional';
+  const kind=forest?'shroom':zone==='centro'||zone==='comercial'?'city':zone==='agrícola'?'town':zone==='residencial'?'candy':a>.44?'chile':'shroom';
+  const factor={centro:1.32,comercial:1.17,'agrícola':.76,residencial:1.05,regional:.94,silvestre:.7}[zone];
+  const id=(forest?'foresta':'continente')+'_'+gx+'_'+gy,build=[],plots=[],paths=[[0,352,768,352],[384,0,384,704]],stands=[];
+  const m={id,MW,MH,cx:384,cy:352,rx:420,ry:396,seed,main:false,kind,zone,
+   economy:factor,gridX:gx,gridY:gy,forest,name:forest?'Bosque sin Fin':({
+    centro:'Distrito Central',comercial:'Barrio Comercial','agrícola':'Campos del Sur',
+    residencial:'Barrio Jardín',regional:'Pueblo de la Meseta'})[zone],
+   build,stands,plots,paths,spots:{},islandD:()=>0,
+   biome:(x,y)=>{
+    if(forest){const v=vnoise((gx*MW+x)/440,(gy*MH+y)/420);
+      return v>.81?'candy':v<.13?'town':'shroom'}
+    const v=vnoise((gx*MW+x+500)/590,(gy*MH+y+500)/590);
+    if(kind==='city'&&v>.24)return'city';
+    if(v>.78)return'candy';if(v<.22)return'shroom';return kind==='city'?'town':kind;
+   }};
+  // Red vial que coincide exactamente en los cuatro bordes.
+  if(zone==='centro'||zone==='comercial')m.roads=[[0,352,768,352],[384,0,384,704],[90,184,678,184]];
+  const add=(n,x,y,job,urban,colors)=>{
+   build.push({id:id+'_'+job+'_'+build.length,x,y,job,city:urban?1:0,
+    wall:colors[0],acc:colors[1],roof:colors[1],name:n,icon:colors[2],sign:'heart'});
+   paths.push([384,352,x,y+8]);
+  };
+  if(forest){
+   // Claros estables que sirven de hitos para orientarse, no un laberinto aleatorio por fotograma.
+   if((seed%5)===0)add('Refugio del Bosque',558,234,'expLodge',false,['#e4f0da','#509d73','🌲']);
+   if(seed%7===0)stands.push({id:id+'_feria',job:'expMarket',x:208,y:258,c:['#73bd5f','#fffaf6'],icon:'cotton',name:'Mercado del claro'});
+  }else{
+   if(zone==='centro'||zone==='comercial'){
+    add('Mercado de '+(zone==='centro'?'la Plaza':'la Avenida'),190,220,'expMarket',true,['#f6e5cc','#d29055','🛍️']);
+    add('Oficina Distrital',566,220,'expOffice',true,['#e7eeff','#668bb3','📜']);
+    add('Viviendas del Paseo',210,506,'expResidence',true,['#fde3ec','#d9869f','🏘️']);
+    add('Comercio de Barrio',560,506,'expMarket',true,['#e2f4f2','#6da5a3','☕']);
+   }else if(zone==='agrícola'){
+    add('Cooperativa de Cultivos',184,240,'expMarket',false,['#fff0d2','#d99a55','🌾']);
+    add('Casa de Campo',568,236,'expResidence',false,['#e2f0d8','#71aa62','🏡']);
+    add('Oficina Comunal',550,510,'expOffice',false,['#f3ecdc','#7e9d6c','📜']);
+   }else{
+    add('Mercado del Pueblo',184,222,'expMarket',false,['#fae8dc','#d78984','🛍️']);
+    add('Oficina Vecinal',566,224,'expOffice',false,['#e6eff8','#86a1c8','📜']);
+    add('Viviendas de la Colina',545,510,'expResidence',false,['#f8e6f3','#cc87af','🏘️']);
+   }
+   const base=Math.round(2300*factor);
+   plots.push({id:id+'_loteA',x:165,y:544,price:base},{id:id+'_loteB',x:608,y:584,price:Math.round(base*1.32)});
+   paths.push([384,352,165,555],[384,352,608,594]);
+  }
+  // Dentro del mismo motor: genGround, placeObjects, PB y sprites originales.
+  return runGen(m,false).then(result=>{
+   for(const p of result.plots)addObj(result,plotSprite('lot'),p.x,p.y,null,{plot:p});
+   if(!forest)addObj(result,sprites().fount[0],384,324,circS(384,312,15),{fount:true});
+   return result;
+  });
+ }
+ return{C,mk,PB,hash,vnoise,HOOK,BIO,OUTFITS,ACCS,NPCDEF,charSprite,MAIN,makeExpanseSector,rng,addObj,rectS,circS,TREE_PAL,
   CITY,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
   get map(){return map},use(m){map=m},get spr(){return sprites()},get sea(){return seaTile()},get rooms(){return rooms},get progress(){return progress},
   prepare,polaroid,mysteryDef,makeMystery(seed){const m=mysteryDef(seed);return runGen(m,true)},makeKind(kind,seed){const m=mysteryDef(seed);m.kind=kind;m.biome=()=>kind;m.name=BIO[kind].n;m.id=kind+seed;m.pond=null;return runGen(m,true)},spawnPicks,
