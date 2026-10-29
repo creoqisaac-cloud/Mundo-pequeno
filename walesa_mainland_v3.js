@@ -52,11 +52,9 @@ window.WalesaMainland=(()=>{
   if(u<0||u>1||v<0||v>1)return 'town';
   return T.classify(u,v);
  }
- const COL={town:['#5c9e52','#6caf61','#7abb6e','#90c985'],
-    chile:['#b6783e','#cf914e','#e1a665','#f4bd7e'],
-    city:['#c5b9a0','#d1c9b3','#dfd4bf','#e7dfc9'],
-    shroom:['#254e37','#326349','#3c7451','#4a835c'],
-    candy:['#d9a8bf','#e9b6c9','#f4c6d7','#f7dae3']};
+ // Misma biblioteca cromática del suelo original, no una segunda paleta artificial.
+ const COL={town:V.BIO.town.g,chile:V.BIO.chile.g,city:V.BIO.city.g,
+   shroom:V.BIO.shroom.g,candy:V.BIO.candy.g};
  const SEA=[95,172,193],SAND=[232,219,188],W=SZ,H=SZ;
  const rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]};
  const PAL={};for(const [k,v] of Object.entries(COL))PAL[k]=v.map(rgb);
@@ -78,8 +76,9 @@ window.WalesaMainland=(()=>{
     const sea=(SEA_MASK[p]*(1-ti)+SEA_MASK[p+1]*ti)*(1-tj)+(SEA_MASK[p+N]*(1-ti)+SEA_MASK[p+N+1]*ti)*tj;
     const k=(j*W+i)*4,noise=hash(x>>2,y>>2),small=hash(x,y),bk=biome(x,y),pal=PAL[bk]||PAL.town;
     let col;
-    if(sea>1.07)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
-    else if(sea>.91)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
+    // Lo que se ve como agua tiene EXACTAMENTE el umbral de colisión del motor (.95).
+    if(sea>.95)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
+    else if(sea>.84)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
     else{
      const f=clamp(((noise*.60+hash(x>>4,y>>4)*.4)*3.8)|0,0,3);
      col=pal[f].slice();
@@ -99,17 +98,48 @@ window.WalesaMainland=(()=>{
    }
   }
   ctx.putImageData(im,0,0);
-  // La red vial real se pinta EN EL SUELO (no encima del atlas).
-  // Sólo se procesan segmentos que intersectan esta tesela.
-  for(const [a,b] of seg){
-   if(Math.max(a[0],b[0])<x0-24||Math.min(a[0],b[0])>x0+SZ+24||
-      Math.max(a[1],b[1])<y0-24||Math.min(a[1],b[1])>y0+SZ+24)continue;
-   const urban=zone((a[0]+b[0])/2,(a[1]+b[1])/2);
-   const paved=urban==='administrativo'||urban==='meseta';
+  // El pavimento se fusiona POR CAPAS: las uniones en T y en cruz ya no
+  // quedan atravesadas por el contorno de la última calle pintada.
+  const visible=seg.filter(([a,b])=>!(Math.max(a[0],b[0])<x0-34||
+    Math.min(a[0],b[0])>x0+SZ+34||Math.max(a[1],b[1])<y0-34||
+    Math.min(a[1],b[1])>y0+SZ+34)).map(([a,b])=>({
+      a,b,paved:['administrativo','meseta'].includes(zone((a[0]+b[0])/2,(a[1]+b[1])/2))
+    }));
+  const strokes=(layer)=>{
    ctx.lineJoin='round';ctx.lineCap='round';
-   ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);
-   ctx.strokeStyle=paved?'#cbbda6':'#c2aa80';ctx.lineWidth=28;ctx.stroke();
-   ctx.strokeStyle=paved?'#77717a':'#e8ce9c';ctx.lineWidth=20;ctx.stroke();
+   for(const {a,b,paved} of visible){
+    ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);
+    ctx.strokeStyle=layer===0?(paved?'#c7b9a7':'#ab895e'):
+      (paved?'#77717a':'#e8ce9c');
+    ctx.lineWidth=layer===0?32:layer===1?24:0;
+    ctx.stroke();
+   }
+  };
+  strokes(0);strokes(1);
+  // Bordes de acera, desagües y marcas viales siguiendo el mismo trazado.
+  for(const {a,b,paved} of visible)if(paved){
+   ctx.save();ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);
+   ctx.lineTo(b[0]-x0,b[1]-y0);ctx.strokeStyle='rgba(244,230,193,.56)';
+   ctx.lineWidth=1.2;ctx.setLineDash([6,17]);ctx.stroke();ctx.restore();
+  }
+  // Detalle superficial determinista en coordenadas globales, con textura
+  // coherente entre tiles: flores, hierbas, piedritas y sombras de senderos.
+  for(let yy=0;yy<SZ;yy+=12)for(let xx=0;xx<SZ;xx+=12){
+   const gx=x0+xx,gy=y0+yy,h=hash(gx>>2,gy>>2);
+   if(h<.44||coast(gx,gy)>.84||nearbyRoad(gx,gy,19))continue;
+   const bi=biome(gx,gy),e=height(gx,gy);
+   const px=xx+Math.floor(hash(gx+71,gy)*9),py=yy+Math.floor(hash(gx,gy+93)*9);
+   if(bi==='city'){
+    ctx.fillStyle=h>.91?'rgba(106,91,76,.20)':'rgba(248,238,219,.20)';
+    ctx.fillRect(px,py,2+(h>.94?2:0),1);
+   }else if(e>.53){
+    ctx.fillStyle=h>.85?'rgba(249,227,185,.42)':'rgba(72,54,44,.28)';
+    ctx.fillRect(px,py,3,2);
+   }else{
+    ctx.fillStyle=h>.90?'#f8e8c0':h>.77?'rgba(33,96,47,.42)':'rgba(239,247,179,.28)';
+    ctx.fillRect(px,py,1+(h>.97?1:0),h>.91?2:1);
+    if(h>.83){ctx.fillStyle='rgba(49,105,55,.52)';ctx.fillRect(px+3,py-2,1,3)}
+   }
   }
   // Sombreado de montaña vectorial: crea bordes/terrazas en el mismo suelo.
   if(x0>ORX&&y0<1570){
@@ -164,7 +194,7 @@ window.WalesaMainland=(()=>{
  function adorn(){
   const a=V.spr,rg=V.rng(514721);
   const clearNear=(x,y,rad)=>houses.some(b=>Math.hypot(b.x-x,b.y-y)<rad)||nearbyRoad(x,y,27)||Math.hypot(x-P.village.x,y-P.village.y)<115;
-  for(let k=0;k<1700;k++){
+  for(let k=0;k<3300;k++){
    const x=ORX+50+rg()*(RW-90),y=ORY+60+rg()*(RH-110);
    const u=(x-ORX)/RW,v=(y-ORY)/RH,z=height(x,y),b=biome(x,y),p=rg();
    if(coast(x,y)>.84||clearNear(x,y,28))continue;
@@ -219,6 +249,29 @@ window.WalesaMainland=(()=>{
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
   adorn();
  }
+ // Cada vivienda usa el MISMO sistema de interiores/colisión del motor.
+ // Las plantillas originales se copian sin alterar sus sprites, regalos ni partidas.
+ function furnishRooms(){
+  const rooms=V.rooms;
+  if(!Array.isArray(rooms)||rooms.length<4)throw Error('No están listas las habitaciones originales');
+  let i=0;
+  for(const b of houses){
+   if(b.job)continue;
+   const base=rooms[(i+++(b.city?3:0))%4];
+   const bg=document.createElement('canvas');bg.width=256;bg.height=192;
+   const ctx=bg.getContext('2d');ctx.drawImage(base.bg,0,0);
+   // Papel y piso con un matiz suave, muebles siempre pixel-art nativos.
+   const tone=zone(b.x,b.y)==='forest'?'#46795c':b.city?'#a8b4c3':
+     zone(b.x,b.y)==='montana'?'#c29b77':'#e9b5c8';
+   ctx.fillStyle=tone;ctx.globalAlpha=.09;ctx.fillRect(8,8,240,38);
+   ctx.globalAlpha=.045;ctx.fillRect(8,52,240,132);ctx.globalAlpha=1;
+   const room={...base,bg,name:b.name,gift:false,
+     objs:base.objs.slice(0,-1).map(o=>({...o})),
+     solids:base.solids.slice(0,-1).map(o=>({...o})),
+     flav:base.flav.map(f=>({...f}))};
+   b.room=rooms.length;rooms.push(room);
+  }
+ }
  function sampleMap(ctx,ox,oy,k){
   const img=ctx.createImageData(190,145),D=img.data;
   for(let j=0;j<145;j++)for(let i=0;i<190;i++){
@@ -240,7 +293,7 @@ window.WalesaMainland=(()=>{
   m.biome=(x,y,mm)=>x>=0&&y>=0&&x<oldW&&y<oldH?origBiome(x,y,mm):biome(x,y);
   m.elevation=height;
   m.mainland={draw,coast,height,biome,zone,roadAt,nearbyRoad,sampleMap,original:{width:oldW,height:oldH},extent:{width:MW,height:MH},landmarks:P};
-  structures();
+  structures();furnishRooms();
   return m;
  }
  function moveToPreview(){

@@ -48,6 +48,18 @@ const server=http.createServer((req,res)=>{
   assert.ok(map.bridge<.95,'Existe paso terrestre desde Ciudad Corazón');
   assert.ok(map.forest<.95,'El bosque se encuentra dentro del mapa');
   assert.ok(map.home&&map.newHouse&&map.city&&map.forestHouse);
+  const homes=await page.evaluate(()=>{
+   const m=World.MAIN,all=m.build.filter(b=>b.id.startsWith('v3_')&&!b.job);
+   return {count:all.length,rooms:all.map(b=>b.room),
+     names:all.map(b=>World.rooms[b.room]?.name),
+     noGifts:all.every(b=>World.rooms[b.room]?.gift===false),
+     originalRooms:m.build.filter(b=>!b.id.startsWith('v3_')&&b.room!==undefined).map(b=>b.room)};
+  });
+  assert.ok(homes.count>=25,'Todas las viviendas nuevas tienen interior');
+  assert.equal(new Set(homes.rooms).size,homes.count,'Cada casa tiene una habitación propia');
+  assert.ok(homes.rooms.every(n=>Number.isInteger(n)&&n>=4));
+  assert.equal(homes.noGifts,true,'No aparece un regalo inexistente');
+  assert.deepEqual(homes.originalRooms,[0,1,2,3],'Las viviendas originales no cambian');
   await page.evaluate(async()=>{
    await Game.enter();
    Game.X.st.mode='play';
@@ -64,6 +76,31 @@ const server=http.createServer((req,res)=>{
   const start=await page.evaluate(()=>({main:World.map===World.MAIN,x:Game.X.player.x,y:Game.X.player.y,scene:Game.X.st.scene}));
   assert.equal(start.main,true);assert.equal(start.scene,'out');
   assert.ok(start.x>3500&&start.y>2100,'La partida aparece en el pueblo nuevo');
+  // Recorrer dos interiores muy separados, mediante la interacción ORIGINAL.
+  for(const id of ['v3_radial0','v3_urb3_4']){
+   const door=await page.evaluate(async id=>{
+    const X=Game.X,b=World.MAIN.build.find(b=>b.id===id);
+    X.player.x=b.x;X.player.y=b.y+17;X.cam.x=b.x;X.cam.y=b.y;
+    const it=X.interactables().find(it=>it.type==='house'&&it.b===b);
+    if(!it)throw Error('Casa sin interacción: '+id);
+    await X.act(it);
+    return {scene:X.st.scene,room:X.st.room,name:World.rooms[X.st.room]?.name,
+      gift:X.interactables().some(it=>it.type==='gift')};
+   },id);
+   assert.equal(door.scene,'in',id+' abre un interior funcional');
+   assert.equal(door.gift,false,'Sin regalos inexistentes');
+   const out=await page.evaluate(async()=>{
+    const X=Game.X,exit=X.interactables().find(it=>it.type==='exit');
+    if(!exit)throw Error('Interior sin salida');
+    await X.act(exit);
+    return {scene:X.st.scene,x:X.player.x,y:X.player.y};
+   });
+   const expected=await page.evaluate(id=>{
+    const b=World.MAIN.build.find(b=>b.id===id);return {x:b.x,y:b.y+16};
+   },id);
+   assert.equal(out.scene,'out',id+' permite salir');
+   assert.deepEqual({x:out.x,y:out.y},expected,id+' regresa a su propia puerta');
+  }
   for(const [x,y] of [[3500,900],[5540,2200],[3600,3690],[5840,3650],[2675,930]]){
    const step=await page.evaluate(async([x,y])=>{
     const X=Game.X;X.player.x=x;X.player.y=y;X.cam.x=x;X.cam.y=y;
