@@ -101,6 +101,9 @@ function classify(u,v,forest=false){
  if(u>.63&&v>.35&&v<.70)return 'city';
  if(s===3||s===0)return'shroom';
  if(s===2||s===6||s===11)return'chile';
+ // Los parches dulces del boceto eran clasificados como pasto genérico:
+ // recuperamos el material de caramelo sólo al norte y noreste de la villa.
+ if((s===5||s===9||s===10)&&v<.41&&u>.16&&u<.70)return'candy';
  if(s===5||s===9||s===10)return'town';
  if(s===8||s===1)return'city';
  return'town';
