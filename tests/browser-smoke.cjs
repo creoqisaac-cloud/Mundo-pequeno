@@ -64,9 +64,9 @@ async function slideZipper(page){
    display:getComputedStyle(document.querySelector('#tabs')).display,
    columns:getComputedStyle(document.querySelector('#tabs')).gridTemplateColumns.split(' ').length
   }));
-  assert.deepEqual(tabs51.names,['tasks','pets','dex','opts'],'Mochila: solo cuatro pestañas');
+  assert.deepEqual(tabs51.names,['tasks','pets','cartas','dex','quests','partida','opts'],'Mochila: conservar Cartas, Encargos y Partida sin Mapa ni Armario');
   assert.equal(tabs51.display,'grid','Mochila: dos filas ordenadas');
-  assert.equal(tabs51.columns,2,'Mochila: dos columnas del mismo ancho');
+  assert.equal(tabs51.columns,12,'Mochila: cuadricula de 12 columnas para dos filas 4+3');
   await page.locator('#wcControlOptions40').waitFor({state:'visible'});
   await page.locator('#wcControlOptions40 [data-mode="joy"]').click();
   await page.locator('#wcControlOptions40 [data-size="144"]').click();
