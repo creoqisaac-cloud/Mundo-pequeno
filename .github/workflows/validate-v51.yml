@@ -1,0 +1,33 @@
+name: Validar interfaz v51 en Chromium
+on:
+  push:
+    branches: [feat/v51-phone-map-wallpaper]
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Revisar motor y partida
+        run: |
+          test -s index.html
+          ! grep -q 'native46/' index.html
+          grep -q 'walesa-ds-v1' index.html
+          node - <<'NODE'
+          const fs=require('node:fs'),vm=require('node:vm');
+          const html=fs.readFileSync('index.html','utf8');
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+          if(scripts.length<40)throw Error('Script del juego incompleto');
+          scripts.forEach((match,i)=>new vm.Script(match[1],{filename:'inline-'+i+'.js'}));
+          console.log('✓ '+scripts.length+' scripts válidos');
+          NODE
+          node --check native_joystick40.js
+          node --check sw.js
+          node tests/joystick-smoke.cjs
+      - name: Probar mochila celular galeria mapa y render
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)"
+          test -n "$CHROME_PATH"
+          CHROME_PATH="$CHROME_PATH" node tests/browser-smoke.cjs
