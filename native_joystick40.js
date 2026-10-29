@@ -1,4 +1,4 @@
-/* Isla de Walesa · Control nativo v43.
+/* Isla de Walesa · Control nativo v44.
    Sin dependencias: el joystick no puede detener el bucle del juego.
    Al soltarlo, tocar el suelo sigue disponible como control de respaldo. */
 (()=>{
@@ -188,7 +188,7 @@
       '<button type="button" data-size="144">Grande</button>',
       '</div>',
       '<div class="wcHitRow43"><span>Área táctil invisible</span><output class="wcHitValue43">180 px</output></div>',
-      '<input class="wcHitSlider43" type="range" min="120" max="260" step="10" aria-label="Tamaño real del área táctil invisible">',
+      '<input class="wcHitSlider43" type="range" min="120" max="260" step="1" aria-label="Tamaño real del área táctil invisible">',
       '<button type="button" class="wcSave40">✓ Guardar posición</button>',
       '<p class="wcBackup41">Puedes seguir tocando el suelo aunque uses la palanca.</p>',
       '</div>'
