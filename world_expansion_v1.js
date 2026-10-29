@@ -4,7 +4,7 @@
 'use strict';
 if(typeof Game==='undefined'||typeof World==='undefined'||typeof World.makeExpanseSector!=='function')return;
 const V=World,X=Game.X,H=X.HOOKS;
-const S=save.expansionV1||(save.expansionV1={current:'home',last:{forest:false,x:16,y:16},visited:{},discoveries:{},work:{}});
+const S=save.expansionV1||(save.expansionV1={current:'home',last:{forest:false,x:12,y:16},visited:{},discoveries:{},work:{}});
 S.visited=S.visited||{};S.discoveries=S.discoveries||{};S.work=S.work||{};
 const SIZE=32,W=768,HH=704,MAX_CACHE=3,cache=new Map();
 let moving=false,thresholdNotice=0;
@@ -51,7 +51,7 @@ async function goHome(){
  try{
   await V.prepare();
   await X.iris(()=>{
-   V.use(V.MAIN);X.st.scene='out';X.player.x=2535;X.player.y=994;X.player.dir=0;
+   V.use(V.MAIN);X.st.scene='out';X.player.x=2610;X.player.y=945;X.player.dir=0;
    X.player.path=null;X.player.pending=null;
    X.cam.x=X.player.x;X.cam.y=X.player.y;
    X.petE.x=X.player.x;X.petE.y=X.player.y+8;
@@ -60,28 +60,26 @@ async function goHome(){
   X.placeTag('Isla de Walesa');
  }finally{moving=false;X.st.busy=false}
 }
-function atlasZone(x,y){
- const n=V.vnoise((x+11)/5,(y+17)/5),center=Math.hypot(x-16,y-16);
- return center<3.5?'centro':n>.72?'comercial':n<.28?'agrícola':n>.55?'residencial':'regional';
-}
-const COLORS={centro:'#b6adba',comercial:'#d9aa8e','agrícola':'#a1c680',residencial:'#f4b9d5',regional:'#7daea1'};
+function atlasZone(x,y){return WalesaTopografia.district((x+.5)/32,(y+.5)/32)}
+const COLORS={montana:'#995e3e',meseta:'#debf68',administrativo:'#adb3bd',pueblo:'#a1cb91',valle:'#91c57b',forest:'#1c3d27',costa:'#d1bd8e'};
 function atlasSheet(){
  X.sheet('🗺️ Atlas del Gran Continente',box=>{
   const m=current(),n=Object.keys(S.visited).filter(k=>k.startsWith('c:')).length;
   box.innerHTML='<p class="shop-hi">La isla original sigue intacta. A su alrededor se extienden 1,024 distritos explorables, y en el sureste comienza un bosque sin fin.</p>'+
    '<div class="bal">📍 '+(isExp(m)?m.name+' ('+(m.gridX+1)+', '+(m.gridY+1)+')':'Isla de Walesa')+' · '+n+' distritos descubiertos</div>'+
    '<canvas id="wcAtlasExp" width="384" height="384" style="display:block;width:min(100%,384px);height:auto;margin:10px auto;border:3px solid #f7e3ea;border-radius:12px;image-rendering:pixelated;background:#e6eef0" aria-label="Atlas de 32 por 32 distritos"></canvas>'+
-   '<p class="shop-hi">Verde: campos · Rosa: residencial · Terracota: comercio · Gris: centro · Turquesa: pueblos. Los sectores sin explorar permanecen velados.</p>'+
+   '<p class="shop-hi">Cordilleras al norte, meseta al este, cuadrícula administrativa al suroeste y bosque profundo al sureste. Esta distribución se leyó de tu Procreate.</p>'+
    '<button class="orow" id="wcAtlasClose">Cerrar atlas <span>›</span></button>';
   const cv=box.querySelector('#wcAtlasExp'),g=cv.getContext('2d'),unit=12;
   for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
    const zone=atlasZone(x,y),visited=!!S.visited[key(false,x,y)];
-   g.fillStyle=COLORS[zone];g.fillRect(x*unit,y*unit,unit,unit);
-   if(!visited){g.fillStyle='rgba(34,46,52,.78)';g.fillRect(x*unit,y*unit,unit,unit)}
+   const c=WalesaTopografia.PALETTE[parseInt(WalesaTopografia.SAMPLES[y][x],12)];
+   g.fillStyle='rgb('+c.join(',')+')';g.fillRect(x*unit,y*unit,unit,unit);
+   if(!visited){g.fillStyle='rgba(26,40,47,.17)';g.fillRect(x*unit,y*unit,unit,unit)}
    g.strokeStyle='rgba(255,255,255,.16)';g.strokeRect(x*unit+.5,y*unit+.5,unit-1,unit-1);
   }
   const mark=(x,y,c)=>{g.fillStyle=c;g.fillRect(x*unit+2,y*unit+2,unit-4,unit-4)};
-  mark(16,16,'#fffaf6');mark(31,31,'#66d5bd');
+  mark(8,16,'#fffaf6');mark(27,24,'#66d5bd');
   if(isExp(m)&&!m.forest)mark(m.gridX,m.gridY,'#ffdf55');
   box.querySelector('#wcAtlasClose').onclick=()=>X.closeMenu();
  });
@@ -89,7 +87,7 @@ function atlasSheet(){
 function homeGates(m){
  if(m._expandedGates)return;
  m._expandedGates=true;
- for(const [x,y] of [[2550,952],[2450,1008]]){
+ for(const [x,y] of [[825,730],[2610,937]]){
   V.addObj(m,V.spr.sign,x,y,V.rectS(x-3,y-4,6,4),{expMarker:true});
  }
 }
@@ -98,29 +96,35 @@ H.inter.push(l=>{
  if(X.st.scene!=='out'||X.st.mg)return;
  const m=current();if(!m)return;
  if(m===V.MAIN){
-  l.push({type:'expGate',gate:'continent',x:2550,y:958,r:26,hy:28,label:'Explorar el Gran Continente'});
-  l.push({type:'expGate',gate:'forestHome',x:2450,y:1014,r:26,hy:28,label:'Entrar al Bosque sin Fin'});
+  l.push({type:'expGate',gate:'continent',x:825,y:737,r:28,hy:28,label:'🗺️ Explorar el mapa gigante'});
+  l.push({type:'expGate',gate:'continent',x:2610,y:946,r:31,hy:28,label:'Seguir el camino al continente'});
  }else if(isExp(m)){
   if(m.forest){
    if(m.gridX===0&&m.gridY===0)l.push({type:'expGate',gate:'forestExit',x:70,y:354,r:29,hy:24,label:'Regresar a la isla'});
    if((m.seed%3)===0)l.push({type:'expDiscovery',x:542,y:536,r:32,hy:26,label:'Examinar el claro del bosque'});
   }else{
-   if(m.gridX===16&&m.gridY===16)l.push({type:'expGate',gate:'atlasExit',x:67,y:354,r:30,hy:24,label:'Regresar a Walesa'});
-   if(m.gridX===31&&m.gridY===31)l.push({type:'expGate',gate:'forestAtlas',x:690,y:608,r:28,hy:26,label:'Sendero del bosque infinito'});
+   if(m.gridX===12&&m.gridY===16)l.push({type:'expGate',gate:'atlasExit',x:67,y:354,r:30,hy:24,label:'Regresar al barrio de Walesa'});
+   if(m.gridX>=26&&m.gridY>=23&&m.zone==='forest')l.push({type:'expGate',gate:'forestAtlas',x:690,y:608,r:28,hy:26,label:'Entrar al Bosque Infinito'});
   }
  }
 });
 H.act.unshift(it=>{
  if(it.type==='expGate')return (async()=>{
   if(it.gate==='continent'){
-   const r=await X.ask('🗺️ Gran Continente',['Explorar desde el Distrito Central','Continuar la última expedición','Seguir paseando']);
-   if(r===0)await moveTo(16,16,false,70,352);
-   if(r===1){const p=S.last||{forest:false,x:16,y:16};await moveTo(p.x,p.y,!!p.forest,384,352)}
+   const r=await X.ask('🗺️ Nuevo mapa de Walesa',['Caminar hacia el gran valle','Continuar mi última expedición','Ver el atlas topográfico','Más tarde']);
+   if(r===0)await moveTo(12,16,false,65,352);
+   if(r===1){const p=S.last||{forest:false,x:12,y:16};await moveTo(p.x,p.y,!!p.forest,384,352)}
+   if(r===2)atlasSheet()
   }else if(it.gate==='forestHome'){
    const r=await X.ask('🌲 Bosque sin Fin',['Entrar al primer claro','Por ahora no']);
    if(r===0)await moveTo(0,0,true,98,352);
-  }else if(it.gate==='forestExit'||it.gate==='atlasExit')await goHome();
-  else if(it.gate==='forestAtlas')await moveTo(0,0,true,98,352);
+  }else if(it.gate==='forestExit'){
+   const p=S.forestEntry||{x:27,y:24};await moveTo(p.x,p.y,false,690,570);
+  }else if(it.gate==='atlasExit')await goHome();
+  else if(it.gate==='forestAtlas'){
+   const m=current();S.forestEntry={x:m.gridX,y:m.gridY};Game.G.save();
+   await moveTo(0,0,true,98,352);
+  }
  })();
  if(it.type==='expDiscovery')return (async()=>{
   const m=current(),k=key(true,m.gridX,m.gridY),d=season();
@@ -176,8 +180,14 @@ async function lodge(b){
 }
 H.update.push(()=>{
  const m=current();
- if(moving||!isExp(m)||X.st.mode!=='play'||X.st.scene!=='out'||X.st.menu||X.st.busy||X.st.trans)return;
- const p=X.player;let dx=0,dy=0,nx=p.x,ny=p.y;
+ if(moving||X.st.mode!=='play'||X.st.scene!=='out'||X.st.menu||X.st.busy||X.st.trans)return;
+ const p=X.player;
+ // Acceso realmente continuo desde el malecón oriental de la isla original.
+ if(m===V.MAIN){
+  if(p.x>2675&&p.y>850&&p.y<1020)moveTo(12,16,false,40,352);
+  return;
+ }
+ if(!isExp(m))return;let dx=0,dy=0,nx=p.x,ny=p.y;
  if(p.x<20){dx=-1;nx=W-38}
  else if(p.x>W-20){dx=1;nx=38}
  else if(p.y<20){dy=-1;ny=HH-38}
@@ -200,5 +210,19 @@ H.tab.push((tab,box)=>{
  box.appendChild(node);
  node.querySelector('button').onclick=()=>{X.closeMenu();atlasSheet()};
 });
-window.WalesaExpansion={version:1,dimensions:{columns:32,rows:32,sectorWidth:W,sectorHeight:HH},state:S,sector,go:moveTo,returnHome:goHome,atlas:atlasSheet};
+function terrainSpeed(){
+ const m=current(),p=X.player;if(!m?.elevation)return 1;
+ const v=[[0,12],[0,-12],[-12,0],[12,0]][p.dir]||[0,12];
+ const dh=m.elevation(p.x+v[0],p.y+v[1])-m.elevation(p.x,p.y);
+ return Math.max(.62,Math.min(1.13,1-dh*8));
+}
+H.screen.push(g=>{
+ if(X.st.scene!=='out'||X.st.mode!=='play'||X.st.mg)return;
+ const m=current();if(!m?.elevation)return;
+ g.save();g.fillStyle='rgba(35,48,48,.74)';g.fillRect(5,X.H-29,105,19);
+ g.fillStyle='#fffaf3';g.font='8px sans-serif';g.textAlign='left';
+ g.fillText('⛰ '+m.topography.elevationMeters(X.player.x,X.player.y)+' m · '+m.name,9,X.H-17);
+ g.restore();
+});
+window.WalesaExpansion={version:2,dimensions:{columns:32,rows:32,sectorWidth:W,sectorHeight:HH},state:S,sector,go:moveTo,returnHome:goHome,atlas:atlasSheet,terrainSpeed};
 })();
