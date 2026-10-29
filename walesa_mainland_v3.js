@@ -604,11 +604,19 @@ window.WalesaMainland=(()=>{
     if(dt<1)continue;
     const t=clamp(((exit[0]-a[0])*dx+(exit[1]-a[1])*dy)/dt,0,1);
     const px=a[0]+t*dx,py=a[1]+t*dy,d=Math.hypot(px-exit[0],py-exit[1]);
-    if(d>=best||d<24)continue;
+    if(d>=best||d<24||py<b.y+11)continue;
+    // Acceso exclusivamente delante de la fachada, nunca bajo un tejado,
+    // incluida la propia casa y las construidas anteriormente.
     let clear=true;
     for(const h of houses){
-     if(h===b)continue;
-     if(distSegment(h.x,h.y-18,exit,[px,py])<(h.city?48:41)){clear=false;break}
+     const half=h.city?37:30,top=h.city?41:32,limit=18;
+     for(const xx of [h.x-half,h.x,h.x+half]){
+      for(const yy of [h.y-top,h.y-(top+1)/2,h.y-1]){
+       if(distSegment(xx,yy,exit,[px,py])<limit){clear=false;break}
+      }
+      if(!clear)break;
+     }
+     if(!clear)break;
     }
     if(clear){best=d;chosen=[px,py]}
    }
