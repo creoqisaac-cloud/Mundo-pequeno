@@ -2255,7 +2255,7 @@ const Game=(()=>{
  for(const k of ['f','b','i','p'])if(!save.dex[k])save.dex[k]={};
  for(const a of ['bigbow','double','flowercrown','tiara','cherry'])if(!save.owned.acc.includes(a))save.owned.acc.push(a);
  if(save.inv.pez){save.inv['f:sardina']=(save.inv['f:sardina']||0)+save.inv.pez;delete save.inv.pez}
- const spec=()=>({type:'kitty',fur:save.fur,outfit:save.outfit,oColor:save.oColor,oPat:save.oPat,bottom:save.bottom,bColor:save.bColor,shoes:save.shoes,sColor:save.sColor,ears:save.ears||'',acc:save.acc,aColor:save.aColor,eyes:save.eyes|0,blush:save.blush!==false});
+ const spec=()=>({type:'kitty',fur:save.fur,outfit:save.outfit,oColor:save.oColor,oPat:save.oPat,bottom:save.bottom,bColor:save.bColor,shoes:save.shoes,sColor:save.sColor,ears:save.ears||'',acc:save.acc,aColor:save.aColor,eyes:save.eyes|0,blush:save.blush!==false,rainGear:save.rainGear34||null});
  const outfitKey=()=>save.outfit+save.oColor+save.acc+save.aColor+save.fur+(save.bottom||'')+(save.shoes||'')+(save.oPat||'')+(save.ears||'');
  const invAdd=(k,n=1)=>{save.inv[k]=Math.max(0,(save.inv[k]||0)+n);if(!save.inv[k])delete save.inv[k];persist()};
  const catOf=k=>k.startsWith('f:')?'pez':k.startsWith('b:')?'bicho':k;
@@ -4410,6 +4410,7 @@ const Puppets=(()=>{const V=World,P=Paint,HK=V.HOOK;
    if(L.fill&&!NOFILL.has(r)){const col=colorFor(sp,r);g.drawImage(tinted(L,'f',col),0,0);
     /* ropa pintada dentro de la forma de cada pieza: se mueve con el brazo o la pierna */
     if(window.Wardrobe&&(r==='body'||r==='armL'||r==='armR'||r==='legL'||r==='legR'))try{Wardrobe.part(g,sp,r,L,nn,i,back)}catch(e){}
+    if(window.Wardrobe?.rainPart&&sp.type==='kitty')try{Wardrobe.rainPart(g,sp,r,L,nn,i,back)}catch(e){}
     /* volumen suave: luz arriba a la izquierda, sombra abajo */
    }
    if((r==='head'||r==='body')&&L.inner){const t=V.mk(CW*R,CH*R),tg=t.getContext('2d');tg.scale(R,R);tg.drawImage(tinted(L,'l',lineFor(sp,r)),0,0);tg.globalCompositeOperation='destination-out';tg.drawImage(L.inner,0,0);g.drawImage(t,0,0,CW,CH)}else g.drawImage(tinted(L,'l',lineFor(sp,r)),0,0)}
@@ -4460,7 +4461,7 @@ const Puppets=(()=>{const V=World,P=Paint,HK=V.HOOK;
  /* Solo se dibujan los personajes que hizo Isaac (él es su conejito blanco y negro, ya coloreado) */
  const BLANK={c:V.mk(1,1),ax:0,ay:0};
  HK.char=(sp,dir=0,frame=0)=>{if(!ready||!WHO[sp.type])return BLANK;const d2=dir===1||dir===2||dir===3?dir:0,bl=frame===0&&d2!==1&&((performance.now()/1000)%4.2)<.13?1:0;
-  const key=[sp.type,sp.fur,sp.outfit,sp.oColor,sp.oPat,sp.bottom,sp.bColor,sp.shoes,sp.sColor,sp.ears,sp.acc,sp.aColor,sp.blush===false?0:1,sp.eyes|0,d2,frame,bl].join('|');let s=cache.get(key);if(!s){s=PROCREATE_COLORED.includes(WHO[sp.type])?buildColored(sp,d2,frame):build(sp,d2,frame,bl);cache.set(key,s)}
+  const key=[sp.type,sp.fur,sp.outfit,sp.oColor,sp.oPat,sp.bottom,sp.bColor,sp.shoes,sp.sColor,sp.ears,sp.acc,sp.aColor,sp.blush===false?0:1,sp.eyes|0,sp.rainGear?.coat?1:0,sp.rainGear?.boots?1:0,d2,frame,bl].join('|');let s=cache.get(key);if(!s){s=PROCREATE_COLORED.includes(WHO[sp.type])?buildColored(sp,d2,frame):build(sp,d2,frame,bl);cache.set(key,s)}
   return s};
  /* Tu unicornio: coloreado pieza por pieza */
  const UNICOATS=[
@@ -7549,12 +7550,11 @@ window.Wardrobe=Wardrobe;
   drums:()=>sp('drums',36,26,18,25,g=>{P.wc(g,P.E(18,16,12,7),'#e8456f',{lw:.5});P.wc(g,P.E(18,12,12,4),'#fffaf3',{lw:.4});P.wc(g,P.E(6,8,5,2.4),'#f6d26b',{lw:.35});P.wc(g,P.E(30,8,5,2.4),'#f6d26b',{lw:.35})}),
   toys:()=>sp('toys',40,50,20,48,g=>{P.wc(g,P.RR(1,1,38,47,1.6),'#e3f6ee',{lw:.5});for(let r=0;r<3;r++){P.ln(g,[[3,15+r*15],[37,15+r*15]],'#4fa67a',.8);for(let k=0;k<3;k++){const x=9+k*11,y=10+r*15,c=['#d9a56a','#f490b4','#7ad0e6','#f6d26b','#c8b5e8'][(k+r*2)%5];P.wc(g,P.E(x,y+1,3.6,3.4),c,{lw:.35});P.wc(g,P.E(x-2.6,y-2,1.3,1.3),c,{lw:.3});P.wc(g,P.E(x+2.6,y-2,1.3,1.3),c,{lw:.3});P.dot(g,x-1,y,.5,'#3a2630');P.dot(g,x+1,y,.5,'#3a2630')}}}),
   blocks:()=>sp('blocks',34,22,17,21,g=>{for(let i=0;i<5;i++)P.wc(g,P.RR(2+(i%3)*10+(i>2?5:0),i>2?3:12,9,9,1),['#e8456f','#f6d26b','#7ad0e6','#8bd18b','#9b6bd0'][i],{lw:.35,gloss:.3})}),
-  lowtable:()=>sp('lowtable',40,22,20,21,g=>{P.wc(g,P.RR(2,6,36,7,2),'#8a5e3c',{lw:.5});P.wc(g,P.E(14,6,4,2.6),'#fffaf3',{lw:.35});P.wc(g,P.E(26,6,3,2),'#c8f0c0',{lw:.3});P.wc(g,P.RR(-1+1,14,8,6,2),'#f490b4',{lw:.3});P.wc(g,P.RR(32,14,8,6,2),'#f490b4',{lw:.3})})};
-
- PR.medcab=()=>sp('medcab33',39,48,19,46,g=>{P.wc(g,P.RR(1,1,37,45,2),'#d5efeb',{lw:.6});for(let r=0;r<3;r++){P.wc(g,P.RR(3,3+r*14,33,12,1),'#f9ffff',{lw:.35});for(let i=0;i<4;i++){const x=6+i*8,y=6+r*14;P.wc(g,P.RR(x,y,5,7,1),['#a5d7d5','#f4afc6','#efe4ac','#bcb4eb'][(i+r)%4],{lw:.3});if(i===2&&r===0)P.heart(g,x+2.5,y+3.2,1.5,'#e77796')}}});
- PR.medbed=()=>sp('medbed33',57,36,28,34,g=>{P.wc(g,P.RR(3,8,51,19,4),'#f1fbfc',{lw:.6});P.wc(g,P.RR(6,10,46,11,3),'#b8e8e2',{lw:.4});P.wc(g,P.RR(7,10,14,9,3),'#fff',{lw:.3});P.wc(g,P.RR(15,19,35,5,2),'#ecf6fb',{lw:.4});for(let x of[8,48])P.ln(g,[[x,27],[x,34]],'#79b1b5',1.6);P.heart(g,35,14,3,'#df7b97')});
- PR.heartmonitor=()=>sp('monitor33',28,34,14,33,g=>{P.wc(g,P.RR(1,1,26,21,2),'#c7e7e4',{lw:.5});P.wc(g,P.RR(4,4,20,14,1),'#275c68',{lw:.35});P.ln(g,[[5,12],[10,12],[12,8],[15,16],[18,10],[23,10]],'#8beaaf',.9);P.ln(g,[[14,22],[14,31]],'#7fadb0',1.4);P.wc(g,P.E(14,31,8,2),'#8dafaf',{lw:.35})});
- PR.petclinic=()=>sp('petclinic33',34,26,17,25,g=>{P.wc(g,P.E(17,18,16,6),'#9dd4cb',{lw:.45});P.wc(g,P.E(17,15,12,4),'#fff9f2',{lw:.3});P.wc(g,P.E(12,8,5,5),'#f6e0bb',{lw:.4});P.wc(g,P.E(22,8,5,5),'#f6e0bb',{lw:.4});P.wc(g,P.E(17,12,6,6),'#f6e0bb',{lw:.4});P.heart(g,17,17,2.4,'#ec82a3')});
+  lowtable:()=>sp('lowtable',40,22,20,21,g=>{P.wc(g,P.RR(2,6,36,7,2),'#8a5e3c',{lw:.5});P.wc(g,P.E(14,6,4,2.6),'#fffaf3',{lw:.35});P.wc(g,P.E(26,6,3,2),'#c8f0c0',{lw:.3});P.wc(g,P.RR(-1+1,14,8,6,2),'#f490b4',{lw:.3});P.wc(g,P.RR(32,14,8,6,2),'#f490b4',{lw:.3})}),
+  medcab:()=>sp('medcab33',39,48,19,46,g=>{P.wc(g,P.RR(1,1,37,45,2),'#d5efeb',{lw:.6});for(let r=0;r<3;r++){P.wc(g,P.RR(3,3+r*14,33,12,1),'#f9ffff',{lw:.35});for(let i=0;i<4;i++){const x=6+i*8,y=6+r*14;P.wc(g,P.RR(x,y,5,7,1),['#a5d7d5','#f4afc6','#efe4ac','#bcb4eb'][(i+r)%4],{lw:.3});if(i===2&&r===0)P.heart(g,x+2.5,y+3.2,1.5,'#e77796')}}}),
+  medbed:()=>sp('medbed33',57,36,28,34,g=>{P.wc(g,P.RR(3,8,51,19,4),'#f1fbfc',{lw:.6});P.wc(g,P.RR(6,10,46,11,3),'#b8e8e2',{lw:.4});P.wc(g,P.RR(7,10,14,9,3),'#fff',{lw:.3});P.wc(g,P.RR(15,19,35,5,2),'#ecf6fb',{lw:.4});for(let x of[8,48])P.ln(g,[[x,27],[x,34]],'#79b1b5',1.6);P.heart(g,35,14,3,'#df7b97')}),
+  heartmonitor:()=>sp('monitor33',28,34,14,33,g=>{P.wc(g,P.RR(1,1,26,21,2),'#c7e7e4',{lw:.5});P.wc(g,P.RR(4,4,20,14,1),'#275c68',{lw:.35});P.ln(g,[[5,12],[10,12],[12,8],[15,16],[18,10],[23,10]],'#8beaaf',.9);P.ln(g,[[14,22],[14,31]],'#7fadb0',1.4);P.wc(g,P.E(14,31,8,2),'#8dafaf',{lw:.35})}),
+  petclinic:()=>sp('petclinic33',34,26,17,25,g=>{P.wc(g,P.E(17,18,16,6),'#9dd4cb',{lw:.45});P.wc(g,P.E(17,15,12,4),'#fff9f2',{lw:.3});P.wc(g,P.E(12,8,5,5),'#f6e0bb',{lw:.4});P.wc(g,P.E(22,8,5,5),'#f6e0bb',{lw:.4});P.wc(g,P.E(17,12,6,6),'#f6e0bb',{lw:.4});P.heart(g,17,17,2.4,'#ec82a3')})};
  const SOL={shelf:[36,12],rack:[34,8],mirror:[14,6],mannequin:[14,6],salonchair:[20,8],bottles:[26,6],petbed:[28,8],foodbags:[26,8],tank:[30,8],shoeshelf:[36,12],bench2:[32,6],freezer:[56,10],table:[30,8],plant:[12,6],basket:[26,6],cabinet:[18,8],claw:[24,8],models:[34,8],sofa:[42,8],cakes:[56,10],oven:[38,12],boxes:[30,10],mailwall:[36,6],bookshelf:[36,12],flag:[8,4],flowers:[32,8],ribbons:[36,12],breads:[36,12],easel:[20,6],paints:[30,6],stools:[66,8],piano:[42,8],guitars:[34,8],drums:[30,8],toys:[36,12],blocks:[30,8],lowtable:[36,8],medcab:[35,12],medbed:[52,13],heartmonitor:[24,8],petclinic:[30,9]};
  /* ── el cuarto ── */
  function makeRoom(b,th){const D=T[th],wall=b.wall||'#fdf1e6',acc=b.acc||b.roof||'#e8708f',f0=D.floor[0],f1=D.floor[1],icon=b.icon&&b.icon.length<4?b.icon:({shop:'🛍',papers:'🏛',pizza:'🍕',delivery:'📦'}[th]||'♡');
@@ -9054,35 +9054,58 @@ window.Wardrobe=Wardrobe;
  });
  H.inter.push(l=>{const a=Parque.at;if(!a||a.bad||X.M()!==V.MAIN||X.st.scene!=='out')return;
   l.push({type:'parque',k:'swing',x:a.x,y:a.y+10,r:20,hy:36,label:'🛝 Columpiarte'},{type:'parque',k:'slide',x:a.x+52,y:a.y+14,r:19,hy:44,label:'🛝 Bajar por la resbaladilla'},{type:'parque',k:'sand',x:a.x-60,y:a.y+16,r:16,hy:10,label:'🏖️ Jugar en el arenero'})});
- const css=document.createElement('style');css.textContent=`#parkControls25{position:absolute;z-index:35;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);margin:auto;max-width:400px;padding:10px;border:1px solid #dfc4a2;border-radius:18px;background:#fff8edee;color:#674b40;font:800 13px Nunito,sans-serif;box-shadow:0 4px 20px #47352d33;text-align:center}#parkControls25 .park-row{display:flex;gap:7px;margin-top:7px}#parkControls25 button{flex:1;min-height:44px;border-radius:12px;background:#f4dfc4;color:#674b40;border:1px solid #d5b797;font:800 13px Nunito,sans-serif;padding:8px;touch-action:manipulation}#parkControls25 .park-leave{background:#648c79;color:white}#parkControls25 p{margin:3px;line-height:1.4}#game.parkRide25 #menuBtn,#game.parkRide25 #actsBtn,#game.parkRide25 #act,#game.parkRide25 #fonBtn,#game.parkRide25 #misionBtn,#game.parkRide25 #guiaBar,#game.parkRide25 #movBtns,#game.parkRide25 #vehBtn{display:none!important}`;document.head.appendChild(css);
+ const css=document.createElement('style');css.textContent=`
+ #parkControls25{position:absolute;z-index:35;inset:0;pointer-events:none;font:800 12px Nunito,sans-serif;color:#614b62}
+ #parkControls25 [data-status]{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:12px;right:110px;padding:9px 12px;border-radius:18px;background:#fffaf5e8;border:2px solid #fff;box-shadow:0 3px 13px #402e4533;line-height:1.25;pointer-events:none}
+ #parkControls25 [data-motion],#parkControls25 [data-leave]{position:absolute;right:calc(env(safe-area-inset-right) + 12px);width:52px;height:52px;display:grid;place-items:center;border-radius:50%;border:2px solid #fff;background:linear-gradient(155deg,#fffdf8,#fae8f0);color:#8c5376;box-shadow:0 3px 0 #e5c6d7,0 7px 18px #5b405844;font:900 23px Nunito,sans-serif;pointer-events:auto;touch-action:manipulation}
+ #parkControls25 [data-motion]{bottom:calc(env(safe-area-inset-bottom) + 92px)}
+ #parkControls25 [data-leave]{bottom:calc(env(safe-area-inset-bottom) + 22px);background:linear-gradient(155deg,#f4dce8,#eebbd0)}
+ #parkControls25 button:active{transform:translateY(2px);box-shadow:0 1px 0 #d3b2c4}
+ #game.parkRide25 #menuBtn,#game.parkRide25 #actsBtn,#game.parkRide25 #act,#game.parkRide25 #fonBtn,#game.parkRide25 #misionBtn,#game.parkRide25 #guiaBar,#game.parkRide25 #movBtns,#game.parkRide25 #vehBtn,#game.parkRide25 #wellHunger34,#game.parkRide25 #wellHealth34,#game.parkRide25 #wcQuick34{display:none!important}`;
+ document.head.appendChild(css);
  function status(r,text){if(ride===r&&r.ui)r.ui.querySelector('[data-status]').textContent=text}
  function stopMotion(r){r.motion=false;r.base=null;r.tilt=0;r.filtered=0;r.sensorWait=0;window.removeEventListener('deviceorientation',r.sensor);window.removeEventListener('orientationchange',r.reset);screen.orientation?.removeEventListener?.('change',r.reset)}
  function sensor(r,e){if(ride!==r||!r.motion||!Number.isFinite(e.beta)||!Number.isFinite(e.gamma))return;
   const angle=screen.orientation?.angle??window.orientation??0,rad=angle*Math.PI/180;
   const value=e.gamma*Math.cos(rad)+e.beta*Math.sin(rad);
-  if(r.base===null){r.base=value;status(r,'Inclina suavemente a los lados para balancearte.');r.ui.querySelector('[data-motion]').textContent='Desactivar inclinación'}
+  if(r.base===null){r.base=value;status(r,'Inclina suavemente a los lados para balancearte.');r.ui.querySelector('[data-motion]').textContent='📱 ✓'}
   r.lastSensor=performance.now();r.sensorWait=0;r.tilt=Math.max(-1,Math.min(1,(value-r.base)/22));
  }
  async function enableMotion(r){
-  if(r.pending)return;if(r.motion){stopMotion(r);r.ui.querySelector('[data-motion]').textContent='Activar inclinación';status(r,'Usa los botones para impulsarte.');return}
-  if(!window.isSecureContext||!window.DeviceOrientationEvent){status(r,'La inclinación no está disponible aquí. Puedes usar los botones.');return}
+  if(r.pending)return;if(r.motion){stopMotion(r);r.ui.querySelector('[data-motion]').textContent='📱';status(r,'Desliza el dedo a los lados para impulsarte.');return}
+  if(!window.isSecureContext||!window.DeviceOrientationEvent){status(r,'La inclinación no está disponible aquí. Puedes deslizar un dedo sobre la pantalla.');return}
   r.pending=true;const button=r.ui.querySelector('[data-motion]');button.disabled=true;
   try{
    // Called directly from the click, before any awaited work, for iPhone permission.
    const permission=typeof DeviceOrientationEvent.requestPermission==='function'?await DeviceOrientationEvent.requestPermission():'granted';
-   if(ride!==r)return;if(permission!=='granted'){status(r,'Sin permiso de movimiento. Los botones siguen disponibles.');return}
+   if(ride!==r)return;if(permission!=='granted'){status(r,'Sin permiso de movimiento. También puedes deslizar el dedo en pantalla.');return}
    r.motion=true;r.base=null;r.tilt=0;r.filtered=0;r.lastSensor=performance.now();r.sensorWait=performance.now()+4000;
    window.addEventListener('deviceorientation',r.sensor);window.addEventListener('orientationchange',r.reset);screen.orientation?.addEventListener?.('change',r.reset);
-   button.textContent='Desactivar inclinación';status(r,'Sostén el celular cómodo un momento para calibrarlo.');
-  }catch(e){if(ride===r)status(r,'No se pudo activar la inclinación. Puedes usar los botones.')}
+   button.textContent='📱 ✓';status(r,'Sostén el celular cómodo un momento para calibrarlo.');
+  }catch(e){if(ride===r)status(r,'No se pudo activar la inclinación. Puedes deslizar un dedo sobre la pantalla.')}
   finally{r.pending=false;if(ride===r)button.disabled=false}
  }
- function controls(r){const ui=r.ui=document.createElement('div');ui.id='parkControls25';
-  ui.innerHTML='<p data-status aria-live="polite">'+(r.kind==='swing'?'Usa los botones para impulsarte o activa la inclinación.':'Sube la escalera… ¡y deslízate!')+'</p>'+(r.kind==='swing'?'<div class="park-row"><button data-push="1" aria-label="Impulsar a la izquierda">← Impulso</button><button data-push="-1" aria-label="Impulsar a la derecha">Impulso →</button></div><div class="park-row"><button data-motion>Activar inclinación</button><button class="park-leave" data-leave>Bajarme</button></div>':'<div class="park-row"><button class="park-leave" data-leave>Salir</button></div>');
+ function controls(r){
+  const ui=r.ui=document.createElement('div');ui.id='parkControls25';
+  ui.innerHTML='<div data-status aria-live="polite">'+(r.kind==='swing'?'↔ Desliza un dedo a izquierda y derecha para impulsarte.':'🛝 Deslizándote…')+'</div>'+(r.kind==='swing'?'<button data-motion title="Usar giroscopio" aria-label="📱">📱</button>':'')+'<button data-leave title="Bajar / salir" aria-label="Salir de la actividad">✕</button>';
   ui.addEventListener('pointerdown',e=>e.stopPropagation());ui.addEventListener('click',e=>e.stopPropagation());
-  ui.querySelectorAll('[data-push]').forEach(b=>b.onclick=()=>{if(ride!==r)return;sw.v=Math.max(-2.5,Math.min(2.5,sw.v+Number(b.dataset.push)*.85));G.sfx.tap()});
+  ui.querySelector('[data-leave]').onclick=()=>r.finish();
   const motion=ui.querySelector('[data-motion]');if(motion)motion.onclick=()=>enableMotion(r);
-  ui.querySelector('[data-leave]').onclick=()=>r.finish();document.querySelector('#game').appendChild(ui);
+  document.querySelector('#game').appendChild(ui);
+  const canvas=document.querySelector('#cv');let drag=null;
+  r.pDown=e=>{if(ride!==r||e.target!==canvas)return;e.preventDefault();e.stopImmediatePropagation();drag={id:e.pointerId,x:e.clientX,t:performance.now()};try{canvas.setPointerCapture(e.pointerId)}catch(_){}};
+  r.pMove=e=>{if(ride!==r||!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();const dx=e.clientX-drag.x;drag.x=e.clientX;
+    if(r.kind!=='swing'||Math.abs(dx)<1)return;
+    const impulse=Math.max(-.36,Math.min(.36,dx*.031));sw.v=Math.max(-2.8,Math.min(2.8,sw.v-impulse));
+    if(r.motion)r.tilt=Math.max(-1,Math.min(1,r.tilt+dx*.012));
+    r.swiped=true;
+  };
+  r.pUp=e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();drag=null};
+  canvas.addEventListener('pointerdown',r.pDown,true);
+  canvas.addEventListener('pointermove',r.pMove,true);
+  canvas.addEventListener('pointerup',r.pUp,true);
+  canvas.addEventListener('pointercancel',r.pUp,true);
+  r.clearTouch=()=>{for(const [ev,fn] of [['pointerdown',r.pDown],['pointermove',r.pMove],['pointerup',r.pUp],['pointercancel',r.pUp]])canvas.removeEventListener(ev,fn,true)};
  }
  function exitPoint(x,y){if(!V.blockedOut(x,y,7))return{x,y};for(let d=8;d<=72;d+=8)for(let i=0;i<16;i++){const a=i/16*TAU,xx=x+Math.cos(a)*d,yy=y+Math.sin(a)*d;if(!V.blockedOut(xx,yy,7))return{x:xx,y:yy}}return null}
  async function parkRide(kind){if(ride||!Parque.at||Parque.at.bad)return;const a=Parque.at,pl=X.player,original={x:pl.x,y:pl.y},buddy=kind==='swing'?near(260)[0]:null;let r;
@@ -9094,7 +9117,7 @@ window.Wardrobe=Wardrobe;
     document.querySelector('#game').classList.add('parkRide25');controls(r);G.sfx.swoosh&&G.sfx.swoosh();
    });
   }finally{
-   if(r){stopMotion(r);r.ui?.remove();if(r.npc){const n=r.npc;release(n);Object.assign(n,r.npcState);const p=exitPoint(a.x+20,a.y+19);if(p){n.x=p.x;n.y=p.y}n.hx=n.tx=n.x;n.hy=n.ty=n.y;n.wait=1}}
+   if(r){stopMotion(r);r.clearTouch?.();r.ui?.remove();if(r.npc){const n=r.npc;release(n);Object.assign(n,r.npcState);const p=exitPoint(a.x+20,a.y+19);if(p){n.x=p.x;n.y=p.y}n.hx=n.tx=n.x;n.hy=n.ty=n.y;n.wait=1}}
    ride=null;sw.a=sw.b=sw.v=0;document.querySelector('#game').classList.remove('parkRide25');X.resetInput();
    if(X.M()===V.MAIN&&X.st.scene==='out'){const p=exitPoint(a.x+(kind==='swing'?-13:80),a.y+17)||original;pl.x=p.x;pl.y=p.y;pl.dir=0}pl.frame=0;
   }
@@ -9105,7 +9128,7 @@ window.Wardrobe=Wardrobe;
  H.update.push(dt=>{const r=ride;if(!r)return;if(X.st.scene!=='out'||X.M()!==V.MAIN||!document.querySelector('#game.on')){r.finish();return}
   dt=Math.max(0,Math.min(.05,dt));r.t+=dt;
   if(r.kind==='slide'){if(r.t>=1.9&&!r.sliding){r.sliding=true;status(r,'¡Wiii!')}if(r.t>=3.6)r.finish();return}
-  if(r.sensorWait>0&&performance.now()>=r.sensorWait){stopMotion(r);r.ui.querySelector('[data-motion]').textContent='Reintentar inclinación';status(r,'No llegaron datos de movimiento. Usa los botones o vuelve a intentar.')}
+  if(r.sensorWait>0&&performance.now()>=r.sensorWait){stopMotion(r);r.ui.querySelector('[data-motion]').textContent='📱';status(r,'No llegaron datos de movimiento. Desliza el dedo para seguir o vuelve a intentar.')}
   const target=r.motion&&performance.now()-r.lastSensor<650?r.tilt:0;r.filtered+=(target-r.filtered)*Math.min(1,dt*8);
   const steps=Math.max(1,Math.ceil(dt/.012)),h=dt/steps;
   for(let i=0;i<steps;i++){sw.v+=(-6.5*Math.sin(sw.a)-.65*sw.v-3.2*r.filtered)*h;sw.a+=sw.v*h;if(Math.abs(sw.a)>.62){sw.a=Math.sign(sw.a)*.62;sw.v*=-.2}}
@@ -9463,9 +9486,13 @@ window.Wardrobe=Wardrobe;
  s.hunger=Math.max(0,Math.min(100,Number(s.hunger??86)));s.wet=Math.max(0,Math.min(100,Number(s.wet||0)));
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const you=()=>X.kname();let timer=0,once=0;
  const pet=()=>X.activePet();
- const raincoat=()=>save.outfit==='impermeable'&&!!save.inv.impermeable32;
- const boots=()=>save.shoes==='botasLluvia'&&!!save.inv.botas32;
- const umbrella=()=>!!save.umbrella32&&!!save.inv.paraguas32;
+ const gear=save.rainGear34||(save.rainGear34={coat:!!save.inv.impermeable32&&save.outfit==='impermeable',boots:!!save.inv.botas32&&save.shoes==='botasLluvia',umbrella:!!save.umbrella32});
+ // Legacy v32 replaced the normal outfit. Migrate to an outer layer and keep the original clothing system.
+ if(save.outfit==='impermeable'&&gear.coat){save.outfit=(save.owned?.outfit||[]).find(k=>k!=='impermeable'&&k!=='none')||'sueter'}
+ if(save.shoes==='botasLluvia'&&gear.boots){save.shoes=(save.owned?.shoes||[]).find(k=>k!=='botasLluvia'&&k!=='none')||'tenis'}
+ const raincoat=()=>!!gear.coat&&!!save.inv.impermeable32;
+ const boots=()=>!!gear.boots&&!!save.inv.botas32;
+ const umbrella=()=>!!gear.umbrella&&!!save.inv.paraguas32;
  const protectedRain=()=>raincoat()&&boots()||umbrella();
  const persist=()=>G.save();
  const snackIds=['galleta','fruta','pizza','ensalada','baya','galletasC','sandwich','pudin','sopa','pan','manzana','fresa','pera','sandia','platano','cereza','limon','zanahoria','champi','panque','donas','chocolate','leche','jugo','agua','onigiri','ramen','bento','ensaladaV','pescado','limonada','paleta','te','teMiel','cupcake','helado','dulce','algodon','miel'];
@@ -9490,22 +9517,28 @@ window.Wardrobe=Wardrobe;
   timer+=dt;if(timer>7){timer=0;persist()}
   const mark=Math.floor((100-s.hunger)/20);if(mark>once&&s.hunger<=20){once=mark;X.toast('🍎 Tienes hambre. Abre Mochila → Comer.')}else if(s.hunger>30)once=0;
  });
- H.screen.push((f,B,w2s,t,dt)=>{if(X.st.scene==='out'&&!X.st.mg&&X.st.mode==='play'){
-   const px=Math.max(5,X.W-94);f.save();f.fillStyle='rgba(30,39,58,.68)';f.beginPath();f.roundRect(px,38,89,33,5);f.fill();
-   f.font='8px sans-serif';f.textAlign='left';f.fillStyle='#fff';f.fillText('🍎',px+4,49);f.fillText('🌧',px+4,62);
-   for(const [v,y,c] of [[s.hunger,43,'#f5bd69'],[s.wet,56,'#8ccbf6']]){f.fillStyle='rgba(255,255,255,.2)';f.fillRect(px+21,y,63,5);f.fillStyle=c;f.fillRect(px+21,y,63*v/100,5)}
-   if(s.sick){f.font='12px sans-serif';f.fillText('🤒',px-16,55)}f.restore()
- }});
  H.bill.push((bb,t)=>{if(X.st.scene!=='out'||X.st.mg)return;
    if(umbrella()&&X.wx()==='lluvia')bb.push({x:X.player.x,y:X.player.y+2,draw:g=>{g.font='25px sans-serif';g.textAlign='center';g.fillText('☂️',0,-40)}});
    const p=pet();if(p&&save.petCoats32?.[p.uid]&&save.inv.petCoat32&&X.wx()==='lluvia')bb.push({x:X.petE.x,y:X.petE.y+1,draw:g=>{g.fillStyle='#78c9c3';g.strokeStyle='#245c63';g.lineWidth=.8;g.beginPath();g.moveTo(-9,-17);g.lineTo(10,-17);g.lineTo(8,-6);g.lineTo(-8,-6);g.closePath();g.fill();g.stroke();g.font='9px sans-serif';g.fillText('💧',-3,-8)}});
  });
- H.tab.push((t,box)=>{if(t==='tasks'){
-   const d=document.createElement('div');d.innerHTML='<h4>💗 Bienestar</h4><div class="task"><div><b>🍎 Saciedad: '+Math.round(s.hunger)+'% · 🌧️ Mojada: '+Math.round(s.wet)+'%</b><small>'+(s.sick?'🤒 '+s.reason:'😊 Saludable')+' · '+(protectedRain()?'Protegida de la lluvia':'Sin protección completa')+'</small></div></div><button class="orow" id="eat32">🍽️ Comer algo <span>›</span></button><button class="orow" id="rain32">🧥 Ropa de lluvia <span>›</span></button><button class="orow" id="care32">🩹 Usar botiquín / medicina <span>›</span></button>';
-   box.appendChild(d);d.querySelector('#eat32').onclick=()=>{X.closeMenu();feed()};d.querySelector('#care32').onclick=()=>{X.closeMenu();treatment()};d.querySelector('#rain32').onclick=async()=>{X.closeMenu();const opts=[save.inv.impermeable32?'🧥 Equipar impermeable':'🧥 Comprar impermeable en el mercadito',save.inv.botas32?'👢 Equipar botas':'👢 Comprar botas en el mercadito',save.inv.paraguas32?(umbrella()?'☂️ Guardar paraguas':'☂️ Abrir paraguas'):'☂️ Comprar paraguas en el mercadito','Cerrar'];const k=await X.ask('🌧️ Protección de lluvia',opts);if(k===3)return;if(!save.inv[['impermeable32','botas32','paraguas32'][k]]){window.Items32?.shop();return}if(k===0){save.outfit='impermeable';save.owned.outfit=save.owned.outfit||[];if(!save.owned.outfit.includes('impermeable'))save.owned.outfit.push('impermeable');}if(k===1){save.shoes='botasLluvia';save.owned.shoes=save.owned.shoes||[];if(!save.owned.shoes.includes('botasLluvia'))save.owned.shoes.push('botasLluvia')}if(k===2)save.umbrella32=!save.umbrella32;persist();X.toast('🌧️ Equipo actualizado')}};
+ async function gearMenu(){
+   const list=[['coat','impermeable32','🧥 Impermeable superpuesto'],['boots','botas32','👢 Botas para lluvia'],['umbrella','paraguas32','☂️ Paraguas plegable']];
+   const options=list.map(([key,id,label])=>label+(save.inv[id]?gear[key]?' · Quitar':' · Poner':' · No lo tienes'));
+   const k=await X.ask('🌦️ Accesorios para la lluvia',options.concat('Cancelar'));
+   if(k>=list.length)return;
+   const [key,id]=list[k];if(!save.inv[id]){X.toast('🛍️ Consíguelo en la farmacia del Hospital de los Corazones.');return}
+   gear[key]=!gear[key];if(key==='umbrella')save.umbrella32=gear.umbrella;
+   persist();X.toast((gear[key]?'✨ ¡Accesorio equipado!':'📦 Accesorio guardado')+' Tu ropa normal sigue igual.');
+ }
+ H.tab.push((t,box)=>{if(t==='closet'){
+   const d=document.createElement('div');d.className='rain-wardrobe34';
+   const wear=(k,id)=>!save.inv[id]?'Por conseguir':gear[k]?'Puesto sobre tu ropa':'Guardado';
+   d.innerHTML='<h4>🌦️ Capas y accesorios para lluvia</h4><p class="rain-desc34">Combina el impermeable con cualquier vestido o conjunto. No reemplaza tu ropa.</p><button class="orow" id="wearRain34">🧥 '+wear('coat','impermeable32')+' · 👢 '+wear('boots','botas32')+' · ☂️ '+wear('umbrella','paraguas32')+'<span>›</span></button>';
+   box.appendChild(d);d.querySelector('#wearRain34').onclick=()=>{X.closeMenu();gearMenu()};
+  }
   if(t==='pets'){const p=pet();if(!p)return;const d=document.createElement('div');d.innerHTML='<button class="orow" id="pcoat32">🐾 '+(save.petCoats32?.[p.uid]?'Quitar':'Poner')+' impermeable a '+String(p.name).replace(/[&<>]/g,'')+' <span>›</span></button><small class="memtext">La barra naranja de cada mascota indica cuánto ha comido. Dale alimento desde su menú de interacción.</small>';box.appendChild(d);d.querySelector('button').onclick=()=>{if(!save.inv.petCoat32){X.toast('🛍️ Compra un impermeable para mascota en el mercadito.');return}save.petCoats32=save.petCoats32||{};save.petCoats32[p.uid]=!save.petCoats32[p.uid];persist();X.showTab('pets')}}
  });
- Object.defineProperty(window,'Health32',{value:{sting,cure,feed,shop:hospital,get speed(){return s.sick?.78:s.hunger<18?.85:1},status:s}});
+ Object.defineProperty(window,'Health32',{value:{sting,cure,feed,treatment,gearMenu,gear,shop:hospital,get speed(){return s.sick?.78:s.hunger<18?.85:1},status:s}});
 })();
 </script>
 <script>
@@ -9532,6 +9565,126 @@ window.Wardrobe=Wardrobe;
   const hist=save.hello32||(save.hello32={});const rec=hist[id]||(hist[id]={seq:-1,recent:[]});let ix=(rec.seq+1+Math.floor(Math.random()*4))%lines.length;for(let i=0;i<lines.length&&rec.recent.includes(ix);i++)ix=(ix+1)%lines.length;rec.seq=ix;rec.recent.push(ix);if(rec.recent.length>6)rec.recent.shift();
   const first=steps.find(s=>typeof s.say==='string');if(first)first.say=lines[ix];return steps;
  };
+})();
+</script>
+<script>
+/* Isla de Walesa v34 · Bienestar circular, menú radial y prendas de lluvia superpuestas */
+(()=>{'use strict';
+ const X=Game.X,H=X.HOOKS,G=Game.G,health=window.Health32;
+ const game=document.querySelector('#game'),actions=document.querySelector('#actsBtn'),bag=document.querySelector('#menuBtn'),phone=document.querySelector('#fonBtn');
+ if(!game||!actions||!bag||!phone||!health)return;
+ const css=document.createElement('style');css.textContent=`
+ #game.playing:not(.mg):not(.parkRide25):not(.cine) #menuBtn,
+ #game.playing:not(.mg):not(.parkRide25):not(.cine) #fonBtn {opacity:0!important;pointer-events:none!important}
+ #game #wellHunger34,#game #wellHealth34{position:absolute;z-index:12;top:calc(env(safe-area-inset-top) + 10px);width:54px;height:54px;border:2px solid #fffefc;border-radius:50%;background:linear-gradient(155deg,#fffef8,#fcefe8);box-shadow:0 3px 0 #d9c7bf,0 8px 20px #482c4730;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation;transition:transform .17s,background .25s}
+ #game #wellHunger34{right:calc(env(safe-area-inset-right) + 12px)}
+ #game #wellHealth34{right:calc(env(safe-area-inset-right) + 74px)}
+ #game #wellHunger34:active,#game #wellHealth34:active{transform:scale(.92)}
+ #game #wellHunger34 .apple34{width:42px;height:42px;display:grid;place-items:center;line-height:1}
+ #game #wellHunger34 .apple34 svg{width:42px;height:42px;overflow:visible;filter:drop-shadow(0 2px 1px #29533020)}
+ #game #wellHealth34 .face34{font-size:29px;line-height:1;filter:drop-shadow(0 1px 0 #ffffff)}
+ #game #wellHealth34.wc-unwell{background:linear-gradient(160deg,#fff7e7,#ffe6df)}
+ #game #wellHealth34.wc-sick{background:linear-gradient(160deg,#fff3f1,#ffc8d1)}
+ #game #wellHunger34.wc-low{background:linear-gradient(160deg,#fff4e5,#ffddc3)}
+ #game #wellHunger34.wc-shaking .apple34{animation:wcAppleShake34 .3s ease-in-out 3}
+ @keyframes wcAppleShake34{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-3px) rotate(-10deg)}75%{transform:translateX(3px) rotate(10deg)}}
+ #game:not(.playing) #wellHunger34,#game:not(.playing) #wellHealth34,#game.mg #wellHunger34,#game.mg #wellHealth34,#game.cine #wellHunger34,#game.cine #wellHealth34,#game.parkRide25 #wellHunger34,#game.parkRide25 #wellHealth34{display:none!important}
+ #game #wcQuick34{position:absolute;z-index:23;right:calc(env(safe-area-inset-right) + 12px);bottom:calc(env(safe-area-inset-bottom) + 88px);display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}
+ #game #wcQuick34:not(.on){display:none}
+ #game #wcQuick34.on{pointer-events:auto}
+ #game #wcQuick34 button{display:flex;align-items:center;gap:10px;border:2px solid white;color:#704c62;background:linear-gradient(155deg,#fffdf8,#fcecf4);border-radius:30px;padding:5px 13px 5px 6px;min-height:52px;box-shadow:0 3px 0 #ddc7c3,0 7px 16px #583a4933;font:900 13px Nunito,sans-serif;touch-action:manipulation;animation:wcQuickIn34 .16s ease both}
+ #game #wcQuick34 button:nth-child(2){animation-delay:.045s}#game #wcQuick34 button:nth-child(3){animation-delay:.09s}
+ #game #wcQuick34 button span{width:38px;height:38px;border-radius:50%;background:#fff8ee;display:grid;place-items:center;font-size:24px;box-shadow:inset 0 0 0 1px #f6e3dc}
+ #game #wcQuick34 button:active{transform:scale(.94)}
+ @keyframes wcQuickIn34{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+ #game #wcWellPanel34{position:absolute;z-index:40;inset:0;background:#36253a88;display:none;align-items:center;justify-content:center;padding:16px;touch-action:manipulation}
+ #game #wcWellPanel34.on{display:flex}
+ #game #wcWellPanel34 .well-card34{width:min(325px,92%);border:3px solid #fff;background:linear-gradient(150deg,#fffdf6,#fff3ec);border-radius:30px;padding:20px 17px;box-shadow:0 10px 0 #d8b7bb,0 20px 45px #30203355;color:#66475b;text-align:center;font:800 14px/1.45 Nunito,sans-serif}
+ #game #wcWellPanel34 .well-icon34{font-size:47px;display:block;margin:0 0 5px}#game #wcWellPanel34 h3{margin:4px 0 6px;font:900 20px Nunito,sans-serif}
+ #game #wcWellPanel34 p{margin:0 0 12px;color:#94788c;font:700 13px/1.4 Nunito,sans-serif}
+ #game #wcWellPanel34 .well-bar34{height:9px;border-radius:12px;background:#efddd6;overflow:hidden;margin:12px 2px 16px}
+ #game #wcWellPanel34 .well-bar34 i{display:block;height:100%;border-radius:12px;background:linear-gradient(90deg,#83caa3,#4eaa7d)}
+ #game #wcWellPanel34 .well-btn34{display:block;width:100%;min-height:46px;margin-top:9px;border-radius:17px;background:#f9e4ee;color:#784c68;font:900 13px Nunito,sans-serif;box-shadow:0 2px 0 #dabecb;touch-action:manipulation}
+ #game #wcWellPanel34 .well-btn34.primary{background:linear-gradient(135deg,#df83a8,#c75d86);color:#fff}
+ #game #actsBtn.wc-ringing34{animation:wcBell34 .25s infinite alternate;background:#ffe4ed}
+ @keyframes wcBell34{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+ #game .rain-wardrobe34 .rain-desc34{font:700 12px/1.4 Nunito,sans-serif;color:#a27e91;margin:4px 0 10px}
+ `;document.head.appendChild(css);
+ const hunger=document.createElement('button');hunger.id='wellHunger34';hunger.setAttribute('aria-label','Hambre: ver cuánto falta para comer');
+ const hinner=document.createElement('span');hinner.className='apple34';hunger.appendChild(hinner);
+ const healthy=document.createElement('button');healthy.id='wellHealth34';healthy.setAttribute('aria-label','Salud: ver cómo te sientes');
+ const face=document.createElement('span');face.className='face34';healthy.appendChild(face);
+ const quick=document.createElement('div');quick.id='wcQuick34';quick.innerHTML='<button data-open="phone"><span>📱</span>Celular</button><button data-open="bag"><span>🎒</span>Mochila</button><button data-open="acts"><span>✦</span>Acciones</button>';
+ const panel=document.createElement('div');panel.id='wcWellPanel34';panel.innerHTML='<div class="well-card34" role="dialog" aria-modal="true"></div>';
+ for(const el of [hunger,healthy,quick,panel])game.appendChild(el);
+ const bitten=n=>{
+  const cut=n===0?'':Array.from({length:n},(_,i)=>`<circle cx="${33+i%2*4}" cy="${14+i*12}" r="${5+i*.7}" fill="#fffaf3" stroke="#8cbb63" stroke-width=".3"/>`).join('');
+  return `<svg viewBox="0 0 50 50" role="img" aria-label="Manzana con ${n} mordidas" xmlns="http://www.w3.org/2000/svg"><path d="M25 14 C24 8 27 5 31 5" fill="none" stroke="#795a35" stroke-width="2.8" stroke-linecap="round"/><path d="M24 12 C14 3 8 8 15 16 C17 14 21 13 24 12" fill="#5c9b4b"/><path d="M25 17 C14 8 6 20 11 32 C15 44 21 44 25 41 C30 45 37 41 41 30 C47 17 36 8 25 17" fill="#9ad866" stroke="#448f3b" stroke-width="1.8"/><path d="M19 19 Q13 22 16 29" fill="none" stroke="#ddf7ac" stroke-width="3" stroke-linecap="round"/>${cut}</svg>`;
+ };
+ let shown=Math.max(0,Math.min(3,Math.floor((100-health.status.hunger)/25))),pending=null,blinkToken=0;
+ const drawApple=()=>{hinner.innerHTML=shown===0?'<span style="font-size:33px;line-height:1">🍏</span>':bitten(shown);hunger.classList.toggle('wc-low',shown>=2);hunger.setAttribute('aria-label',`Hambre: ${Math.round(health.status.hunger)}%. Nivel ${shown+1} de 4`)};
+ drawApple();
+ function refresh(){
+  const s=health.status,target=Math.max(0,Math.min(3,Math.floor((100-s.hunger)/25)));
+  if(target<shown){blinkToken++;clearTimeout(pending);pending=null;hunger.classList.remove('wc-shaking');shown=target;drawApple()}
+  else if(target>shown&&!pending){const token=++blinkToken;hunger.classList.remove('wc-shaking');void hunger.offsetWidth;hunger.classList.add('wc-shaking');
+   pending=setTimeout(()=>{if(token!==blinkToken)return;shown=Math.max(shown,Math.max(0,Math.min(3,Math.floor((100-s.hunger)/25))));hunger.classList.remove('wc-shaking');pending=null;drawApple()},920);
+  }
+  let icon='😊',description='¡Te sientes bien!',level='good';
+  if(s.sick){icon=/picadura|lesi[oó]n|golpe/i.test(s.reason||'')?'🤕':'🤒';description=s.reason||'Necesitas atención médica';level='sick'}
+  else if(s.wet>70){icon='🥶';description='Estás muy mojada. Protégete de la lluvia.';level='unwell'}
+  else if(s.wet>37||s.hunger<20){icon='😣';description=s.wet>37?'Estás empapándote.':'Te falta comer algo.';level='unwell'}
+  else if(s.wet>12||s.hunger<45){icon='😟';description='No te sientes al cien.';level='unwell'}
+  face.textContent=icon;healthy.dataset.well=description;healthy.classList.toggle('wc-unwell',level==='unwell');healthy.classList.toggle('wc-sick',level==='sick');
+  healthy.setAttribute('aria-label','Salud: '+description);actions.classList.toggle('wc-ringing34',phone.classList.contains('ring'));
+ }
+ let uiT=0;H.update.push(dt=>{uiT+=dt;if(uiT>=.18){uiT=0;refresh()}});refresh();
+ let suppress=false;
+ function closeQuick(){quick.classList.remove('on');actions.classList.remove('on');actions.setAttribute('aria-expanded','false')}
+ actions.setAttribute('aria-expanded','false');
+ actions.addEventListener('click',e=>{if(suppress)return;e.preventDefault();e.stopImmediatePropagation();if(X.st.mode!=='play'||X.st.mg||X.st.busy||X.st.poseLock||X.st.menu)return;
+  if(quick.classList.contains('on'))closeQuick();else {document.querySelector('#actsTray')?.classList.remove('on');quick.classList.add('on');actions.classList.add('on');actions.setAttribute('aria-expanded','true')}},true);
+ quick.addEventListener('click',e=>{const b=e.target.closest('button[data-open]');if(!b)return;e.preventDefault();e.stopPropagation();closeQuick();
+  const op=b.dataset.open;if(op==='bag')bag.click();else if(op==='phone')phone.click();else if(op==='acts'){suppress=true;try{actions.click()}finally{suppress=false}}
+ });
+ document.addEventListener('pointerdown',e=>{if(quick.classList.contains('on')&&!e.target.closest('#wcQuick34,#actsBtn'))closeQuick()},true);
+ function closePanel(){panel.classList.remove('on');panel.querySelector('.well-card34').innerHTML='';if(X.st.menu)X.st.menu=false}
+ panel.addEventListener('pointerdown',e=>{if(e.target===panel)closePanel();e.stopPropagation()});
+ function showPanel(type){if(X.st.mode!=='play'||X.st.mg||X.st.busy||X.st.poseLock||X.st.menu)return;closeQuick();const s=health.status,box=panel.querySelector('.well-card34');
+  if(type==='hunger'){
+   box.innerHTML=`<span class="well-icon34">🍏</span><h3>Mi pancita</h3><p>${s.hunger>=75?'¡Estás satisfecha!':s.hunger>=50?'Un bocadito te vendría bien.':s.hunger>=25?'Ya tienes bastante hambre.':'¡Es hora de comer algo rico!'}</p><div class="well-bar34"><i style="width:${s.hunger}%"></i></div><button class="well-btn34 primary" data-k="feed">🍱 Comer de la mochila</button><button class="well-btn34" data-k="close">Seguir paseando</button>`;
+  }else{
+   const reason=healthy.dataset.well||'Te sientes bien';
+   box.innerHTML=`<span class="well-icon34">${face.textContent}</span><h3>Cómo me siento</h3><p>${reason}<br>Humedad ${Math.round(s.wet)}% · Saciedad ${Math.round(s.hunger)}%</p><div class="well-bar34"><i style="width:${100-s.wet}%;background:linear-gradient(90deg,#aadcd3,#76acb1)"></i></div><button class="well-btn34 primary" data-k="care">🩹 Cuidarme</button><button class="well-btn34" data-k="gear">🌧️ Accesorios de lluvia</button><button class="well-btn34" data-k="close">Seguir paseando</button>`;
+  }
+  panel.classList.add('on');X.st.menu=true;
+  box.querySelectorAll('[data-k]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;closePanel();if(k==='feed')health.feed();else if(k==='care')health.treatment();else if(k==='gear')health.gearMenu()}));
+ }
+ hunger.addEventListener('click',e=>{e.stopPropagation();showPanel('hunger')});healthy.addEventListener('click',e=>{e.stopPropagation();showPanel('health')});
+ // Layered rainwear: draw each segment inside its real Procreate mask, so body, sleeves and boots follow bones.
+ const maskCache=new Map();const make=(L,r,col,n,i)=>{const key=[n,i,r,col].join('|');if(maskCache.has(key))return maskCache.get(key);
+  const c=document.createElement('canvas');c.width=96;c.height=100;const g=c.getContext('2d');g.fillStyle=col;g.fillRect(0,0,96,100);
+  g.globalCompositeOperation='destination-in';g.drawImage(L.fill,0,0);g.globalCompositeOperation='source-over';
+  if(maskCache.size>130)maskCache.clear();maskCache.set(key,c);return c;
+ };
+ window.Wardrobe.rainPart=(g,sp,r,L,n,i,back)=>{
+  const v=sp.rainGear;if(!v||sp.type!=='kitty')return;
+  const coat=!!v.coat&&!!save.inv.impermeable32,boots=!!v.boots&&!!save.inv.botas32;
+  if(!((coat&&['body','armL','armR'].includes(r))||(boots&&['legL','legR'].includes(r))))return;
+  const b=L.box,h=b[3]-b[1];g.save();
+  if(coat&&(r==='body'||r.startsWith('arm'))){
+   g.globalAlpha=.80;
+   if(r==='body'){
+    g.beginPath();g.rect(b[0]-2,b[1]-1,b[2]-b[0]+4,h*.86);g.clip();
+   }else{g.beginPath();g.rect(b[0]-1,b[1],b[2]-b[0]+2,h*.90);g.clip()}
+   g.drawImage(make(L,r,'#6fc5b2',n,i),0,0,96,100);
+   g.globalAlpha=.95;g.strokeStyle='#f2ffee';g.lineWidth=.85;
+   if(r==='body'){const cx=(b[0]+b[2])/2;g.beginPath();g.moveTo(cx,b[1]-1);g.lineTo(cx,b[3]-2);g.stroke();g.fillStyle='#f5fbf1';g.beginPath();g.arc(cx+1.7,b[1]+h*.46,1.1,0,Math.PI*2);g.fill()}
+  }
+  if(boots&&r.startsWith('leg')){g.restore();g.save();g.beginPath();g.rect(b[0]-2,b[1]+h*.45,b[2]-b[0]+4,h*.59);g.clip();g.globalAlpha=.94;g.drawImage(make(L,r,'#447ba7',n,i),0,0,96,100);g.strokeStyle='#f0f8ff';g.lineWidth=.9;g.beginPath();g.moveTo(b[0],b[1]+h*.46);g.lineTo(b[2],b[1]+h*.46);g.stroke()}
+  g.restore();
+ };
+ window.Wellness34={hunger,healthy,quick,refresh,shown:()=>shown};
 })();
 </script>
 <script src="./picnic_v31.js"></script>
