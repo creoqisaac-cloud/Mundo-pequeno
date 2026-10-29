@@ -46,6 +46,9 @@ const server=http.createServer((req,res)=>{
   assert.ok(visuals.civicStops>=3,'Plazas y jardines originales añadidos a los distritos');
   assert.ok(visuals.landmarks,'Destinos antiguos y nuevos visibles');
   await page.evaluate(async()=>{await Game.enter();Game.X.st.mode='play';document.querySelector('#titleCov')?.classList.remove('on')});
+  // El tour de llegada ahora es una secuencia animada; termina antes de abrir UI.
+  await page.waitForFunction(()=>save.mainlandV3Welcome===1&&!WalesaMainland.arrivalRunning&&
+   Game.X.st.busy===false,{timeout:35000});
   fs.mkdirSync(path.join(root,'tests','proof'),{recursive:true});
   await page.waitForTimeout(500);
   await page.screenshot({path:path.join(root,'tests','proof','overworld-v56.png')});
