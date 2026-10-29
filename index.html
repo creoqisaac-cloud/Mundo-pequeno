@@ -1713,7 +1713,7 @@ const World=(()=>{
   if(m.elevation&&x>=10&&y>=10&&x<m.MW-10&&y<m.MH-10){
    const k=(y|0)*m.MW+(x|0);
    // Carreteras, veredas y zigzags preparados son pasos transitables.
-   if(!(m.path&&m.path[k])&&!(m.road&&m.road[k])){
+   if(!(m.mainland&&m.mainland.nearbyRoad(x,y,24))&&!(m.path&&m.path[k])&&!(m.road&&m.road[k])){
     const hh=m.elevation(x,y),hx=m.elevation(x+8,y),hy=m.elevation(x,y+8);
     if(Math.max(Math.abs(hh-hx),Math.abs(hh-hy))>.027)return true;
    }
@@ -1786,7 +1786,7 @@ const World=(()=>{
  function runGen(m,sync){m.islandD=m.islandD||islandDf(m);const it=genGround(m);
   if(sync){let r;do{r=it.next()}while(!r.done);placeObjects(m);return Promise.resolve(m)}
   return new Promise(res=>{const step=()=>{const t0=performance.now();let r;do{r=it.next();if(typeof r.value==='number')progress=r.value}while(!r.done&&performance.now()-t0<12);if(r.done){placeObjects(m);progress=1;res(m)}else setTimeout(step,0)};step()})}
- function prepare(){if(!mainP){MAIN.islandD=islandDf(MAIN);mainP=runGen(MAIN).then(m=>{rooms=MAIN.build.filter(b=>b.room!==undefined).sort((a,b)=>a.room-b.room).map(b=>genRoom(b.room,b.name));if(!map)map=m;return m})}return mainP}
+ function prepare(){if(!mainP){MAIN.islandD=islandDf(MAIN);mainP=runGen(MAIN).then(m=>{rooms=MAIN.build.filter(b=>b.room!==undefined).sort((a,b)=>a.room-b.room).map(b=>genRoom(b.room,b.name));if(window.WalesaMainland)window.WalesaMainland.install(m);if(!map)map=m;return m})}return mainP}
  function polaroid(cv){prepare().then(m=>{const x=cv.getContext('2d');x.imageSmoothingEnabled=false;const P=m.spots.plaza,sx=P.x-64,sy=P.y-62;x.drawImage(m.ground,sx,sy,128,96,0,0,128,96);
   const list=m.objs.filter(o=>o.x>sx-40&&o.x<sx+168&&o.y>sy-10&&o.y<sy+140).sort((a,b)=>a.y-b.y);for(const o of list)x.drawImage(o.s.c,Math.round(o.x-o.s.ax-sx),Math.round(o.y-o.s.ay-sy));
   const k=charSprite({type:'kitty',fur:'#ffffff',outfit:'sueter',oColor:'#fffaf6',acc:'bow',aColor:'#e8456f'},0,0);x.drawImage(k.c,Math.round(P.x-k.ax-sx),Math.round(P.y+44-k.ay-sy));
@@ -1873,10 +1873,10 @@ const World=(()=>{
   });
  }
  return{C,mk,PB,hash,vnoise,HOOK,BIO,OUTFITS,ACCS,NPCDEF,charSprite,MAIN,makeExpanseSector,rng,addObj,rectS,circS,TREE_PAL,
-  CITY,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
+  CITY,castShadow,PETS,RARITY,petSprite,VEH,vehSprite,EYES,plotSprite,houseSprite,cityBuilding,makeCity(){if(CITY.objs)return Promise.resolve(CITY);CITY.islandD=islandDf(CITY);return runGen(CITY)},
   get map(){return map},use(m){map=m},get spr(){return sprites()},get sea(){return seaTile()},get rooms(){return rooms},get progress(){return progress},
   prepare,polaroid,mysteryDef,makeMystery(seed){const m=mysteryDef(seed);return runGen(m,true)},makeKind(kind,seed){const m=mysteryDef(seed);m.kind=kind;m.biome=()=>kind;m.name=BIO[kind].n;m.id=kind+seed;m.pond=null;return runGen(m,true)},spawnPicks,
-  blockedOut:(x,y,r)=>blockedOutM(map,x,y,r),blockedIn,findPath,islandD:(x,y)=>map.islandD(x,y),biomeAt:(x,y)=>{if(!map||!map.bio)return'town';x=clamp(x|0,0,map.MW-1);y=clamp(y|0,0,map.MH-1);return Object.keys(BIO)[map.bio[y*map.MW+x]]},treeSprite,ensure:prepare}
+  blockedOut:(x,y,r)=>blockedOutM(map,x,y,r),blockedIn,findPath,islandD:(x,y)=>map.islandD(x,y),biomeAt:(x,y)=>{if(!map||!map.bio)return'town';x=clamp(x|0,0,map.MW-1);y=clamp(y|0,0,map.MH-1);if(map.mainland&&(x>=map.baseMW||y>=map.baseMH))return map.biome(x,y,map);return Object.keys(BIO)[map.bio[y*(map.baseMW||map.MW)+x]]||'town'},treeSprite,ensure:prepare}
 })();
 World.prepare();
 </script>
@@ -2712,7 +2712,8 @@ const Game=(()=>{
   /* 1 · suelo (se curva con el horizonte) */
   if(!seaPat||seaPat._k!==m.kind){seaPat=sx.createPattern(m.kind==='nube'&&window.Nubes?Nubes.sea():V.sea,'repeat');seaPat._k=m.kind}sx.save();sx.translate(-ox,-oy);sx.fillStyle=seaPat;sx.fillRect(ox,oy,SW,SH);sx.restore();
   const ix=Math.max(0,ox),iy=Math.max(0,oy),iw=Math.min(m.MW,ox+SW)-ix,ih=Math.min(m.MH,oy+SH)-iy;
-  if(iw>0&&ih>0){sx.drawImage(m.ground,ix,iy,iw,ih,ix-ox,iy-oy,iw,ih);sx.globalAlpha=.85;sx.drawImage(m.foam[Math.floor(t*1.4)%2],ix/2,iy/2,iw/2,ih/2,ix-ox,iy-oy,iw,ih);sx.globalAlpha=1}
+  if(m.mainland)m.mainland.draw(sx,ox,oy,SW,SH,t);
+  else if(iw>0&&ih>0){sx.drawImage(m.ground,ix,iy,iw,ih,ix-ox,iy-oy,iw,ih);sx.globalAlpha=.85;sx.drawImage(m.foam[Math.floor(t*1.4)%2],ix/2,iy/2,iw/2,ih/2,ix-ox,iy-oy,iw,ih);sx.globalAlpha=1}
   sx.fillStyle='#e8fbff';const shn=m.shine[Math.floor(t*2.5)%3];for(const p of shn){const x=p[0]-ox,y=p[1]-oy;if(x>=0&&x<SW&&y>=0&&y<SH)sx.fillRect(x,y,2,1)}
   for(let gy=Math.floor(oy/12)*12;gy<oy+SH;gy+=12)for(let gx=Math.floor(ox/12)*12;gx<ox+SW;gx+=12){if(gx>=0&&gx<m.MW&&gy>=0&&gy<m.MH)continue;if(V.hash(gx,gy+Math.floor(t*2)*7)<.06)sx.fillRect(gx-ox,gy-oy,2,1)}
   const td=today(),list=[];for(const o of m.objs)if(o.x>ox-70&&o.x<ox+SW+70&&o.y>oy-30&&o.y<oy+SH+90)list.push(o);
@@ -2781,7 +2782,7 @@ const Game=(()=>{
  let actItem=null;function actBtn(it){const b=$('#act');if(it===actItem&&(it?b.dataset.l===it.label:true))return;actItem=it;if(!it){b.classList.remove('on');return}b.dataset.l=it.label;b.querySelector('span').textContent=it.label;b.classList.add('on')}
  $('#act').addEventListener('click',e=>{e.stopPropagation();if(actItem&&!st.busy&&!st.poseLock)act(actItem)});
  /* el subtítulo sólo cambia al entrar a otra zona o a un interior (no al pasar junto a cada edificio) */
- function zoneName(){if(st.scene==='in')return(V.rooms[st.room]||{}).name||'';const m=M();if(!m)return'';if(!m.main&&!m.city)return m.name;if(m.city||(m.cityOff&&player.x>1600))return'Ciudad Corazón';const b=V.biomeAt(player.x,player.y),B=V.BIO[b];return b==='city'?'Ciudad Corazón':B&&B.n?B.n:'Tu isla'}
+ function zoneName(){if(st.scene==='in')return(V.rooms[st.room]||{}).name||'';const m=M();if(!m)return'';if(m.mainland&&player.x>2700)return({montana:'Cordilleras del Norte',meseta:'Meseta Oriental',administrativo:'Ciudad del Sur',pueblo:'Pueblo de Walesa',valle:'Valle de los Arroyos',forest:'Bosque Profundo',costa:'Litoral de Walesa'})[m.mainland.zone(player.x,player.y)]||'Gran Continente';if(!m.main&&!m.city)return m.name;if(m.city||(m.cityOff&&player.x>1600))return'Ciudad Corazón';const b=V.biomeAt(player.x,player.y),B=V.BIO[b];return b==='city'?'Ciudad Corazón':B&&B.n?B.n:'Tu isla'}
  function placeName(){if(st.scene==='in')return V.rooms[st.room].name;const m=M(),x=player.x,y=player.y;if(!m.main&&!m.city)return m.name;for(const b of m.build)if(Math.abs(x-b.x)<46&&y>b.y-60&&y<b.y+34)return b.name;if(m.city)return'Ciudad Corazón';
   if(y>m.pier.y-20&&Math.abs(x-m.pier.x-10)<40)return'El muelle';if(V.islandD(x,y)>.88)return'La playa';return V.BIO[V.biomeAt(x,y)].n}
 
@@ -2879,7 +2880,7 @@ const Game=(()=>{
   for(const h of HOOKS.tab)h(t,box);
   if(t==='opts'){box.innerHTML=`<button class="orow" id="oMusic">♫ Música<span>${save.music?'Sí':'No'}</span></button><button class="orow" id="oTime">☀ Ambiente<span>${{auto:'Hora real',day:'Día',night:'Noche'}[save.time]}</span></button><button class="orow" id="oPhoto">📷 Tomar una foto<span>›</span></button><button class="orow" id="oHelp">? Cómo se juega<span>›</span></button>${window.showInstall?'<button class="orow" id="oInstall">📲 Guardar en mi celular<span>›</span></button>':''}<button class="orow" id="oLetter">✉ Volver a la carta<span>›</span></button>`;
    $('#oMusic').onclick=()=>{save.music=!save.music;persist();if(save.music){st.songT=0;Sound.play(areaSong())}else Sound.stop();showTab('opts')};$('#oTime').onclick=()=>{save.time={auto:'day',day:'night',night:'auto'}[save.time];persist();showTab('opts')};$('#oPhoto').onclick=()=>{closeMenu();setTimeout(photo,250)};$('#oHelp').onclick=()=>{closeMenu();help()};$('#oLetter').onclick=leave;const oi=$('#oInstall');if(oi)oi.onclick=()=>{closeMenu();window.showInstall()}}}
- function drawMap(){const c=$('#mapC'),x=c.getContext('2d'),m=M(),k=Math.min(280/m.MW,248/m.MH),ox=(280-m.MW*k)/2,oy=(248-m.MH*k)/2;x.fillStyle='#3189c0';x.fillRect(0,0,280,248);x.imageSmoothingEnabled=true;x.drawImage(m.ground,ox,oy,m.MW*k,m.MH*k);
+ function drawMap(){const c=$('#mapC'),x=c.getContext('2d'),m=M(),k=Math.min(280/m.MW,248/m.MH),ox=(280-m.MW*k)/2,oy=(248-m.MH*k)/2;x.fillStyle='#3189c0';x.fillRect(0,0,280,248);x.imageSmoothingEnabled=true;if(m.mainland){m.mainland.sampleMap(x,ox,oy,k);x.drawImage(m.ground,ox,oy,m.baseMW*k,m.baseMH*k)}else x.drawImage(m.ground,ox,oy,m.MW*k,m.MH*k);
   x.font='12px sans-serif';x.textAlign='center';x.textBaseline='middle';const ic={home:'🏠',cinnaH:'☁️',melodyH:'🌷',kuromiH:'💜',hall:'🏛',shop:'🎀',pizza:'🍕',post:'📦',station:'🚆'};for(const b of m.build||[])x.fillText(b.icon||ic[b.id]||'🏠',ox+b.x*k,oy+b.y*k-6);for(const s of m.stands||[])x.fillText(s.icon==='cotton'?'🍭':'🪅',ox+s.x*k,oy+s.y*k-6);
   for(const p of m.plots||[])x.fillText(save.plots[p.id]?'💗':'🪧',ox+p.x*k,oy+p.y*k-6);if(m.pier)x.fillText('⛵',ox+(m.pier.x+10)*k,oy+(m.pier.y+m.pier.h)*k);for(const c2 of wild)x.fillText('✨',ox+c2.x*k,oy+c2.y*k);
   if(m.main){for(const [e,p] of [['🌸',m.spots.tree],['⛲',m.spots.plaza]])x.fillText(e,ox+p.x*k,oy+p.y*k);x.font='bold 9px sans-serif';x.fillStyle='#fff';x.strokeStyle='#3a2834';x.lineWidth=3;for(const [b,[cx2,cy2]] of Object.entries(m.centers)){const n=V.BIO[b].n.replace('Valle de ','').replace('Bosque de ','B. ');x.strokeText(n,ox+cx2*k,oy+cy2*k);x.fillText(n,ox+cx2*k,oy+cy2*k)}}
@@ -2908,7 +2909,7 @@ const Game=(()=>{
   if(st.mg){st.mg.update(dt,t);st.mg.draw(t)}
   else{
    if(st.mode==='play'&&!st.menu){for(const h of HOOKS.update)h(dt,t);updPlayer(dt);if(st.scene==='out'){for(const n of NPCS)updNPC(n,dt);bugUpdate(dt);ambient(dt);updWild(dt);updPet(dt)}}
-   if(st.mode==='title'){for(const n of NPCS)updNPC(n,dt);const P=V.MAIN.spots.plaza;cam.x=P.x+Math.sin(t*.12)*220;cam.y=P.y+Math.sin(t*.09)*170}
+   if(st.mode==='title'){for(const n of NPCS)updNPC(n,dt);const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;cam.x=P.x+Math.sin(t*.12)*220;cam.y=P.y+Math.sin(t*.09)*170}
    else{let fxp=player.x,fyp=player.y;if(st.talkWith){fxp=(player.x+st.talkWith.x)/2;fyp=(player.y+st.talkWith.y)/2}if(st.focus){fxp=st.focus.x;fyp=st.focus.y}const k=Math.min(1,dt*5);cam.x+=(fxp-cam.x)*k;cam.y+=(fyp-cam.y)*k}
    if(st.scene==='out'){if(M())drawScene(t,dt)}else drawRoom(t,dt);drawWeather(t,dt);
    if(st.mode==='play'){const pn=zoneName();if(pn!==st.place){st.place=pn;placeTag(pn)}actBtn(st.busy||st.menu?null:nearest())}}
@@ -2966,7 +2967,7 @@ const Game=(()=>{
  async function enter(){Desk.hide();$('#game').classList.add('on');layout();Sound.init();petTick();
   if(!V.map||!V.rooms){loading(true,'Preparando tu isla…',0);const iv=setInterval(()=>{$('#loadBar').style.width=Math.round(V.progress*100)+'%'},100);await V.prepare();clearInterval(iv);loading(false)}
   if(!NPCS.length)setNPCs();newDay();hud();st.songT=0;
-  if(st.mode==='off'){st.mode='title';const P=V.MAIN.spots.plaza;player.x=P.x;player.y=P.y+60;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
+  if(st.mode==='off'){st.mode='title';const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;player.x=P.x;player.y=P.y+60;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
   cancelAnimationFrame(st.raf);st.last=performance.now();st.raf=requestAnimationFrame(loop)}
  function leave(){closeMenu();cancelAnimationFrame(st.raf);st.raf=0;if(st.mg)endMG();$('#game').classList.remove('on');Sound.stop();Desk.show()}
  document.addEventListener('visibilitychange',()=>{if(document.hidden){window.WalesaJoystick37?.release?.();Sound.stop(true);for(const k in keys)keys[k]=false;steer=null}else{st.songT=0;if(!$('#game').classList.contains('on')&&save.music&&$('#env').classList.contains('open'))Sound.play('box')}});
@@ -10206,7 +10207,7 @@ window.Wardrobe=Wardrobe;
 <script src="./picnic_v31.js"></script>
 <script src="./native_joystick40.js"></script>
 <script src="./topografia_walesa_v2.js"></script>
-<script src="./world_expansion_v1.js"></script>
+<script src="./walesa_mainland_v3.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
