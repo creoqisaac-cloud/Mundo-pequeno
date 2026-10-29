@@ -1700,8 +1700,8 @@ const World=(()=>{
    else if(b==='nube'){if(q<.38){const o=put(i%2?s.tree.cotton:s.tree.cottonB,x,y,26,circS(x,y-3,6),{shadow:'T',kind:'cotton',fid:m.id+'c'+(fid++)});m.harvest.push(o)}else if(q<.58)put(s.tree.pink,x,y,24,circS(x,y-3,6),{shadow:'T'});else if(q<.74)put(s.crystal[i%3],x,y,16,circS(x,y-2,4),{glowF:true});else if(q<.84)put(s.tree.star,x,y,24,circS(x,y-3,6),{shadow:'T'});else put(s.bush[1],x,y,18,circS(x,y-4,7))}}
   m.near=null;return m}
  /* objetos para recoger: aparecen distintos cada día */
- function spawnPicks(m,daySeed){const R=rng(m.seed*13+daySeed),keys=Object.keys(BIO),out=[];const per={town:'flor',candy:'dulce',chile:'chile',shroom:'hongo',beach:'concha',snow:'cristal',star:'estrella',nube:'flor'};const n=m.main?30:24;
-  for(let i=0;i<n*8&&out.length<n;i++){const x=Math.round(40+R()*(m.MW-80)),y=Math.round(50+R()*(m.MH-90)),dd=m.islandD(x,y);if(dd>.95)continue;const b=dd>.88?'beach':keys[m.bio[y*m.MW+x]];if(blockedOutM(m,x,y,6))continue;const k=dd>.88&&b!=='snow'&&b!=='star'?'concha':per[b];if(!k)continue;out.push({k,x,y,id:i})}
+ function spawnPicks(m,daySeed){const R=rng(m.seed*13+daySeed),keys=Object.keys(BIO),out=[];const per={town:'flor',candy:'dulce',chile:'chile',shroom:'hongo',beach:'concha',snow:'cristal',star:'estrella',nube:'flor',city:'flor'};const n=m.main?30:24;
+  for(let i=0;i<n*8&&out.length<n;i++){const x=Math.round(40+R()*(m.MW-80)),y=Math.round(50+R()*(m.MH-90)),dd=m.islandD(x,y);if(dd>.95)continue;const b=dd>.88?'beach':m.mainland?m.biome(x,y,m):keys[m.bio[y*m.MW+x]];if(blockedOutM(m,x,y,6))continue;const k=dd>.88&&b!=='snow'&&b!=='star'?'concha':per[b];if(!k)continue;out.push({k,x,y,id:i})}
   m.picks=out;return out}
 
  function hitList(m,x,y,r){const list=m.sg[Math.floor(x/64)+','+Math.floor(y/64)];if(list)for(const s of list){if(s.t==='r'){if(x+r>s.x&&x-r<s.x+s.w&&y+r>s.y&&y-r<s.y+s.h)return true}else if(Math.hypot(x-s.x,y-s.y)<s.r+r)return true}
@@ -1715,7 +1715,9 @@ const World=(()=>{
    // Carreteras, veredas y zigzags preparados son pasos transitables.
    if(!(m.mainland&&m.mainland.nearbyRoad(x,y,24))&&!(m.path&&m.path[k])&&!(m.road&&m.road[k])){
     const hh=m.elevation(x,y),hx=m.elevation(x+8,y),hy=m.elevation(x,y+8);
-    if(Math.max(Math.abs(hh-hx),Math.abs(hh-hy))>.027)return true;
+    // Sólo los escarpes realmente abruptos bloquean. Las cuestas normales se recorren.
+     const edge=m.mainland&&(x>=m.baseMW||y>=m.baseMH)?.105:.027;
+     if(Math.max(Math.abs(hh-hx),Math.abs(hh-hy))>edge)return true;
    }
   }
   return hitList(m,x,y,r)
@@ -2513,7 +2515,7 @@ const Game=(()=>{
 
  /* ── Interacciones ── */
  function interactables(){
-  if(st.scene==='in'){const R=V.rooms[st.room],l=R.special?[]:[...(save.mem.includes('gift'+st.room)?[]:[{type:'gift',x:128,y:132,r:22,hy:30,label:'Abrir el regalo'}]),{type:'exit',x:128,y:182,r:16,hy:-6,label:'Salir'}];for(const h of HOOKS.inter)h(l);for(const f of R.flav)l.push({type:'flavor',k:f.k,x:f.x,y:f.y,r:24,hy:30,label:f.k==='mirror'?'Cambiarte de ropa':f.k==='bed'?'Dormir':'Mirar'});return l}
+  if(st.scene==='in'){const R=V.rooms[st.room],l=R.special?[]:[...(R.gift===false||save.mem.includes('gift'+st.room)?[]:[{type:'gift',x:128,y:132,r:22,hy:30,label:'Abrir el regalo'}]),{type:'exit',x:128,y:182,r:16,hy:-6,label:'Salir'}];for(const h of HOOKS.inter)h(l);for(const f of R.flav)l.push({type:'flavor',k:f.k,x:f.x,y:f.y,r:24,hy:30,label:f.k==='mirror'?'Cambiarte de ropa':f.k==='bed'?'Dormir':'Mirar'});return l}
   const m=M(),l=[];for(const n of NPCS)l.push({type:'npc',npc:n,x:n.x,y:n.y,r:34,hy:48,label:'💬 Hablar con '+Talk.P[n.id].name});
   for(const c of wild)if(!c.fly)l.push({type:'wild',c,x:c.x,y:c.y,r:24,hy:28,label:'Acercarte al '+PETS[c.sp].n.toLowerCase()});
   const ap=activePet();if(ap&&save.vehicle!=='pet')l.push({type:'pet',x:petE.x,y:petE.y,r:20,hy:26,label:'Jugar con '+ap.name,dyn:1});
@@ -2540,7 +2542,7 @@ const Game=(()=>{
    else if(it.type==='wild')await adoptFlow(it.c);
    else if(it.type==='pick')takePick(it.p);
    else if(it.type==='plot')await plotAct(it.p);
-   else if(it.type==='house'){sfx.door();await iris(()=>{st.scene='in';st.room=it.b.room;player.x=128;player.y=168;player.dir=1;cam.x=128;cam.y=150});placeTag(it.b.name);if(!save.mem.includes('gift'+it.b.room))toast('🎁 Hay un regalito esperándote')}
+   else if(it.type==='house'){sfx.door();await iris(()=>{st.scene='in';st.room=it.b.room;player.x=128;player.y=168;player.dir=1;cam.x=128;cam.y=150});placeTag(it.b.name);if(V.rooms[it.b.room]?.gift!==false&&!save.mem.includes('gift'+it.b.room))toast('🎁 Hay un regalito esperándote')}
    else if(it.type==='exit'){sfx.door();const b=V.MAIN.build.find(x=>x.room===st.room);await iris(()=>{st.scene='out';player.x=b.x;player.y=b.y+16;player.dir=0;cam.x=player.x;cam.y=player.y})}
    else if(it.type==='job'){const b=it.b,j=b.job;
     if(j==='shop'){openShop('town');return}if(j==='moda'){openShop('moda');return}if(j==='salon'){await say('Peluquería Kawaii','¡Bienvenida! Aquí te cambiamos el color, los ojitos y el peinado. La primera vez es gratis, luego cuesta 300 🔔.');openCreator(true);return}
