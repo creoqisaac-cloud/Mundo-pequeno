@@ -71,7 +71,13 @@ const server=http.createServer((req,res)=>{
   assert.equal(a.cap,false,'La palanca sin presionar no debe secuestrar la pantalla');
 
   await page.locator('#sheet .panel h3 .close').click();
-  assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'Cerrar debe liberar el juego');
+  assert.equal(await page.evaluate(()=>Game.X.st.menu),true,'Un toque simple sobre la X NO debe cerrar la mochila');
+  await page.evaluate(()=>{
+   const b=document.querySelector('#sheet .panel h3 .close'),r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+   for(const [type,dx] of [['pointerdown',0],['pointermove',-80],['pointerup',-80]])b.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true,pointerId:97,clientX:x+dx,clientY:y,buttons:type==='pointerup'?0:1}));
+  });
+  await page.waitForTimeout(480);
+  assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'Arrastrar la cremallera SÍ debe cerrar');
   assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
 
   // Probar pestañas de la mochila sin depender del HUD de hambre superpuesto en la simulación.
@@ -80,7 +86,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#tabs button[data-t="opts"]').click();
   await page.locator('#oTime').click();
   await page.locator('#wcControlOptions40').waitFor({state:'visible'});
-  await page.locator('#sheet .panel h3 .close').click();
+  await page.evaluate(()=>Game.X.closeMenu());
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false);
 
   // La cremallera original permanece y permite cerrar arrastrando la X.
@@ -97,7 +103,7 @@ const server=http.createServer((req,res)=>{
     }));
    }
   });
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(470);
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'La cremallera debe cerrar con swipe');
   assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
   assert.deepEqual(errors,[],'Cerrar con cremallera no debe producir errores de JavaScript');
@@ -112,7 +118,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.ok(canvas.width>0&&canvas.height>0&&canvas.alpha>0&&canvas.visible,'La pantalla debe dibujarse, no quedar negra');
   assert.deepEqual(errors,[],'No debe haber errores JS de página');
-  console.log('✓ Chromium real: joystick, tamaño, área invisible, cierre normal, cremallera, navegación y render.');
+  console.log('✓ Chromium real: joystick, tamaño, área invisible, cierre únicamente por cremallera, navegación y render.');
  }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

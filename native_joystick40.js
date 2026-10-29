@@ -1,4 +1,4 @@
-/* Isla de Walesa · Control nativo v45.
+/* Isla de Walesa · Control nativo v46.
    Sin dependencias: el joystick no puede detener el bucle del juego.
    Al soltarlo, tocar el suelo sigue disponible como control de respaldo. */
 (()=>{
@@ -100,7 +100,9 @@
   function position(){
    const r=game.getBoundingClientRect(),w=Math.max(1,r.width||innerWidth),h=Math.max(1,r.height||innerHeight);
    cfg.hitArea=clamp(Number(cfg.hitArea)||180,Math.max(cfg.size,120),260);
-   const half=cfg.hitArea/2+10;
+   // Respetar la posición elegida tomando como referencia el círculo visible.
+   // La zona invisible puede extenderse hasta el borde sin mover la flor.
+   const half=cfg.size/2+10;
    const xmin=Math.min(49,half/w*100),ymin=Math.min(49,half/h*100);
    stick.style.width=cfg.hitArea+'px';
    stick.style.height=cfg.hitArea+'px';

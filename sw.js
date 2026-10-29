@@ -1,6 +1,6 @@
-/* Isla de Walesa v45 · Caché compatible con GitHub Pages */
-const CACHE = 'walesa-v45-github-pages';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './picnic_v31.js', './walesa_v32.js', './native_joystick40.js'];
+/* Isla de Walesa v46 · Caché compatible con GitHub Pages */
+const CACHE = 'walesa-v46-github-pages';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './picnic_v31.js', './walesa_v32.js', './native_joystick40.js', './native46/core.js', './native46/worlds.js', './native46/games.js', './native46/pets.js', './native46/arcade.js', './native46/pizza.js', './native46/kitchen.js', './native46/transport.js', './native46/polish.js', './native46/neighbors.js', './native46/scenery.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
