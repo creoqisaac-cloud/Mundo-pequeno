@@ -32,6 +32,8 @@ jobs:
           grep -q 'walesa-ds-v1' index.html
       - name: Configurar Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Subir sitio
         uses: actions/upload-pages-artifact@v4
         with:
