@@ -558,7 +558,9 @@ window.WalesaMainland=(()=>{
  function freePlot(x,y,urban){
   const sz=urban?82:66;
   if(x<ORX+45||x>MW-45||y<ORY+65||y>MH-60)return false;
-  if(coast(x,y)>.73||coast(x-35,y-40)>.81||coast(x+35,y-40)>.81)return false;
+  // La función topográfica devuelve .80 incluso en tierra firme.
+  // Sólo la franja costera sobre .88 y el agua impiden construir.
+  if(coast(x,y)>.88||coast(x-35,y-40)>.89||coast(x+35,y-40)>.89)return false;
   if(plazaDistance(x,y)<PLAZA.edge+47)return false;
   if(!roadClearance(x,y,urban).valid)return false;
   for(const h of buildClaims){
@@ -1491,7 +1493,7 @@ window.WalesaMainland=(()=>{
    for(let k=0;k<16;k++){
     const theta=k*Math.PI/8,tx=Math.round(x+Math.cos(theta)*r),
       ty=Math.round(y+Math.sin(theta)*r);
-    if(coast(tx,ty)<.75&&!V.blockedOut(tx,ty,9)&&
+    if(coast(tx,ty)<.85&&!V.blockedOut(tx,ty,9)&&
      !houses.some(b=>Math.hypot(b.x-tx,b.y-ty)<38))return[tx,ty];
    }
   }
