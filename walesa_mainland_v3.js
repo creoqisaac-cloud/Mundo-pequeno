@@ -376,6 +376,205 @@ window.WalesaMainland=(()=>{
   for(const [label,x,y] of labels){const px=ox+x*k,py=oy+y*k;ctx.lineWidth=2.6;ctx.strokeStyle='rgba(255,251,238,.94)';ctx.strokeText(label,px,py-7);ctx.fillStyle='#344e55';ctx.fillText(label,px,py-7);ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle='#e77972';ctx.fill()}
   ctx.restore();
  }
+
+ // ═══════════ NAVEGACIÓN DEL CONTINENTE, DENTRO DEL MAPA NATIVO ═══════════
+ // Reutiliza World.MAIN.paths y los caminos ampliados. Nunca crea una segunda isla.
+ let streetGraph=null,guide=null,lastGuideTick=0,guideBar=null;
+ function streets(){
+  const previous=(main?.paths||[]).filter(p=>Array.isArray(p)&&p.length>=4&&p.every(Number.isFinite))
+   .map(p=>[[p[0],p[1]],[p[2],p[3]]]);
+  return [...previous,...seg];
+ }
+ function graph(){
+  if(streetGraph)return streetGraph;
+  const lines=streets(),cuts=lines.map(([,])=>[0,1]);
+  for(let i=0;i<lines.length;i++){
+   const [a,b]=lines[i],rx=b[0]-a[0],ry=b[1]-a[1];
+   for(let j=i+1;j<lines.length;j++){
+    const [c,d]=lines[j],sx=d[0]-c[0],sy=d[1]-c[1],
+     den=rx*sy-ry*sx;if(Math.abs(den)<1e-6)continue;
+    const qx=c[0]-a[0],qy=c[1]-a[1],
+     t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+    if(t>0&&t<1&&u>0&&u<1){cuts[i].push(t);cuts[j].push(u)}
+   }
+  }
+  const nodes=[],adj=[],lookup=new Map();
+  const node=(x,y)=>{
+   const key=Math.round(x*10)+','+Math.round(y*10);
+   if(lookup.has(key))return lookup.get(key);
+   const n=nodes.length;nodes.push([x,y]);adj.push([]);lookup.set(key,n);return n;
+  };
+  lines.forEach(([a,b],i)=>{
+   const cx=b[0]-a[0],cy=b[1]-a[1],ts=[...new Set(cuts[i])].sort((a,b)=>a-b);
+   for(let j=1;j<ts.length;j++){
+    const p=node(a[0]+cx*ts[j-1],a[1]+cy*ts[j-1]),
+      q=node(a[0]+cx*ts[j],a[1]+cy*ts[j]),d=Math.hypot(cx,cy)*(ts[j]-ts[j-1]);
+    if(d>.05&&p!==q){adj[p].push([q,d]);adj[q].push([p,d])}
+   }
+  });
+  return streetGraph={nodes,adj,lines};
+ }
+ function roadRoute(from,to){
+  const G=graph(),{nodes,adj}=G;
+  const near=p=>{let k=-1,d=Infinity;for(let i=0;i<nodes.length;i++){
+   const v=Math.hypot(nodes[i][0]-p.x,nodes[i][1]-p.y);
+   if(v<d){d=v;k=i}
+  }return {k,d}};
+  const a=near(from),b=near(to);
+  if(a.k<0||b.k<0||a.d>800||b.d>800)return {points:[[from.x,from.y],[to.x,to.y]],connected:false};
+  const N=nodes.length,dist=new Float64Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),
+    used=new Uint8Array(N);dist[a.k]=0;
+  for(let turn=0;turn<N;turn++){
+   let u=-1,best=Infinity;
+   for(let j=0;j<N;j++)if(!used[j]&&dist[j]<best){u=j;best=dist[j]}
+   if(u<0||u===b.k)break;used[u]=1;
+   for(const [v,w] of adj[u])if(dist[u]+w<dist[v]){dist[v]=dist[u]+w;prev[v]=u}
+  }
+  if(!Number.isFinite(dist[b.k]))return {points:[[from.x,from.y],[to.x,to.y]],connected:false};
+  const chain=[];for(let v=b.k;v!==-1;v=prev[v]){chain.push(nodes[v]);if(v===a.k)break}
+  chain.reverse();
+  const points=[[from.x,from.y],...chain,[to.x,to.y]].filter((p,i,ar)=>i===0||Math.hypot(p[0]-ar[i-1][0],p[1]-ar[i-1][1])>1);
+  return {points,connected:true};
+ }
+ function destinations(){
+  if(!main)return[];
+  const landmarks=[
+   ['Plaza de Walesa',P.village.x,P.village.y,'⛲'],
+   ['Cordilleras del Norte',3500,900,'⛰️'],
+   ['Altiplano Dorado',P.plateau.x,P.plateau.y,'🏔️'],
+   ['Ciudad del Sur',P.town.x,P.town.y,'🏙️'],
+   ['Bosque Profundo',P.forest.x,P.forest.y,'🌲'],
+   ['Ciudad Corazón',870,878,'🏠']
+  ].map(([name,x,y,icon])=>({name,x,y,icon}));
+  const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:b.icon||'🏪'}));
+  const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:'🏡'}));
+  return [...landmarks,...jobs,...homes];
+ }
+ function ensureGuideBar(){
+  if(guideBar)return guideBar;
+  const div=document.createElement('div');div.id='walesa-route-hud';
+  Object.assign(div.style,{position:'fixed',top:'calc(env(safe-area-inset-top) + 57px)',left:'50%',
+   transform:'translateX(-50%)',maxWidth:'calc(100vw - 24px)',minWidth:'220px',
+   background:'rgba(255,250,241,.95)',border:'2px solid #7da17d',borderRadius:'13px',
+   color:'#314f41',font:'bold 11px/1.4 system-ui,sans-serif',padding:'8px 11px',zIndex:'65',
+   boxShadow:'0 3px 14px #0004',display:'none',pointerEvents:'auto'});
+  const label=document.createElement('span'),stop=document.createElement('button');
+  stop.textContent='✕';stop.title='Cancelar guía';stop.setAttribute('aria-label','Cancelar guía');
+  Object.assign(stop.style,{float:'right',marginLeft:'8px',background:'#e8e1d5',borderRadius:'6px',
+   color:'#514b43',padding:'3px 7px',cursor:'pointer'});
+  stop.onclick=()=>{guide=null;div.style.display='none'};
+  div.append(label,stop);div._label=label;document.body.append(div);guideBar=div;return div;
+ }
+ function updateGuide(){
+  const X=Game?.X;if(!X||!guide)return;
+  const hud=ensureGuideBar();
+  if(X.M()!==main||X.st.scene!=='out'||X.st.mode!=='play'){hud.style.display='none';return}
+  if(Date.now()-lastGuideTick<250)return;lastGuideTick=Date.now();
+  const p=X.player,pts=guide.points;
+  if(Math.hypot(p.x-guide.dest.x,p.y-guide.dest.y)<35){
+   X.toast('📍 Llegaste a '+guide.name);guide=null;hud.style.display='none';return;
+  }
+  let k=guide.step||1;
+  while(k<pts.length-1&&Math.hypot(p.x-pts[k][0],p.y-pts[k][1])<70)k++;
+  guide.step=k;
+  const q=pts[k]||[guide.dest.x,guide.dest.y],d=Math.hypot(q[0]-p.x,q[1]-p.y),
+    all=Math.hypot(guide.dest.x-p.x,guide.dest.y-p.y),a=Math.atan2(q[1]-p.y,q[0]-p.x),
+    compass=['→','↘','↓','↙','←','↖','↑','↗'],
+    arrow=compass[(Math.round(a/ (Math.PI/4))+8)%8];
+  hud._label.textContent=arrow+' '+guide.name+' · '+Math.round(all)+' u · próximo giro '+Math.round(d)+' u';
+  hud.style.display=X.st.menu?'none':'block';
+ }
+ function startGuide(target){
+  if(!main||!Game?.X)return null;
+  const p=Game.X.player;
+  const route=roadRoute({x:p.x,y:p.y},target);
+  guide={points:route.points,connected:route.connected,dest:target,name:target.name||'Destino',step:1};
+  lastGuideTick=0;updateGuide();
+  return guide;
+ }
+ function navigationTab(tab,box){
+  if(tab!=='map'||Game?.X?.M()!==main)return;
+  const X=Game.X,m=main,all=destinations();
+  const wrap=document.createElement('section');wrap.style.cssText='color:#354b42;font:700 12px/1.4 system-ui,sans-serif';
+  wrap.innerHTML='<div style="display:flex;gap:5px;margin:0 0 8px;align-items:center;flex-wrap:wrap">'+
+   '<button data-nav="plus" aria-label="Acercar mapa">＋</button><button data-nav="minus" aria-label="Alejar mapa">－</button>'+
+   '<button data-nav="me">📍 Aquí</button><button data-nav="all">🌍 Completo</button>'+
+   '<span style="font-size:10px">Arrastra para explorar · toca para elegir</span></div>'+
+   '<canvas id="walesa-streets-map" width="560" height="395" style="display:block;width:100%;height:auto;'+
+   'max-height:45vh;object-fit:contain;border:2px solid #bfd2c2;border-radius:11px;touch-action:none;background:#d6ebed"></canvas>'+
+   '<div style="display:flex;gap:6px;margin-top:8px"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:7px;'+
+   'border:1px solid #b3c9b5;border-radius:8px;background:#fffaf1;color:#365344"></select>'+
+   '<button data-nav="route">🧭 Seguir ruta</button></div>'+
+   '<p data-nav="status" role="status" style="margin:7px 0 2px;min-height:32px">Elige un destino o toca una calle.</p>';
+  box.replaceChildren(wrap);
+  for(const b of wrap.querySelectorAll('button')){
+   b.style.cssText='padding:8px 10px;border-radius:8px;background:#e5f0dd;color:#3b604b;font:800 12px system-ui;cursor:pointer';
+  }
+  const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d'),sel=wrap.querySelector('select'),
+    status=wrap.querySelector('[data-nav="status"]'),CW=cv.width,CH=cv.height;
+  const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';sel.append(opt);
+  all.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;sel.append(o)});
+  let zoom=2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null;
+  const clampCenter=()=>{
+   center.x=clamp(center.x,0,m.MW);center.y=clamp(center.y,0,m.MH);
+  };
+  const view=()=>{
+   const k=Math.min(CW/m.MW,CH/m.MH)*zoom;
+   return {k,ox:CW/2-center.x*k,oy:CH/2-center.y*k};
+  };
+  const screen=p=>{const v=view();return {x:v.ox+p.x*v.k,y:v.oy+p.y*v.k}};
+  const world=(x,y)=>{const v=view();return {x:clamp((x-v.ox)/v.k,0,m.MW),y:clamp((y-v.oy)/v.k,0,m.MH)}};
+  function draw(){
+   ctx.clearRect(0,0,CW,CH);ctx.fillStyle='#a6d8e6';ctx.fillRect(0,0,CW,CH);
+   const v=view();m.mainland.sampleMap(ctx,v.ox,v.oy,v.k);
+   ctx.drawImage(m.ground,v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
+   // El mapa general no dibuja 50 casas superpuestas: prioriza establecimientos.
+   for(const p of all.filter((p,i)=>i<6||p.icon!=='🏡')){
+    const s=screen(p);if(s.x<-15||s.x>CW+15||s.y<-15||s.y>CH+15)continue;
+    ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(p.icon,s.x,s.y-7);
+   }
+   if(preview){
+    ctx.save();ctx.lineWidth=5;ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.beginPath();preview.points.forEach((p,i)=>{const q=screen({x:p[0],y:p[1]});i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});
+    ctx.strokeStyle='rgba(255,255,255,.94)';ctx.stroke();ctx.lineWidth=2.6;
+    ctx.strokeStyle=preview.connected?'#267fc6':'#b0785a';
+    if(!preview.connected)ctx.setLineDash([7,5]);ctx.stroke();ctx.restore();
+   }
+   if(target){const q=screen(target);ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);ctx.fillStyle='#e27e68';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke()}
+   const p=screen(X.player);ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+  }
+  function choose(p){
+   target=p;preview=roadRoute({x:X.player.x,y:X.player.y},target);
+   status.textContent='📍 '+p.name+' · '+Math.round(Math.hypot(X.player.x-p.x,X.player.y-p.y))+
+    ' unidades · '+(preview.connected?'ruta por caminos':'guía directa, sin conexión vial verificada');
+   draw();
+  }
+  const controls=k=>wrap.querySelector('[data-nav="'+k+'"]');
+  controls('plus').onclick=()=>{zoom=clamp(zoom*1.5,1,12);draw()};
+  controls('minus').onclick=()=>{zoom=clamp(zoom/1.5,1,12);draw()};
+  controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=3;draw()};
+  controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;draw()};
+  controls('route').onclick=()=>{if(!target){status.textContent='Elige primero un destino.';return}
+    startGuide(target);X.closeMenu();X.toast('🧭 Ruta activada. Sigue la indicación superior.')};
+  sel.onchange=()=>{const id=Number(sel.value);if(sel.value!==''){
+   const p=all[id];center={x:p.x,y:p.y};clampCenter();choose(p)
+  }};
+  const point=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height}};
+  cv.addEventListener('pointerdown',e=>{const p=point(e);down={...p,cx:center.x,cy:center.y};cv.setPointerCapture?.(e.pointerId)});
+  cv.addEventListener('pointermove',e=>{if(!down)return;
+   const p=point(e),v=view();center.x=down.cx-(p.x-down.x)/v.k;center.y=down.cy-(p.y-down.y)/v.k;
+   clampCenter();draw()});
+  cv.addEventListener('pointerup',e=>{if(!down)return;const p=point(e),travel=Math.hypot(p.x-down.x,p.y-down.y);down=null;
+   if(travel>10)return;
+   const pos=world(p.x,p.y);
+   let best=null,bd=22;
+   for(const a of all){const q=screen(a),d=Math.hypot(q.x-p.x,q.y-p.y);if(d<bd){bd=d;best=a}}
+   choose(best||{...pos,name:zone(pos.x,pos.y).replace(/^./,c=>c.toUpperCase())});
+  });
+  cv.addEventListener('pointercancel',()=>down=null);
+  draw();
+ }
+
  function install(m){
   if(m.mainland)return m;
   main=m;oldW=m.MW;oldH=m.MH;baseD=m.islandD;origBiome=m.biome;
@@ -402,7 +601,8 @@ window.WalesaMainland=(()=>{
  function register(){
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
-  H.update.push(()=>{if(!main)return;moveToPreview();
+  H.tab.push(navigationTab);
+  H.update.push(()=>{if(!main)return;updateGuide();moveToPreview();
    const m=X.M();if(m!==main||X.st.scene!=='out')return;
    const n=zone(X.player.x,X.player.y);
    if(seen!==n&&X.player.x>2700){seen=n;X.toast(({montana:'⛰ Cordilleras del Norte',meseta:'🏔 Meseta Oriental',
@@ -419,5 +619,5 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,landmarks:P,get original(){return main}};
 })();
