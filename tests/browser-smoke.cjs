@@ -30,10 +30,22 @@ async function slideZipper(page){
  const rect=await close.boundingBox();
  assert.ok(rect&&rect.width>0&&rect.height>0,'Tirador visible');
  const x=rect.x+rect.width/2,y=rect.y+rect.height/2;
+ const before=await page.evaluate(([x,y])=>{
+  const c=document.querySelector('#sheet .panel h3 .close'),top=document.elementFromPoint(x,y);
+  return{menu:Game.X.st.menu,top:top?.tagName+'.'+top?.className,
+   same:top===c,drag:c.classList.contains('wcDragging37'),
+   parent:c.parentElement?.outerHTML.slice(0,130)};
+ },[x,y]);console.log('ZIP BEFORE',before);
  await page.mouse.move(x,y);
  await page.mouse.down();
  await page.mouse.move(x-95,y,{steps:7});
  await page.mouse.up();
+ const after=await page.evaluate(()=>{
+  const c=document.querySelector('#sheet .panel h3 .close'),sheet=document.querySelector('#sheet');
+  return {menu:Game.X.st.menu,drag:c.classList.contains('wcDragging37'),
+   xform:c.style.transform,closing:sheet.classList.contains('wcZipClosing37'),
+   visible:sheet.classList.contains('on')};
+ });console.log('ZIP AFTER',after);
  await page.waitForFunction(()=>!document.getElementById('sheet').classList.contains('on'),null,{timeout:7000});
 }
 
