@@ -30,6 +30,20 @@ jobs:
           test -s sw.js
           test -s icon.svg
           grep -q 'walesa-ds-v1' index.html
+      - name: Revisar JavaScript antes de publicar
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+          if (scripts.length < 40) throw Error('Faltan scripts del juego');
+          for (const [i, script] of scripts.entries()) {
+            try { new vm.Script(script[1], {filename: 'index-script-'+i+'.js'}); }
+            catch (error) { console.error(error); process.exit(1); }
+          }
+          console.log(scripts.length + ' bloques JavaScript válidos');
+          NODE
       - name: Configurar Pages
         uses: actions/configure-pages@v5
         with:
