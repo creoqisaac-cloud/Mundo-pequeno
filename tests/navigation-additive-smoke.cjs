@@ -32,7 +32,9 @@ const server=http.createServer((req,res)=>{
     viaPlateau:b.connected&&b.points.length>=3,
     landmarks:all.some(p=>p.name==='Ciudad Corazón')&&all.some(p=>p.name==='Bosque Profundo'),
     legacyTexture:m.ground.width===2700&&m.ground.height===1320,
-    biomeColors:World.BIO.town.g.length===4};
+    biomeColors:World.BIO.town.g.length===4,
+    lowRise:homes.filter(b=>b.districtHome).length,
+    civicStops:L.destinations().filter(p=>['Parque del Pueblo','Mirador de la Meseta','Plaza del Sur','Jardín del Bosque'].includes(p.name)).length};
   });
   console.log('ADITIVO',visuals);
   assert.deepEqual(visuals.original,[0,1,2,3],'No se pierden los interiores originales');
@@ -40,6 +42,8 @@ const server=http.createServer((req,res)=>{
   assert.ok(visuals.distinct>=12,'Fachadas diferenciables');
   assert.ok(visuals.noGifts&&visuals.roomCanvas&&visuals.legacyTexture&&visuals.biomeColors);
   assert.ok(visuals.viaRoads&&visuals.viaPlateau,'Grafo de calles conecta regiones');
+  assert.ok(visuals.lowRise>=2,'Barrio urbano con casas bajas y edificios');
+  assert.ok(visuals.civicStops>=3,'Plazas y jardines originales añadidos a los distritos');
   assert.ok(visuals.landmarks,'Destinos antiguos y nuevos visibles');
   await page.evaluate(async()=>{await Game.enter();Game.X.st.mode='play';document.querySelector('#titleCov')?.classList.remove('on')});
   fs.mkdirSync(path.join(root,'tests','proof'),{recursive:true});
