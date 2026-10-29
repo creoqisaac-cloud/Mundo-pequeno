@@ -2503,9 +2503,10 @@ const Game=(()=>{
  const keys={};let steer=null;
  const vspeed=()=>st.scene==='in'||!save.vehicle?1:save.vehicle==='pet'?2.1:(V.VEH[save.vehicle]||{sp:1}).sp;
  function updPlayer(dt){let moved=false,run=false,dx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),dy=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
-  if(steer&&steer.active&&!st.busy){const w=screenToWorld(steer.x,steer.y);if(w){const ddx=w.x-player.x,ddy=w.y-player.y,d=Math.hypot(ddx,ddy);if(d>5){dx=ddx/d;dy=ddy/d;run=d>70}}}
+  const joy=window.WalesaJoystick37?.vector?.();if(joy){dx+=joy.x;dy+=joy.y}
+  if(!joy&&steer&&steer.active&&!st.busy){const w=screenToWorld(steer.x,steer.y);if(w){const ddx=w.x-player.x,ddy=w.y-player.y,d=Math.hypot(ddx,ddy);if(d>5){dx=ddx/d;dy=ddy/d;run=d>70}}}
   if(st.busy||st.poseLock||st.trans||st.menu)dx=dy=0;const m=Math.hypot(dx,dy),ox0=player.x,oy0=player.y,vm=vspeed();
-  if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn;moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt)}
+  if(m>.2){player.path=null;player.pending=null;run=run||!!keys.Shift||!!st.runOn;moved=step(player,dx/m,dy/m,(run?92:56)*vm*(window.Health32?Health32.speed:1)*dt*(joy?Math.min(1,Math.max(.32,m)):1))}
   else if(player.path&&!st.busy&&!st.poseLock){const [tx,ty]=player.path[0],d=Math.hypot(tx-player.x,ty-player.y);run=player.path.length>2||d>80||!!st.runOn;
    if(d<2.5){player.path.shift();if(!player.path.length)player.path=null}else{const ox=player.x,oy=player.y;step(player,(tx-player.x)/d,(ty-player.y)/d,Math.min(d,(run?88:60)*vm*(window.Health32?Health32.speed:1)*dt));moved=Math.hypot(player.x-ox,player.y-oy)>.05;if(!moved){player.stuck+=dt;if(player.stuck>.5){player.path=null;player.pending=null}}else player.stuck=0}}
   if(player.pending&&!st.busy&&!st.poseLock){const it=player.pending,q=ipos(it);if(it.bug&&!bugs.includes(it.bug))player.pending=null;else if(Math.hypot(q.x-player.x,q.y-player.y)<it.r){player.path=null;player.pending=null;act(it)}else if(!player.path)player.pending=null}
@@ -2671,7 +2672,7 @@ const Game=(()=>{
    if($('#pAgain'))$('#pAgain').onclick=e=>{e.stopPropagation();p.classList.remove('on');sfx.sel();o.again&&o.again()};$('#pExit').onclick=e=>{e.stopPropagation();p.classList.remove('on');const f=o.onExit;endMG();f&&f()}},
   quickPop(icon,title,text,ms){const p=$('#popup');p.className='';p.innerHTML=`<div class="big">${icon}</div><b>${title}</b><p>${text||''}</p>`;p.classList.add('on');clearTimeout(p._t);p._t=setTimeout(()=>p.classList.remove('on'),ms||1600)},
   end:()=>endMG(),shake(){st.shake=.25}};
- function resetInput(){for(const k in keys)keys[k]=false;steer=null;ptr.clear();pinch=null;player.path=null;player.pending=null;player.running=false}
+ function resetInput(){window.WalesaJoystick37?.release?.();for(const k in keys)keys[k]=false;steer=null;ptr.clear();pinch=null;player.path=null;player.pending=null;player.running=false}
  function startMG(id,arg){const m=MG[id];if(!m){toast('Este juego no está disponible todavía');return false}resetInput();closeMenu();$('#shop').classList.remove('on');$('#popup').classList.remove('on');clearTimeout($('#popup')._t);st.mg=m;st.mgId=id;actBtn(null);$('#game').classList.add('mg');G.hint('');G.dom('');G.hud('','');st.songT=0;try{m.start(arg);return true}catch(e){console.error(e);endMG();toast('No se pudo abrir el juego. Puedes volver a intentarlo.');return false}}
  function endMG(){if(!st.mg)return;sfx.back();try{st.mg.end&&st.mg.end()}catch(e){console.error(e)}st.mg=null;st.mgId=null;st.busy=false;st.menu=false;resetInput();clearTimeout($('#popup')._t);clearTimeout($('#mgX')._t);$('#game').classList.remove('mg');$('#popup').classList.remove('on');$('#mgX').classList.remove('arm');$('#mgX').textContent='✕';G.hint('');G.dom('');hud();st.songT=0;checkFinale()}
  /* salir de un minijuego: el primer toque pregunta, el segundo regresa a la isla */
@@ -2731,7 +2732,7 @@ const Game=(()=>{
  function crLoop(){if(!$('#creator').classList.contains('on'))return;const c=$('#crPv'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.imageSmoothingEnabled=false;const dir=[0,3,1,2][Math.floor(st.t/1.2)%4],s=V.charSprite(spec(),dir,Math.floor(st.t*3)%3===1?1:0),k=4;x.drawImage(s.c,Math.round(c.width/2-s.ax*k),Math.round(c.height-8-s.ay*k),s.c.width*k,s.c.height*k)}
 
  /* ── Mochila ── */
- function openMenu(tab){st.menu=true;$('#sheet').classList.add('on');showTab(tab||'tasks');sfx.sel()}
+ function openMenu(tab){window.WalesaJoystick37?.release?.();st.menu=true;$('#sheet').classList.add('on');showTab(tab||'tasks');sfx.sel()}
  function closeMenu(){st.menu=false;$('#sheet').classList.remove('on');$('#shop').classList.remove('on');st.sheetR=null;sfx.back();hud()}
  $('#menuBtn').addEventListener('click',e=>{e.stopPropagation();if(!st.poseLock)openMenu()});
  $$('.sheet .close').forEach(b=>b.onclick=closeMenu);
@@ -2799,13 +2800,13 @@ const Game=(()=>{
  cv.addEventListener('pointerdown',e=>{e.preventDefault();Sound.init();const p=toFrame(e);ptr.set(e.pointerId,{x:p.x,y:p.y,cx:e.clientX,cy:e.clientY,x0:e.clientX,y0:e.clientY,t0:performance.now()});try{cv.setPointerCapture(e.pointerId)}catch(_){}
   if(ptr.size===2){const [a,b]=[...ptr.values()];pinch={d0:Math.hypot(a.cx-b.cx,a.cy-b.cy),z0:cam.uz};steer=null;return}
   if(st.mode==='title'){startPlay();return}if(choice)return;if(advance())return;
-  if(st.mg){st.mg.down&&st.mg.down(p.x,p.y);return}if(st.busy||st.poseLock||st.menu||st.mode!=='play')return;steer={x:p.x,y:p.y,active:false,id:e.pointerId}});
+  if(st.mg){st.mg.down&&st.mg.down(p.x,p.y);return}if(st.busy||st.poseLock||st.menu||st.mode!=='play'||window.WalesaJoystick37?.enabled())return;steer={x:p.x,y:p.y,active:false,id:e.pointerId}});
  cv.addEventListener('pointermove',e=>{const q=ptr.get(e.pointerId);if(!q)return;const p=toFrame(e);q.x=p.x;q.y=p.y;q.cx=e.clientX;q.cy=e.clientY;
   if(pinch&&ptr.size>=2){const [a,b]=[...ptr.values()];cam.uz=clamp(pinch.z0*Math.hypot(a.cx-b.cx,a.cy-b.cy)/pinch.d0,ZMIN,ZMAX);cam.tz=st.talkWith?Math.min(ZMAX,cam.uz*1.3):cam.uz;return}
   if(st.mg){st.mg.move&&st.mg.move(p.x,p.y);return}
   if(steer&&steer.id===e.pointerId){steer.x=p.x;steer.y=p.y;if(!steer.active&&(Math.hypot(e.clientX-q.x0,e.clientY-q.y0)>12||performance.now()-q.t0>220)){steer.active=true;player.path=null;player.pending=null}const r=$('#ring');r.style.transform=`translate(${e.clientX-22}px,${e.clientY-22}px)`;r.classList.toggle('on',steer.active)}});
  const up=e=>{const q=ptr.get(e.pointerId);if(!q)return;ptr.delete(e.pointerId);if(pinch){if(ptr.size<2)pinch=null;steer=null;return}const p=toFrame(e);if(st.mg){st.mg.up&&st.mg.up(p.x,p.y);return}
-  $('#ring').classList.remove('on');if(steer&&steer.id===e.pointerId){const was=steer.active;steer=null;if(!was&&performance.now()-q.t0<400)worldTap(p.x,p.y)}};
+  $('#ring').classList.remove('on');if(window.WalesaJoystick37?.enabled())return;if(steer&&steer.id===e.pointerId){const was=steer.active;steer=null;if(!was&&performance.now()-q.t0<400)worldTap(p.x,p.y)}};
  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
  cv.addEventListener('wheel',e=>{e.preventDefault();cam.uz=clamp(cam.uz*(e.deltaY>0?.92:1.08),ZMIN,ZMAX);cam.tz=cam.uz},{passive:false});
  $('#dlg').addEventListener('pointerdown',e=>{e.stopPropagation();advance()});
@@ -2845,7 +2846,7 @@ const Game=(()=>{
   if(st.mode==='off'){st.mode='title';const P=V.MAIN.spots.plaza;player.x=P.x;player.y=P.y+60;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
   cancelAnimationFrame(st.raf);st.last=performance.now();st.raf=requestAnimationFrame(loop)}
  function leave(){closeMenu();cancelAnimationFrame(st.raf);st.raf=0;if(st.mg)endMG();$('#game').classList.remove('on');Sound.stop();Desk.show()}
- document.addEventListener('visibilitychange',()=>{if(document.hidden){Sound.stop(true);for(const k in keys)keys[k]=false;steer=null}else{st.songT=0;if(!$('#game').classList.contains('on')&&save.music&&$('#env').classList.contains('open'))Sound.play('box')}});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){window.WalesaJoystick37?.release?.();Sound.stop(true);for(const k in keys)keys[k]=false;steer=null}else{st.songT=0;if(!$('#game').classList.contains('on')&&save.music&&$('#env').classList.contains('open'))Sound.play('box')}});
  const X={resetInput,s2w:(x,y)=>screenToWorld(x,y),HOOKS,say,ask,askName,toast,placeTag,flash,iris,wait,night,sunset,dawn,wx,get weather(){return weather},M,kname,spec,today,dayHash,progress,addBells,invAdd,itemInfo,catOf,hasCat,takeCat,gain,hud,burst,bubble,petE,activePet,petMenu,startMG,endMG,openMenu,closeMenu,showTab,sheet,reSheet,payOr,buyRow,goTo,act,talkTo,interactables,nearest,setNPCs,mkNPC,get NPCS(){return NPCS},set NPCS(v){NPCS=v},get wild(){return wild},get bugs(){return bugs},player,cam,st,areaSong,loading,MEMS,TASKS,JOBINFO,SHOPS,ARCADE,EGGS,actBtn,outfitKey,get W(){return W},get H(){return H},get RS(){return RS},get fx(){return fx},setQ(q){quality=q;layout()},get quality(){return quality},frame:(ms)=>loop(ms),w2s,bend,travelHome,travelCity,travelMystery,photo,vehHud,checkFinale};
  return{enter,leave,MG,G,X,startMG,openMenu,openShop,openCreator,get st(){return st},player,cam,get npcs(){return NPCS},travelMystery,travelHome,travelCity,get wild(){return wild},adoptDone}
 })();
@@ -9785,7 +9786,7 @@ window.Wardrobe=Wardrobe;
   const b=stock(),list=featured(),n=Object.values(b).reduce((a,x)=>a+(x||0),0),limit=4;
   box.innerHTML=`<p class="shop-hi">Hangyodon: «Cada viernes saco una selección distinta. Hay una pieza por artículo y solo cuatro compras por visita semanal.»</p><div class="bal">🔔 ${save.bells.toLocaleString('es-MX')} · 🛍️ ${n}/${limit} compras esta semana</div>`+
     list.map(id=>{const it=Talk.ITEMS[id],sold=b[id],pr=it[2];return `<div class="task"><div><b>${it[1]} ${esc(it[0])}</b><small>${esc(descriptions[id])}</small></div><button class="buy" data-market="${id}" ${sold||n>=limit?'disabled':''}>${sold?'Agotado':n>=limit?'Límite semanal':pr+' 🔔'}</button></div>`}).join('')+
-    `<p class="memtext">🎒 Usa lo comprado en Mochila → Tus objetos especiales. La selección cambia cada viernes; el inventario y tus logros no se borran.</p>`;
+    `<p class="memtext">🎒 Usa tus artículos desde Mochila → Pendientes → Tu bolsita. La selección cambia cada viernes; tus objetos y logros se conservan.</p>`;
   box.querySelectorAll('[data-market]').forEach(el=>el.onclick=()=>{const id=el.dataset.market;if(!openFriday()||!featured().includes(id)||stock()[id]||Object.values(stock()).reduce((a,x)=>a+x,0)>=4)return;const p=Talk.ITEMS[id][2];if(!X.payOr(p))return;stock()[id]=1;X.invAdd(id);save.dex.i[id]=1;sync();X.toast(Talk.ITEMS[id][1]+' Comprado · una unidad');X.reSheet()});
  })}
  // Prioridad sobre el antiguo puesto de cinco productos; no abre desde Misiones.
@@ -9844,13 +9845,7 @@ window.Wardrobe=Wardrobe;
   }
   if(consumed)X.invAdd(id,-1);sync();return true;
  }
- // Mochila: la venta depende del viernes, el USO no.
- function bag(){X.sheet('🎒 Tus objetos especiales',box=>{
-  const held=DATA.filter(d=>(save.inv[d[0]]||0)>0);box.innerHTML='<p class="shop-hi">Aquí todos tienen un efecto propio. Los artículos duraderos no se gastan; los consumibles se descuentan al usarlos.</p>'+(held.length?held.map(([id,desc])=>{
-   const x=Talk.ITEMS[id];return `<div class="task"><div><b>${x[1]} ${esc(x[0])} · ${save.inv[id]}</b><small>${esc(desc)}</small></div><button class="buy" data-use36="${id}">Usar</button></div>`}).join(''):'<p class="memtext">Aún no tienes objetos de esta colección. Visita el mercadito de los viernes.</p>')+`<p class="memtext">🛍️ El mercadito abre únicamente los viernes de 9 a 20 h, junto a la plaza.</p>`;
-  box.querySelectorAll('[data-use36]').forEach(el=>el.onclick=async()=>{const id=el.dataset.use36;X.closeMenu();try{await use(id)}catch(err){console.error('Mercado 36',err);X.toast('No se pudo usar el objeto. Inténtalo de nuevo.')} });
- })}
- H.tab.push((tab,box)=>{if(tab!=='tasks')return;const d=document.createElement('div');d.innerHTML='<h4>🎒 Objetos especiales</h4><button class="orow" id="openBag36">✨ Usar objetos emoji <span>›</span></button><small class="memtext">Descubre el efecto concreto de tus objetos y úsalos desde aquí.</small>';box.appendChild(d);d.querySelector('button').onclick=()=>{X.closeMenu();bag()}});
+ // El uso se integra en las fichas de la bolsita. Ya no existe menú separado.
  // Eventos de los objetos que permanecen en el mundo.
  H.inter.push(list=>{if(!state.chest||X.st.scene!=='out'||X.M()!==V.MAIN)return;list.push({type:'marketTreasure36',x:state.chest.x,y:state.chest.y,r:22,hy:20,label:'Abrir cofre escondido'})});
  H.act.unshift(it=>it.type==='marketTreasure36'?(gift('cristal'),delete state.chest,sync(),say('🗺️ ¡Cofre encontrado! Ganaste un cristal 💎'),Promise.resolve()):null);
@@ -9865,7 +9860,151 @@ window.Wardrobe=Wardrobe;
    if(Date.now()<(state.confettiUntil||0))bb.push({x:X.player.x,y:X.player.y,draw:g=>{g.font='14px sans-serif';g.textAlign='center';for(let i=0;i<4;i++)g.fillText('🎊',Math.sin(t*3+i*2)*25,-10-i*9)}});
  });
  // Las vitaminas protegen antes del evento de enfermedad por lluvia del módulo Salud32.
- window.Mercado36={DATA,descriptions,featured,shop,bag,use,shield:()=>Date.now()<(state.shieldUntil||0),state,openFriday};
+ window.Mercado36={DATA,descriptions,featured,shop,use,shield:()=>Date.now()<(state.shieldUntil||0),state,openFriday};
+})();
+</script>
+<script>
+/* Walesa v37: bolsita de objetos y joystick configurable. Conserva el guardado original. */
+(()=>{'use strict';
+ const X=Game.X,H=X.HOOKS,G=Game.G;
+ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const defaults={enabled:false,configured:false,x:17,y:77,size:126,deadzone:15,travel:35,sensitivity:100,opacity:88};
+ const cfg=save.joystick37=Object.assign({},defaults,save.joystick37||{});
+ for(const [k,a,b] of [['x',14,86],['y',24,88],['size',88,176],['deadzone',0,35],['travel',22,44],['sensitivity',50,140],['opacity',45,100]])cfg[k]=clamp(+cfg[k]||defaults[k],a,b);
+ const css=document.createElement('style');css.textContent=`
+ #game #wcBag37{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;padding:4px 0 10px}
+ #game .wc-item37{position:relative;min-height:66px;border:2px solid #f4e5dd;background:#fff;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 2px 0 #eadccb;color:#8c5971;touch-action:manipulation;transition:background .15s,transform .12s}
+ #game .wc-item37:active{transform:scale(.96)}#game .wc-item37[aria-pressed=true]{border-color:#d77aa4;background:#fff0f6;box-shadow:0 2px 0 #c4638e}
+ #game .wc-item37 .ico{font-size:29px;line-height:1.1}#game .wc-item37 .amount{font:900 10px Nunito,sans-serif}
+ #game #wcBagDetail37{border:2px solid #f0dbe3;background:linear-gradient(145deg,#fffdfb,#fff3f7);border-radius:21px;padding:12px;margin:2px 0 14px;color:#70485e}
+ #game .wc-info37{display:flex;align-items:center;gap:12px}#game .wc-hero37{font-size:46px;min-width:54px;text-align:center;line-height:1.1}
+ #game .wc-info37 b{display:block;font:900 16px/1.2 Nunito,sans-serif}#game .wc-info37 small{display:block;color:#aa8293;font:800 12px Nunito,sans-serif;margin:4px 0}
+ #game .wc-info37 p{font:700 12px/1.35 Nunito,sans-serif;margin:5px 0}
+ #game #wcUse37{display:block;width:100%;height:37px;min-height:37px;margin-top:9px;border:0;border-radius:13px;background:linear-gradient(130deg,#dc83a6,#bd5d85);color:white;font:900 14px Nunito,sans-serif;box-shadow:0 2px 0 #a44d6c;touch-action:manipulation}#game #wcUse37:disabled{opacity:.45}
+ #game #wcJoystick37{position:absolute;z-index:25;left:17%;top:77%;transform:translate(-50%,-50%);width:126px;height:126px;border-radius:50%;touch-action:none;display:none;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;pointer-events:auto;background:radial-gradient(circle,#fff6 0 8%,#f5e4f280 70%,#fff6 100%);border:3px solid #f9e5f9bb;box-shadow:inset 0 0 0 1px #8e608f55,0 4px 14px #3d2e4b5c;overscroll-behavior:contain}
+ #game #wcJoystick37.on{display:flex}#game.mg #wcJoystick37,#game:not(.on) #wcJoystick37{display:none!important}
+ #game #wcJoystick37 .wcJoyZone37{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:28%;height:28%;background:#aa89af33;border:1px dashed #9f7aa4;border-radius:50%;pointer-events:none}
+ #game #wcJoystick37 .wcJoyKnob37{width:40%;height:40%;border-radius:50%;pointer-events:none;background:linear-gradient(135deg,#fff6fb,#e9b6d1);border:3px solid #fff9fe;box-shadow:0 3px 9px #644a69a6;display:grid;place-items:center;font-size:20px;will-change:transform}
+ #game #wcJoystick37 .wcJoyKnob37::before{content:'✿';color:#bb6b9a}
+ #game #wcJoySettings37{position:absolute;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:12px;background:#27202bbc;touch-action:pan-y}
+ #game #wcJoySettings37.on{display:flex}#game #wcJoySettings37 .wcJoyCard37{width:min(355px,100%);max-height:90%;overflow:auto;overscroll-behavior:contain;border-radius:23px;background:#fffaf6;padding:17px;border:2px solid #fff;box-shadow:0 12px 34px #1a102055;color:#64465b;font-family:Nunito,sans-serif}
+ #game #wcJoySettings37 h3{font:900 19px Nunito,sans-serif;margin:0 0 4px}#game #wcJoySettings37 p{font:700 12px/1.4 Nunito,sans-serif;color:#947a87;margin:3px 0 12px}
+ #game #wcJoySettings37 label{display:flex;justify-content:space-between;font:850 12px Nunito,sans-serif;margin:10px 0 3px}#game #wcJoySettings37 input[type=range]{display:block;width:100%;height:24px;accent-color:#c86691;touch-action:pan-x}
+ #game #wcJoySettings37 .wcActions37{display:flex;gap:8px;margin-top:13px}#game #wcJoySettings37 button{min-height:39px;flex:1;border-radius:13px;padding:7px;background:#ebd8e4;font:900 12px Nunito,sans-serif;color:#784967}#game #wcJoySettings37 button[data-done]{background:#c86691;color:#fff}
+
+ /* Broche corredizo de la bolsa: deslizar desde ✕ hacia la izquierda. */
+ #game #sheet .panel h3{position:relative}
+ #game #sheet .panel h3 .close{position:relative;z-index:2;touch-action:none;user-select:none;-webkit-user-select:none;will-change:transform;transition:transform .12s ease-out,background .16s;flex-shrink:0}
+ #game #sheet .panel h3 .close.wcDragging37{transition:none;background:#f8cfe1;box-shadow:0 2px 12px #bf7b9e88}
+ #game #wcBagZipTrack37{position:absolute;right:42px;top:50%;transform:translateY(-50%);height:5px;width:102px;border-radius:7px;background:repeating-linear-gradient(90deg,#d6a2b9 0 5px,#ffe2ef 5px 10px);opacity:.75;pointer-events:none}
+ #game #wcBagZipTip37{font-size:10px;letter-spacing:.02em;font-weight:900;color:#b9849c;margin-left:auto;opacity:.88;pointer-events:none}
+ #game #sheet.wcZipClosing37 .panel{transform:translateX(-115%) scaleX(.90);opacity:0;transition:transform .23s ease-in,opacity .22s}
+ @media(max-width:390px){#game #wcBagZipTrack37{width:75px}#game #wcBagZipTip37{font-size:9px}}
+ `;document.head.appendChild(css);
+ let chosen=null;
+ const desc=id=>window.Mercado36?.descriptions?.[id]|| (id.startsWith('f:')?'Pescado de tu colección. Puedes conservarlo, venderlo o regalarlo.':id.startsWith('b:')?'Insecto de tu colección. Puedes conservarlo, venderlo o regalarlo.':'Objeto de tu mochila. Úsalo en encargos, recetas o como regalo para un vecino cercano.');
+ function bagUI(t,box){if(t!=='tasks')return;
+  const invs=box.querySelectorAll('.inv');const inv=invs[invs.length-1];if(!inv)return;
+  const ids=Object.keys(save.inv||{}).filter(id=>(save.inv[id]||0)>0&&X.itemInfo(id));
+  inv.id='wcBag37';inv.classList.remove('inv');inv.replaceChildren();
+  const detail=document.createElement('div');detail.id='wcBagDetail37';inv.after(detail);
+  if(!ids.length){const empty=document.createElement('p');empty.textContent='Tu bolsita está vacía. Recolecta cosas o visita el mercadito.';inv.appendChild(empty);detail.hidden=true;return;}
+  if(!ids.includes(chosen))chosen=ids[0];
+  for(const id of ids){const info=X.itemInfo(id),b=document.createElement('button');b.type='button';b.className='wc-item37';b.dataset.id=id;b.setAttribute('aria-label',`${info.n}: ${save.inv[id]} unidades`);
+   const emo=document.createElement('span'),q=document.createElement('span');emo.className='ico';emo.textContent=info.i;q.className='amount';q.textContent='×'+save.inv[id];b.append(emo,q);
+   b.onclick=()=>{chosen=id;renderDetail()};inv.appendChild(b);
+  }
+  function renderDetail(){const x=X.itemInfo(chosen);if(!x)return;const count=save.inv[chosen]||0;
+   inv.querySelectorAll('button[data-id]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===chosen)));
+   detail.innerHTML=`<div class="wc-info37"><div class="wc-hero37">${esc(x.i)}</div><div><b>${esc(x.n)}</b><small>En tu bolsita: ×${count}</small><p>${esc(desc(chosen))}</p></div></div><button id="wcUse37" type="button" ${count<=0?'disabled':''}>Usar</button>`;
+   detail.querySelector('button').onclick=async()=>{const id=chosen;X.closeMenu();try{
+      if(window.Mercado36?.descriptions?.[id]){await window.Mercado36.use(id);return}
+      if(await useOther(id))return;
+    }catch(err){console.error('Bolsita 37',err);X.toast('No se pudo usar ese objeto. Intenta otra vez.')}
+   };
+  }
+  renderDetail();
+ }
+ H.tab.push(bagUI);
+ // La ✕ de la mochila funciona como tirador de un broche de izquierda a derecha.
+ // Swipe desde ✕ hacia la IZQUIERDA: cierra; el toque normal sigue cerrando.
+ const bagSheet=document.querySelector('#sheet'),bagClose=bagSheet?.querySelector('h3 .close');
+ if(bagSheet&&bagClose){
+  const h=bagClose.closest('h3'),track=document.createElement('span'),hint=document.createElement('span');
+  track.id='wcBagZipTrack37';hint.id='wcBagZipTip37';hint.textContent='← cerrar';
+  h.insertBefore(hint,bagClose);h.appendChild(track);
+  let pid=null,originX=0,originY=0,drag=0,swipedAt=-Infinity,done=false;
+  function snap(){drag=0;pid=null;done=false;bagClose.classList.remove('wcDragging37');bagClose.style.transform='';}
+  const normal=bagClose.onclick;
+  bagClose.onclick=e=>{if(performance.now()-swipedAt<500){e.preventDefault();e.stopPropagation();return;}if(normal)normal.call(bagClose,e)};
+  bagClose.addEventListener('pointerdown',e=>{
+   if(!bagSheet.classList.contains('on')||pid!==null)return;
+   pid=e.pointerId;originX=e.clientX;originY=e.clientY;drag=0;done=false;
+   bagClose.classList.add('wcDragging37');
+   try{bagClose.setPointerCapture(pid)}catch(_){}
+   e.stopPropagation();
+  });
+  bagClose.addEventListener('pointermove',e=>{
+   if(e.pointerId!==pid)return;
+   const dx=e.clientX-originX,dy=e.clientY-originY;
+   // Un gesto vertical no cierra la mochila.
+   if(Math.abs(dy)>65&&Math.abs(dx)<30){snap();return;}
+   drag=Math.max(0,Math.min(103,-dx));
+   bagClose.style.transform=`translateX(${-drag}px)`;
+   e.preventDefault();e.stopPropagation();
+  });
+  bagClose.addEventListener('pointerup',e=>{
+   if(e.pointerId!==pid)return;
+   const dx=e.clientX-originX,dy=e.clientY-originY;
+   const close=dx<=-58&&Math.abs(dy)<65;
+   snap();
+   if(close){
+    swipedAt=performance.now();done=true;
+    e.preventDefault();e.stopPropagation();
+    bagSheet.classList.add('wcZipClosing37');
+    setTimeout(()=>{if(bagSheet.classList.contains('on'))X.closeMenu();bagSheet.classList.remove('wcZipClosing37');},220);
+   }
+  });
+  bagClose.addEventListener('pointercancel',snap);
+  bagClose.addEventListener('lostpointercapture',()=>{if(!done)snap()});
+  // No arrastrar el broche al abrir nuevamente la bolsa.
+  const mo=new MutationObserver(()=>{if(!bagSheet.classList.contains('on')){bagSheet.classList.remove('wcZipClosing37');snap()}});
+  mo.observe(bagSheet,{attributes:true,attributeFilter:['class']});
+ }
+ const simpleFood=new Set(['pan','manzana','fresa','pera','sandia','platano','cereza','zanahoria','champi','panque','donas','chocolate','leche','jugo','agua','onigiri','ramen','ensaladaV','pescado','limonada','paleta','pudin','sandwich','sopa','pizza','fruta','galletas','helado']);
+ async function useOther(id){
+  if(simpleFood.has(id)&&window.Health32?.status){const s=Health32.status,bonus=['ramen','pizza','pescado','sandwich'].includes(id)?34:22;s.hunger=clamp(s.hunger+bonus,0,100);X.invAdd(id,-1);G.save();X.toast('😋 ¡Qué rico! Saciedad +'+bonus);return true}
+  const near=(X.NPCS||[]).filter(n=>Talk.P[n.id]&&n.id!=='isaac'&&Math.hypot(n.x-X.player.x,n.y-X.player.y)<66&&X.st.scene==='out').sort((a,b)=>Math.hypot(a.x-X.player.x,a.y-X.player.y)-Math.hypot(b.x-X.player.x))[0];
+  if(!near){X.toast(id.startsWith('f:')||id.startsWith('b:')?'🎣 Consérvalo o véndelo; también puedes regalarlo a un vecino cercano.':'🎒 Este artículo se utiliza en encargos, recetas o como regalo para un vecino cercano.');return false}
+  const named=X.itemInfo(id)?.n||'este objeto',npc=Talk.P[near.id];
+  const v=await X.ask('🎁 ¿Le das '+named+' a '+npc.name+'?',['Sí, regalar','Mejor guardar']);if(v!==0)return false;
+  X.invAdd(id,-1);if(window.Life?.bump)Life.bump(near.id,1);else{save.friend[near.id]=(save.friend[near.id]||0)+1;G.save()}
+  X.toast('💗 '+npc.name+' recibió tu regalo. +1 amistad.');return true;
+ }
+ // Joystick analogico: un puntero propio; los toques en el mundo dejan de dar órdenes de caminar.
+ const game=document.getElementById('game');const joy=document.createElement('div');joy.id='wcJoystick37';joy.setAttribute('role','group');joy.setAttribute('aria-label','Palanca virtual de movimiento');joy.innerHTML='<span class="wcJoyZone37"></span><span class="wcJoyKnob37"></span>';game.appendChild(joy);
+ const knob=joy.querySelector('.wcJoyKnob37'),zone=joy.querySelector('.wcJoyZone37');let pointer=null,vx=0,vy=0;
+ function release(){pointer=null;vx=vy=0;knob.style.transform='translate(0,0)'}
+ function renderJoystick(){joy.classList.toggle('on',!!cfg.enabled);joy.style.left=cfg.x+'%';joy.style.top=cfg.y+'%';joy.style.width=cfg.size+'px';joy.style.height=cfg.size+'px';joy.style.opacity=cfg.opacity/100;zone.style.width=zone.style.height=cfg.deadzone*2+'%';release()}
+ function locate(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,R=Math.max(12,cfg.size*cfg.travel/100);let dx=e.clientX-cx,dy=e.clientY-cy;const l=Math.hypot(dx,dy),mag=Math.min(1,l/R);if(l>R){dx*=R/l;dy*=R/l}knob.style.transform=`translate(${dx}px,${dy}px)`;const dead=cfg.deadzone/100;const power=mag<=dead?0:clamp((mag-dead)/Math.max(.05,1-dead)*cfg.sensitivity/100,0,1.4);vx=l>0?dx/Math.max(.01,Math.hypot(dx,dy))*power:0;vy=l>0?dy/Math.max(.01,Math.hypot(dx,dy))*power:0}
+ joy.addEventListener('pointerdown',e=>{if(!cfg.enabled||pointer!==null||X.st.mg||X.st.menu||X.st.busy||X.st.poseLock||X.st.mode!=='play')return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;try{joy.setPointerCapture(pointer)}catch(_){}X.player.path=null;X.player.pending=null;locate(e)});
+ joy.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;e.preventDefault();locate(e)});
+ for(const ev of ['pointerup','pointercancel','lostpointercapture'])joy.addEventListener(ev,e=>{if(e.pointerId===pointer)release()});
+ window.addEventListener('blur',release);document.addEventListener('visibilitychange',()=>{if(document.hidden)release()});
+ function vector(){if(!cfg.enabled||pointer===null||X.st.busy||X.st.poseLock||X.st.menu||X.st.mg||X.st.mode!=='play'){if(pointer!==null&& (X.st.busy||X.st.poseLock||X.st.menu||X.st.mg))release();return cfg.enabled?{x:0,y:0}:null}return{x:vx,y:vy}}
+ const ov=document.createElement('div');ov.id='wcJoySettings37';ov.innerHTML=`<div class="wcJoyCard37" role="dialog" aria-modal="true" aria-label="Configurar joystick"><h3>🕹️ Tu palanca</h3><p>Elige dónde colocarla y cuánto debe moverse. Puedes ajustarla cuando quieras en Opciones.</p><div id="wcJoyControls37"></div><div class="wcActions37"><button type="button" data-reset>Restablecer</button><button type="button" data-done>Guardar y jugar</button></div></div>`;game.appendChild(ov);
+ const sliderDefs=[['x','Posición horizontal',14,86,1,'%'],['y','Posición vertical',24,88,1,'%'],['size','Tamaño',88,176,2,' px'],['travel','Recorrido de la palanca',22,44,1,'%'],['deadzone','Zona muerta axial',0,35,1,'%'],['sensitivity','Sensibilidad',50,140,5,'%'],['opacity','Visibilidad',45,100,5,'%']];
+ function values(){const box=ov.querySelector('#wcJoyControls37');box.replaceChildren();for(const [key,label,min,max,step,unit] of sliderDefs){const lab=document.createElement('label');const name=document.createElement('span'),val=document.createElement('output');name.textContent=label;val.textContent=cfg[key]+unit;lab.append(name,val);const input=document.createElement('input');Object.assign(input,{type:'range',min:String(min),max:String(max),step:String(step),value:String(cfg[key])});input.setAttribute('aria-label',label);input.oninput=()=>{cfg[key]=+input.value;val.textContent=cfg[key]+unit;renderJoystick()};box.append(lab,input)}}
+ function showSetup(){release();values();ov.classList.add('on');joy.style.pointerEvents='none'}
+ function hideSetup(){ov.classList.remove('on');joy.style.pointerEvents='auto';cfg.configured=true;G.save();renderJoystick()}
+ ov.querySelector('[data-done]').onclick=hideSetup;
+ ov.querySelector('[data-reset]').onclick=()=>{const en=cfg.enabled;Object.assign(cfg,defaults,{enabled:en,configured:false});values();renderJoystick()};
+ // Opciones es una sección construida al final de showTab, por eso anexamos al completar el microtask.
+ H.tab.push((t,box)=>{if(t!=='opts')return;queueMicrotask(()=>{if(X.st.tab!=='opts'||!box.isConnected||box.querySelector('#wcJoyOpt37'))return;const button=document.createElement('button');button.id='wcJoyOpt37';button.className='orow';button.innerHTML=`🕹️ Movimiento <span>${cfg.enabled?'Joystick':'Táctil'}</span>`;button.onclick=()=>{const i=document.createElement('div');i.className='wcJoyChoice37';i.innerHTML=`<div style="display:flex;gap:8px;margin:7px 0 11px"><button class="orow" data-mode="touch" style="flex:1;justify-content:center">👆 Táctil</button><button class="orow" data-mode="joy" style="flex:1;justify-content:center">🕹️ Joystick</button></div><button class="orow" data-custom>⚙️ Ajustar palanca <span>›</span></button>`;button.after(i);button.remove();i.querySelector('[data-mode=touch]').onclick=()=>{cfg.enabled=false;release();renderJoystick();G.save();X.showTab('opts')};i.querySelector('[data-mode=joy]').onclick=()=>{cfg.enabled=true;renderJoystick();G.save();if(!cfg.configured)showSetup();else X.showTab('opts')};i.querySelector('[data-custom]').onclick=()=>{cfg.enabled=true;renderJoystick();showSetup()}};box.insertBefore(button,box.firstChild)})});
+ renderJoystick();
+ window.WalesaJoystick37={enabled:()=>!!cfg.enabled,vector,release,setup:showSetup,config:cfg};
+ window.WalesaBag37={render:bagUI,useOther};
 })();
 </script>
 <script src="./picnic_v31.js"></script>
@@ -9890,7 +10029,7 @@ window.Wardrobe=Wardrobe;
 <button id="installBtn" aria-label="Guardar en el celular">📲 Guardar en mi celular</button>
 <div class="overlay" id="installOv">
  <div class="inst">
-  <img src="icon.svg" alt="">
+  <img src="icon-180.png" alt="">
   <h2>Guárdala en tu iPhone</h2>
   <ol>
    <li>Toca el botón <b>Compartir</b> <span class="sh"></span> de Safari (abajo, en el centro).</li>
