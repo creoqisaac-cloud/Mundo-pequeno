@@ -59,7 +59,29 @@ window.WalesaMainland=(()=>{
  const rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]};
  const PAL={};for(const [k,v] of Object.entries(COL))PAL[k]=v.map(rgb);
  // Las veredas heredan las cuatro tintas del mismo bioma del motor base.
- const PATH={};for(const [k,v] of Object.entries(V.BIO))PATH[k]=(v.path||V.BIO.town.path||['#f4e1bc','#dec49c','#fff3d4','#b7a084']);
+ const PATH={};for(const [k,v] of Object.entries(V.BIO))PATH[k]=(v.path||['#e6d3ad','#d7c194','#f1e4c4','#c5ae82']);
+ const surfaceCache=new Map();
+ function roadPattern(ctx,kind,paved){
+  const key=(paved?'paved:':'stone:')+kind;let src=surfaceCache.get(key);
+  if(!src){
+   src=document.createElement('canvas');src.width=16;src.height=8;
+   const g=src.getContext('2d');
+   if(paved){g.fillStyle='#706b79';g.fillRect(0,0,16,8);
+    for(let j=0;j<8;j++)for(let i=0;i<16;i++)if(hash(i,j)>.74){
+     g.fillStyle=hash(i+13,j+11)>.5?'#77737f':'#67636f';g.fillRect(i,j,1,1)}
+   }else{
+    const tones=PATH[kind]||PATH.town;
+    for(let j=0;j<8;j++)for(let i=0;i<16;i++){
+     const row=j>>2,bx=(i+(row%2)*4)>>3;
+     const mortar=j%4===0||(i+(row%2)*4)%8===0;
+     g.fillStyle=mortar?tones[3]:tones[hash(bx,row)>.73?1:hash(bx,row)<.16?2:0];
+     g.fillRect(i,j,1,1);
+    }
+   }
+   surfaceCache.set(key,src);
+  }
+  return ctx.createPattern(src,'repeat');
+ }
  const rock=([r,g,b],a)=>[r*.55+119*a,g*.45+87*a,b*.48+66*a];
  let main=null,baseD=null,origBiome=null,oldW=2700,oldH=1320;
  const cache=new Map();
@@ -117,7 +139,7 @@ window.WalesaMainland=(()=>{
     ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);
     const tone=PATH[biome((a[0]+b[0])/2,(a[1]+b[1])/2)]||PATH.town;
     ctx.strokeStyle=layer===0?(paved?'#d5c6b6':tone[3]):
-      (paved?'#86818b':tone[0]);
+      roadPattern(ctx,biome((a[0]+b[0])/2,(a[1]+b[1])/2),paved);
     ctx.lineWidth=layer===0?32:layer===1?24:0;
     ctx.stroke();
    }
