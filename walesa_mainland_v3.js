@@ -1080,6 +1080,7 @@ window.WalesaMainland=(()=>{
    '<div style="display:flex;gap:5px;margin:7px 0;align-items:center;flex-wrap:wrap">'+
    '<button data-nav="minus" aria-label="Alejar mapa">−</button><button data-nav="plus" aria-label="Acercar mapa">＋</button>'+
    '<button data-nav="me">📍 Mi ubicación</button><button data-nav="all">🌍 Isla completa</button>'+
+   '<button data-nav="tour" aria-label="Revivir recorrido de llegada">🧳 Llegada</button>'+
    '<button data-nav="style" aria-label="Cambiar estilo del mapa">🌿 Relieve</button>'+
    '</div><div data-nav="filters" role="group" aria-label="Categorías de lugares" style="display:flex;gap:5px;overflow-x:auto;'+
    'padding:3px 1px 6px;scrollbar-width:thin">'+
@@ -1231,6 +1232,10 @@ window.WalesaMainland=(()=>{
   controls('minus').onclick=()=>zoomAt(1/1.5);
   controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
   controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
+  controls('tour').onclick=()=>{
+   if(phone&&closePhone)closePhone();else X.closeMenu();
+   requestAnimationFrame(()=>replayArrival());
+  };
   controls('style').onclick=()=>{
    terrainMode=!terrainMode;
    controls('style').textContent=terrainMode?'🗺️ Plano':'🌿 Relieve';
@@ -1331,17 +1336,85 @@ window.WalesaMainland=(()=>{
   structures();decorateDistricts();nativePlaces();furnishRooms();
   return m;
  }
+
+ // Llegada jugable de la expansión: mismo personaje, cámara y recorrido.
+ // El viaje en barco y su repetición en el teléfono original se CONSERVAN.
+ let arrivalRunning=false,arrivalCancel=false,arrivalSkip=null;
+ async function arrivalTour(replay=false){
+  if(arrivalRunning||!main||!Game?.X)return false;
+  const X=Game.X;
+  if(X.M()!==main||X.st.scene!=='out'||X.st.mg||X.st.mode!=='play')return false;
+  if(X.st.busy&&!replay)return false;
+  if(X.st.busy&&replay)return false;
+  if(!replay){
+   save.mainlandV3Welcome=1;
+   save.walesaArrivalV59=1;
+   Game.G.save();
+  }
+  arrivalRunning=true;arrivalCancel=false;
+  const p=X.player,st=X.st;
+  const button=document.createElement('button');
+  button.id='walesa-tour-skip';
+  button.type='button';button.textContent='Saltar recorrido ✕';
+  Object.assign(button.style,{
+   position:'absolute',right:'12px',top:'56px',zIndex:'96',
+   background:'rgba(255,247,230,.94)',border:'2px solid #b99681',
+   borderRadius:'12px',padding:'7px 10px',color:'#765a51',
+   font:'bold 12px system-ui',cursor:'pointer',touchAction:'manipulation'
+  });
+  button.onclick=()=>{arrivalCancel=true};
+  arrivalSkip=button;
+  document.querySelector('#game')?.append(button);
+  st.busy=true;X.st.focus={x:3440,y:2015};
+  p.x=3440;p.y=2015;p.dir=3;
+  X.cam.x=p.x;X.cam.y=p.y;
+  X.toast('🧳 Llegando a Walesa… sigue el camino hacia el pueblo');
+  const stops=[
+   [3440,2015],[3505,2070],[3580,2130],
+   [3655,2195],[3730,2250],[PLAZA.x,PLAZA.y+92]
+  ];
+  try{
+   // Recorrido por carretera con vista de las montañas, las casas y la plaza.
+   // La secuencia puede omitirse en cualquier momento, sin perder la partida.
+   for(let i=1;i<stops.length&&!arrivalCancel;i++){
+    const [ax,ay]=stops[i-1],[bx,by]=stops[i],steps=22;
+    for(let k=1;k<=steps&&!arrivalCancel;k++){
+     const t=k/steps,soft=t*t*(3-2*t),prevX=p.x,prevY=p.y;
+     p.x=ax+(bx-ax)*soft;p.y=ay+(by-ay)*soft;
+     p.dir=Math.abs(bx-ax)>Math.abs(by-ay)?(bx>ax?3:2):(by>ay?1:0);
+     p.frame=1+Math.floor(k/5)%2;
+     X.st.focus={x:p.x,y:p.y-18};
+     // Mantiene el movimiento físico original, sin teletransportes entre tomas.
+     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)){
+      p.x=prevX;p.y=prevY;break;
+     }
+     await new Promise(resolve=>requestAnimationFrame(resolve));
+    }
+   }
+   p.x=PLAZA.x;p.y=PLAZA.y+92;p.dir=0;p.frame=0;
+   X.cam.x=p.x;X.cam.y=p.y;
+   X.toast('🎵 Bienvenida a la plaza. El kiosco, el picnic y los vecinos te esperan.');
+  }finally{
+   button.remove();arrivalSkip=null;arrivalCancel=false;
+   X.st.focus=null;st.busy=false;arrivalRunning=false;
+  }
+  return true;
+ }
  function moveToPreview(){
-  if(!main||!Game?.X||!save||save.mainlandV3Welcome)return false;
+  if(!main||!Game?.X||!save||arrivalRunning)return false;
   const X=Game.X;
   if(X.st.mode!=='play'||X.st.scene!=='out'||X.M()!==main||X.st.busy||X.st.mg)return false;
-  // La primera visita abre EN EL OVERWORLD EXPANDIDO: no en una tabla ni un menú.
-  X.player.x=P.village.x;X.player.y=P.village.y+85;X.player.dir=0;
-  X.cam.x=X.player.x;X.cam.y=X.player.y;
-  save.mainlandV3Welcome=1;
-  Game.G.save();
-  X.toast('🏞 ¡Estás dentro del nuevo overworld! Camina hacia montañas, ciudad o bosque.');
+  const first=!save.mainlandV3Welcome;
+  const nearVillage=Math.hypot(X.player.x-PLAZA.x,X.player.y-PLAZA.y)<325;
+  if(!first&&(save.walesaArrivalV59||!nearVillage))return false;
+  if(!first&&save.walesaArrivalV59)return false;
+  // La animación vuelve para partidas antiguas que ya llegaron a la plaza,
+  // pero no interrumpe a quienes exploran muy lejos de ella.
+  arrivalTour(false);
   return true;
+ }
+ function replayArrival(){
+  return arrivalTour(true);
  }
  // Residentes propios de la expansión, construidos con sprites y la
  // conversación, amistad, encargos y movimiento del MOTOR ORIGINAL.
@@ -1516,5 +1589,5 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,replayArrival,get arrivalRunning(){return arrivalRunning},kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
