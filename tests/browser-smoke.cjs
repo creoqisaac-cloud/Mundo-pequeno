@@ -59,6 +59,14 @@ async function slideZipper(page){
    document.querySelector('#game').classList.add('on','playing');
    Game.X.openMenu('opts');
   });
+  const tabs51=await page.evaluate(()=>({
+   names:[...document.querySelectorAll('#tabs button')].map(x=>x.dataset.t),
+   display:getComputedStyle(document.querySelector('#tabs')).display,
+   columns:getComputedStyle(document.querySelector('#tabs')).gridTemplateColumns.split(' ').length
+  }));
+  assert.deepEqual(tabs51.names,['tasks','pets','dex','opts'],'Mochila: solo cuatro pestañas');
+  assert.equal(tabs51.display,'grid','Mochila: dos filas ordenadas');
+  assert.equal(tabs51.columns,2,'Mochila: dos columnas del mismo ancho');
   await page.locator('#wcControlOptions40').waitFor({state:'visible'});
   await page.locator('#wcControlOptions40 [data-mode="joy"]').click();
   await page.locator('#wcControlOptions40 [data-size="144"]').click();
@@ -120,6 +128,43 @@ async function slideZipper(page){
   // El celular debe mantener visible su transicion despues de cerrar.
   await page.evaluate(()=>document.getElementById('fonBtn').click());
   await page.locator('#game .fon.on').waitFor({state:'visible'});
+
+  // Seis apps nativas, mapa original con zoom y foto local en el borde del telefono.
+  const initialApps=await page.evaluate(()=>({
+   keys:[...document.querySelectorAll('.fon .apps .app')].map(b=>b.dataset.a),
+   columns:getComputedStyle(document.querySelector('.fon .apps')).gridTemplateColumns.split(' ').length
+  }));
+  assert.deepEqual(initialApps.keys,['calls','missions','games','metro','weather','map']);
+  assert.equal(initialApps.columns,3,'Dos filas de tres apps');
+  await page.locator('#game .fon .app[data-a="map"]').click();
+  await page.locator('#game .fon #mapC2').waitFor({state:'attached',timeout:12000});
+  await page.locator('#game .fon .mapz button[data-z="1"]').click();
+  const zoom=await page.locator('#game .fon #mapC2').evaluate(el=>({
+   width:el.width,height:el.height,parent:el.parentElement.className
+  }));
+  assert.ok(zoom.width>300&&zoom.height>300,'Se reutiliza el mapa de alta resolucion');
+  await page.locator('#game .fon .hd button[data-back]').click();
+  const imageData=await page.evaluate(()=>{
+   const c=document.createElement('canvas');c.width=4;c.height=4;
+   const x=c.getContext('2d');x.fillStyle='#efabc9';x.fillRect(0,0,4,4);
+   return c.toDataURL('image/png');
+  });
+  await page.locator('#wcWallpaperInput51').setInputFiles({
+   name:'fondo-de-prueba.png',mimeType:'image/png',
+   buffer:Buffer.from(imageData.split(',')[1],'base64')
+  });
+  await page.waitForFunction(()=>localStorage.getItem('walesa-fon-wallpaper-v1')?.startsWith('data:image/jpeg'),null,{timeout:10000});
+  const photo=await page.evaluate(()=>({
+   inGameSave:!!save.wallpaper,
+   active:document.querySelector('.fon').classList.contains('has-wallpaper'),
+   image:document.querySelector('.fon .scr').style.backgroundImage.includes('data:image/jpeg'),
+   buttonPosition:getComputedStyle(document.querySelector('#wcWallpaperButton51')).left
+  }));
+  assert.equal(photo.inGameSave,false,'El fondo no modifica la partida');
+  assert.equal(photo.active,true,'La foto se aplica al telefono');
+  assert.equal(photo.image,true,'La imagen se usa como fondo');
+  assert.equal(photo.buttonPosition,'10px','El boton permanece en el borde inferior izquierdo');
+
   // El gesto nativo de deslizar hacia arriba funciona aun cuando la barra
   // inferior esta muy cerca de otro contenido tactil.
   await page.evaluate(()=>{
