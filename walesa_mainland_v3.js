@@ -632,28 +632,45 @@ window.WalesaMainland=(()=>{
   return guide;
  }
  function navigationTab(tab,box){
-  if(tab!=='map'||Game?.X?.M()!==main)return;
+  if(tab!=='map'||!main)return;
+  renderNavigator(box,false);
+ }
+ function mountPhone(box,closePhone){
+  if(!box||!main)return false;
+  renderNavigator(box,true,closePhone);return true;
+ }
+ function renderNavigator(box,phone=false,closePhone=null){
   const X=Game.X,m=main,all=destinations();
-  const wrap=document.createElement('section');wrap.style.cssText='color:#354b42;font:700 12px/1.4 system-ui,sans-serif';
-  wrap.innerHTML='<div style="display:flex;gap:5px;margin:0 0 8px;align-items:center;flex-wrap:wrap">'+
-   '<button data-nav="plus" aria-label="Acercar mapa">＋</button><button data-nav="minus" aria-label="Alejar mapa">－</button>'+
-   '<button data-nav="me">📍 Aquí</button><button data-nav="all">🌍 Completo</button>'+
-   '<span style="font-size:10px">Arrastra para explorar · toca para elegir</span></div>'+
-   '<canvas id="walesa-streets-map" width="560" height="395" style="display:block;width:100%;height:auto;'+
-   'max-height:45vh;object-fit:contain;border:2px solid #bfd2c2;border-radius:11px;touch-action:none;background:#d6ebed"></canvas>'+
-   '<div style="display:flex;gap:6px;margin-top:8px"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:7px;'+
-   'border:1px solid #b3c9b5;border-radius:8px;background:#fffaf1;color:#365344"></select>'+
-   '<button data-nav="route">🧭 Seguir ruta</button></div>'+
-   '<p data-nav="status" role="status" style="margin:7px 0 2px;min-height:32px">Elige un destino o toca una calle.</p>';
+  const wrap=document.createElement('section');wrap.className='walesa-map-live';
+  wrap.style.cssText='color:#354b42;font:700 12px/1.4 system-ui,sans-serif;'+
+    'width:100%;min-width:0;box-sizing:border-box;padding:'+(phone?'4px 1px 18px':'6px 3px 12px');
+  wrap.innerHTML='<div style="padding:6px 8px 8px;border-radius:12px;background:#fcf9f1;box-shadow:0 2px 8px #26473815">'+
+   '<div style="font-weight:900;color:#426b5b;font-size:13px">🗺 Walesa Maps <span style="font-size:10px;font-weight:600">· rutas de la isla</span></div>'+
+   '<input type="search" aria-label="Buscar destino" placeholder="🔎 Buscar plaza, tienda, casa…" style="display:block;box-sizing:border-box;width:100%;margin-top:7px;'+
+    'padding:10px;border:1px solid #afcbb7;border-radius:9px;background:#fff;color:#375344;font:700 12px system-ui" />'+
+   '<div data-nav="search-results" style="display:none;max-height:110px;overflow:auto;margin-top:4px"></div></div>'+
+   '<div style="display:flex;gap:5px;margin:7px 0;align-items:center;flex-wrap:wrap">'+
+   '<button data-nav="minus" aria-label="Alejar mapa">−</button><button data-nav="plus" aria-label="Acercar mapa">＋</button>'+
+   '<button data-nav="me">📍 Mi ubicación</button><button data-nav="all">🌍 Isla completa</button>'+
+   '</div><canvas id="walesa-streets-map" width="560" height="435" style="display:block;box-sizing:border-box;width:100%;height:auto;'+
+   'border:2px solid #bfd2c2;border-radius:12px;touch-action:none;background:#d6ebed" aria-label="Mapa de calles de Walesa, arrastra para explorar"></canvas>'+
+   '<div style="margin-top:5px;font-size:10px;color:#62786b">Arrastra, pellizca o usa + / −. Toca un punto para elegir destino.</div>'+
+   '<div style="display:flex;gap:6px;margin-top:8px;align-items:stretch"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:8px;'+
+   'border:1px solid #b3c9b5;border-radius:8px;background:#fffaf1;color:#365344;font:700 11px system-ui"></select>'+
+   '<button data-nav="route">🧭 Ir</button></div>'+
+   '<p data-nav="status" role="status" style="margin:7px 0 2px;min-height:32px;color:#4f6557">Elige un lugar o toca el mapa para marcarlo.</p>';
   box.replaceChildren(wrap);
-  for(const b of wrap.querySelectorAll('button')){
-   b.style.cssText='padding:8px 10px;border-radius:8px;background:#e5f0dd;color:#3b604b;font:800 12px system-ui;cursor:pointer';
+  for(const b of wrap.querySelectorAll('button:not([data-result])')){
+   b.style.cssText='padding:9px 10px;border:1px solid #b7d0b8;border-radius:9px;'+
+    'background:#e5f0dd;color:#3b604b;font:800 12px system-ui;cursor:pointer;touch-action:manipulation';
   }
   const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d'),sel=wrap.querySelector('select'),
-    status=wrap.querySelector('[data-nav="status"]'),CW=cv.width,CH=cv.height;
+    status=wrap.querySelector('[data-nav="status"]'),search=wrap.querySelector('input[type="search"]'),
+    results=wrap.querySelector('[data-nav="search-results"]'),CW=cv.width,CH=cv.height;
   const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';sel.append(opt);
   all.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;sel.append(o)});
-  let zoom=2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null;
+  let zoom=phone?3.2:2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null,raf=0;
+  const pointers=new Map();let pinch=null,suppressTap=false;
   const clampCenter=()=>{
    center.x=clamp(center.x,0,m.MW);center.y=clamp(center.y,0,m.MH);
   };
@@ -661,16 +678,37 @@ window.WalesaMainland=(()=>{
    const k=Math.min(CW/m.MW,CH/m.MH)*zoom;
    return {k,ox:CW/2-center.x*k,oy:CH/2-center.y*k};
   };
+  // Zoom alrededor del dedo (no salta al centro al pellizcar).
+  function zoomAt(factor,p={x:CW/2,y:CH/2}){
+   const anchor=world(p.x,p.y);
+   zoom=clamp(zoom*factor,1,16);
+   const k=view().k;
+   center.x=anchor.x-(p.x-CW/2)/k;
+   center.y=anchor.y-(p.y-CH/2)/k;
+   clampCenter();repaint();
+  }
+  function repaint(){
+   if(raf||!cv.isConnected)return;
+   raf=requestAnimationFrame(()=>{raf=0;if(cv.isConnected)draw()});
+  }
   const screen=p=>{const v=view();return {x:v.ox+p.x*v.k,y:v.oy+p.y*v.k}};
   const world=(x,y)=>{const v=view();return {x:clamp((x-v.ox)/v.k,0,m.MW),y:clamp((y-v.oy)/v.k,0,m.MH)}};
   function draw(){
    ctx.clearRect(0,0,CW,CH);ctx.fillStyle='#a6d8e6';ctx.fillRect(0,0,CW,CH);
    const v=view();m.mainland.sampleMap(ctx,v.ox,v.oy,v.k);
    ctx.drawImage(m.ground,v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
-   // El mapa general no dibuja 50 casas superpuestas: prioriza establecimientos.
-   for(const p of all.filter((p,i)=>i<6||p.icon!=='🏡')){
-    const s=screen(p);if(s.x<-15||s.x>CW+15||s.y<-15||s.y>CH+15)continue;
-    ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(p.icon,s.x,s.y-7);
+   // Distinción de hitos sin amontonar las viviendas a escala regional.
+   const candidates=all.filter((p,i)=>zoom>=6||i<11||p.icon!=='🏡');
+   for(const p of candidates){
+    const s=screen(p);if(s.x<-35||s.x>CW+35||s.y<-25||s.y>CH+25)continue;
+    const selected=target===p;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=(selected?'24':'20')+'px sans-serif';
+    ctx.fillText(p.icon,s.x,s.y-13);
+    if(selected||zoom>5&&p.icon!=='🏡'){
+     ctx.font='bold 15px system-ui';ctx.lineWidth=3;ctx.strokeStyle='rgba(255,254,248,.96)';
+     ctx.strokeText(p.name,s.x,s.y+10);ctx.fillStyle='#365449';ctx.fillText(p.name,s.x,s.y+10);
+    }
    }
    if(preview){
     ctx.save();ctx.lineWidth=5;ctx.lineJoin='round';ctx.lineCap='round';
@@ -680,7 +718,15 @@ window.WalesaMainland=(()=>{
     if(!preview.connected)ctx.setLineDash([7,5]);ctx.stroke();ctx.restore();
    }
    if(target){const q=screen(target);ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);ctx.fillStyle='#e27e68';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke()}
-   const p=screen(X.player);ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+   const p=screen(X.player);
+   ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fillStyle='rgba(54,124,221,.15)';ctx.fill();
+   ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();
+   ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();
+   if(preview&&!preview.connected){
+    ctx.fillStyle='rgba(255,249,240,.93)';ctx.fillRect(7,CH-35,CW-14,27);
+    ctx.fillStyle='#875a47';ctx.textAlign='center';ctx.font='bold 13px system-ui';
+    ctx.fillText('Ruta orientativa: no hay un camino continuo',CW/2,CH-21);
+   }
   }
   function choose(p){
    target=p;preview=roadRoute({x:X.player.x,y:X.player.y},target);
@@ -689,28 +735,90 @@ window.WalesaMainland=(()=>{
    draw();
   }
   const controls=k=>wrap.querySelector('[data-nav="'+k+'"]');
-  controls('plus').onclick=()=>{zoom=clamp(zoom*1.5,1,12);draw()};
-  controls('minus').onclick=()=>{zoom=clamp(zoom/1.5,1,12);draw()};
-  controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=3;draw()};
-  controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;draw()};
+  controls('plus').onclick=()=>zoomAt(1.5);
+  controls('minus').onclick=()=>zoomAt(1/1.5);
+  controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
+  controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
   controls('route').onclick=()=>{if(!target){status.textContent='Elige primero un destino.';return}
-    startGuide(target);X.closeMenu();X.toast('🧭 Ruta activada. Sigue la indicación superior.')};
+    if(X.M()!==main||X.st.scene!=='out'){
+     status.textContent='La ruta se puede activar al salir al exterior del continente.';return;
+    }
+    startGuide(target);
+    if(phone&&closePhone)closePhone();
+    else X.closeMenu();
+    X.toast('🧭 Ruta activada. Sigue las indicaciones superiores.');
+  };
   sel.onchange=()=>{const id=Number(sel.value);if(sel.value!==''){
-   const p=all[id];center={x:p.x,y:p.y};clampCenter();choose(p)
+   const p=all[id];center={x:p.x,y:p.y};clampCenter();choose(p);
   }};
-  const point=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height}};
-  cv.addEventListener('pointerdown',e=>{const p=point(e);down={...p,cx:center.x,cy:center.y};cv.setPointerCapture?.(e.pointerId)});
-  cv.addEventListener('pointermove',e=>{if(!down)return;
-   const p=point(e),v=view();center.x=down.cx-(p.x-down.x)/v.k;center.y=down.cy-(p.y-down.y)/v.k;
-   clampCenter();draw()});
-  cv.addEventListener('pointerup',e=>{if(!down)return;const p=point(e),travel=Math.hypot(p.x-down.x,p.y-down.y);down=null;
-   if(travel>10)return;
-   const pos=world(p.x,p.y);
-   let best=null,bd=22;
-   for(const a of all){const q=screen(a),d=Math.hypot(q.x-p.x,q.y-p.y);if(d<bd){bd=d;best=a}}
-   choose(best||{...pos,name:zone(pos.x,pos.y).replace(/^./,c=>c.toUpperCase())});
+  function selectTarget(i){
+   if(!all[i])return;sel.value=String(i);
+   center={x:all[i].x,y:all[i].y};zoom=Math.max(zoom,3.8);clampCenter();
+   choose(all[i]);search.value=all[i].name;results.style.display='none';
+  }
+  search.addEventListener('input',()=>{
+   const q=search.value.trim().toLocaleLowerCase('es-MX');
+   results.replaceChildren();
+   const matches=q?all.map((p,i)=>({...p,i})).filter(p=>p.name.toLocaleLowerCase('es-MX').includes(q)).slice(0,7):[];
+   results.style.display=matches.length?'block':'none';
+   for(const p of matches){
+    const item=document.createElement('button');item.type='button';
+    item.setAttribute('data-result',p.name);
+    item.textContent=p.icon+' '+p.name;
+    item.style.cssText='display:block;text-align:left;width:100%;font:700 11px system-ui;'+
+     'background:#fff;color:#355844;border:0;border-bottom:1px solid #dae8d6;padding:8px';
+    item.onclick=()=>selectTarget(p.i);results.append(item);
+   }
   });
-  cv.addEventListener('pointercancel',()=>down=null);
+  const point=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height}};
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  cv.addEventListener('pointerdown',e=>{
+   e.preventDefault();const p=point(e);
+   pointers.set(e.pointerId,p);cv.setPointerCapture?.(e.pointerId);
+   if(pointers.size===1){
+    down={...p,cx:center.x,cy:center.y};
+    suppressTap=false;
+   }else if(pointers.size===2){
+    const [a,b]=[...pointers.values()],mid=midpoint(a,b);
+    pinch={distance:Math.max(dist(a,b),1),zoom,mid,anchor:world(mid.x,mid.y)};
+    down=null;suppressTap=true;
+   }
+  });
+  cv.addEventListener('pointermove',e=>{
+   if(!pointers.has(e.pointerId))return;
+   const p=point(e);pointers.set(e.pointerId,p);
+   if(pinch&&pointers.size===2){
+    const [a,b]=[...pointers.values()],mid=midpoint(a,b);
+    zoom=clamp(pinch.zoom*dist(a,b)/pinch.distance,1,16);
+    const k=view().k;
+    center.x=pinch.anchor.x-(mid.x-CW/2)/k;
+    center.y=pinch.anchor.y-(mid.y-CH/2)/k;
+    clampCenter();repaint();return;
+   }
+   if(!down||pointers.size!==1)return;
+   const v=view();center.x=down.cx-(p.x-down.x)/v.k;
+   center.y=down.cy-(p.y-down.y)/v.k;
+   if(dist(p,down)>8)suppressTap=true;
+   clampCenter();repaint();
+  });
+  cv.addEventListener('pointerup',e=>{
+   if(!pointers.has(e.pointerId))return;
+   const p=point(e),wasSingle=pointers.size===1;
+   pointers.delete(e.pointerId);const tapped=wasSingle&&down&&dist(p,down)<9&&!suppressTap;
+   down=null;pinch=null;
+   if(!tapped){if(pointers.size===1)suppressTap=true;return}
+   const pos=world(p.x,p.y);
+   let best=null,bd=29;
+   for(const a of all){const q=screen(a),d=dist(q,p);if(d<bd){bd=d;best=a}}
+   choose(best||{...pos,name:'Punto marcado'});
+  });
+  cv.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);down=null;pinch=null});
+  cv.addEventListener('wheel',e=>{
+   e.preventDefault();
+   zoomAt(e.deltaY<0?1.18:1/1.18,point(e));
+  },{passive:false});
+
   draw();
  }
 
@@ -761,5 +869,5 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
