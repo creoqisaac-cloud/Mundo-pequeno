@@ -160,11 +160,15 @@ async function slideZipper(page){
    const x=c.getContext('2d');x.fillStyle='#efabc9';x.fillRect(0,0,4,4);
    return c.toDataURL('image/png');
   });
-  const [wallpaperChooser]=await Promise.all([
-   page.waitForEvent('filechooser'),
-   page.locator('#wcWallpaperButton51').click()
-  ]);
-  await wallpaperChooser.setFiles({
+  // En Chromium sin interfaz no siempre se presenta un dialogo nativo de archivos.
+  // Validar la accion directa del boton y luego simular la eleccion de una foto.
+  await page.evaluate(()=>{
+   const input=document.querySelector('#wcWallpaperInput51');
+   input.click=()=>{input.dataset.activated='yes'};
+  });
+  await page.locator('#wcWallpaperButton51').click();
+  assert.equal(await page.locator('#wcWallpaperInput51').getAttribute('data-activated'),'yes','El boton del borde abre el selector de galeria');
+  await page.locator('#wcWallpaperInput51').setInputFiles({
    name:'fondo-de-prueba.png',mimeType:'image/png',
    buffer:Buffer.from(imageData.split(',')[1],'base64')
   });
