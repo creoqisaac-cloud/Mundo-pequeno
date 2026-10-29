@@ -29,6 +29,9 @@ window.WalesaMainland=(()=>{
  // una sola plaza circular transitable, sin cruces de senderos bajo el kiosco.
  const PLAZA={x:P.village.x,y:P.village.y,r:186,edge:198};
  const circleRoads=[];
+ const kioskAt={x:P.village.x,y:P.village.y-107};
+ const picnicAt={x:P.village.x+107,y:P.village.y+98};
+ const mailAt={x:P.village.x-106,y:P.village.y+102};
  const plazaDistance=(x,y)=>Math.hypot(x-PLAZA.x,y-PLAZA.y);
  function plazaBrick(x,y){
   if(Math.abs(x-PLAZA.x)>PLAZA.edge||Math.abs(y-PLAZA.y)>PLAZA.edge)return null;
@@ -682,6 +685,10 @@ window.WalesaMainland=(()=>{
   }
   // Hitos propios de la región, pero con sprites exclusivos del juego.
   V.addObj(main,a.fount[0],P.village.x,P.village.y+11,V.circS(P.village.x,P.village.y,15),{fount:true});
+  // Kiosco jugable con el sprite y el minijuego musical ORIGINALES.
+  V.addObj(main,a.gazebo,kioskAt.x,kioskAt.y,V.circS(kioskAt.x,kioskAt.y-12,21),{landmark:'walesa-kiosk'});
+  V.addObj(main,a.basket,picnicAt.x,picnicAt.y,null,{landmark:'walesa-picnic'});
+  V.addObj(main,a.mail,mailAt.x,mailAt.y,V.rectS(mailAt.x-6,mailAt.y-7,12,12),{landmark:'walesa-mail'});
   for(const [x,y] of [[P.village.x-52,P.village.y-52],[P.village.x+52,P.village.y-52],
                       [P.village.x-52,P.village.y+52],[P.village.x+52,P.village.y+52],
                       [P.plateau.x-35,P.plateau.y-20],[P.town.x+100,P.town.y-20]]){
@@ -978,6 +985,8 @@ window.WalesaMainland=(()=>{
   if(!main)return[];
   const landmarks=[
    ['Plaza de Walesa',P.village.x,P.village.y,'⛲'],
+   ['Kiosco musical',kioskAt.x,kioskAt.y,'🎵'],
+   ['Picnic del Pueblo',picnicAt.x,picnicAt.y,'🧺'],
    ['Cordilleras del Norte',3500,900,'⛰️'],
    ['Altiplano Dorado',P.plateau.x,P.plateau.y,'🏔️'],
    ['Ciudad del Sur',P.town.x,P.town.y,'🏙️'],
@@ -1397,6 +1406,9 @@ window.WalesaMainland=(()=>{
    g.restore();
   });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
+   list.push({type:'note',id:'gazebo',x:kioskAt.x,y:kioskAt.y+8,r:34,hy:70,label:'🎵 Subir al kiosco y tocar música'});
+   list.push({type:'note',id:'picnic',x:picnicAt.x,y:picnicAt.y+4,r:26,hy:28,label:'🧺 Hacer un picnic'});
+   list.push({type:'note',id:'mail',x:mailAt.x,y:mailAt.y+7,r:20,hy:32,label:'💌 Abrir el buzón'});
    for(const p of [...scenic,...districtDetails])list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
   H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Un rincón para descansar y conocer los paisajes de Walesa. Mira los jardines y sigue explorando los senderos cercanos.')});
   H.update.push(()=>{if(!main)return;updateGuide();moveToPreview();
@@ -1416,5 +1428,5 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,plaza:PLAZA,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
