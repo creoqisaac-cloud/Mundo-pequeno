@@ -1591,7 +1591,7 @@ window.WalesaMainland=(()=>{
  if(document.readyState!=='loading')register();
  return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,
    destinations,startGuide,mountPhone,replayArrival,roadClearance,
-   get streetSegments(){return seg},get townResidents(){return residents.map(r=>r.id)},
+   get streetSegments(){return seg},get roadGraph(){return graph()},get townResidents(){return residents.map(r=>r.id)},
    get arrivalRunning(){return arrivalRunning},
    kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
