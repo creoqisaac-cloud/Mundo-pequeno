@@ -1817,6 +1817,9 @@ const World=(()=>{
    if(!forest&&gx===16&&gy===16)addObj(result,sprites().sign,67,350,rectS(64,346,6,4),{expMarker:true});
    if(!forest&&gx===31&&gy===31)addObj(result,sprites().sign,690,604,rectS(687,600,6,4),{expMarker:true});
    if(forest&&seed%3===0)addObj(result,sprites().glowF[seed%3],542,534,null,{glowF:true});
+   // La navegación de cada sector genera su propia rejilla A*: no retener
+   // rejillas de sectores ya descargados durante expediciones prolongadas.
+   for(const k in grids)if(k.startsWith('outforesta_')||k.startsWith('outcontinente_'))delete grids[k];
    return result;
   });
  }
