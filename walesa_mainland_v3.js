@@ -755,7 +755,7 @@ window.WalesaMainland=(()=>{
    ['centro-candy','Tienda de Caramelos',4780,1770,'shop'],
    ['alto-postres','Dulcería de la Meseta',6160,1980,'pasteles'],
    ['alto-juegos','Recreativos del Altiplano',6200,2250,'arcade'],
-   ['alto-vivienda','Jardines del Altiplano',6170,2470,null],
+   ['alto-vivienda','Residencias Nubes del Altiplano',6170,2470,null],
    ['alto-atelier','Atelier de las Nubes',5250,1880,'moda']
   ];
   for(const [id,name,x,y,job] of civic)building(id,name,x,y,'city',job);
