@@ -40,6 +40,8 @@ const server=http.createServer((req,res)=>{
   assert.deepEqual(api,{native:true,engine:true,gameHasSave:true},'El joystick debe cargar con globals léxicos reales');
 
   await page.evaluate(()=>{
+   // En la prueba se omite la carta inicial; en el juego normal la oculta Game.enter().
+   document.querySelector('#desk').classList.remove('on');
    Game.X.st.mode='play';
    document.querySelector('#game').classList.add('on');
    Game.X.openMenu('opts');
