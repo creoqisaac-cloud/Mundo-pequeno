@@ -43,7 +43,7 @@ const server=http.createServer((req,res)=>{
    // En la prueba se omite la carta inicial; en el juego normal la oculta Game.enter().
    document.querySelector('#desk').classList.remove('on');
    Game.X.st.mode='play';
-   document.querySelector('#game').classList.add('on');
+   document.querySelector('#game').classList.add('on','playing');
    Game.X.openMenu('opts');
   });
   await page.locator('#wcControlOptions40').waitFor({state:'visible'});
