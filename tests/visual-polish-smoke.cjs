@@ -57,6 +57,9 @@ const server=http.createServer((req,res)=>{
    const p=Game.X.player,cam=Game.X.cam;
    Object.assign(p,{x:3770,y:2395});Object.assign(cam,{x:p.x,y:p.y});
   });
+  // El tour de llegada ahora es una secuencia animada; termina antes de abrir UI.
+  await page.waitForFunction(()=>save.mainlandV3Welcome===1&&!WalesaMainland.arrivalRunning&&
+   Game.X.st.busy===false,{timeout:35000});
   fs.mkdirSync(path.join(root,'tests','proof'),{recursive:true});
   await page.waitForTimeout(350);
   await page.screenshot({path:path.join(root,'tests','proof','visual-v58-circular-plaza.png')});
