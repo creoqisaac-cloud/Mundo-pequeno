@@ -1,4 +1,4 @@
-/* Isla de Walesa · Control nativo v44.
+/* Isla de Walesa · Control nativo v45.
    Sin dependencias: el joystick no puede detener el bucle del juego.
    Al soltarlo, tocar el suelo sigue disponible como control de respaldo. */
 (()=>{
@@ -147,20 +147,7 @@
    try{visible();G.save();}catch(err){console.warn('No se pudo guardar la preferencia de movimiento',err);}
   }
 
-  // Retirar los manejadores del broche de v37, también activos en Opciones.
-  const sheet=document.getElementById('sheet');
-  const oldClose=sheet&&sheet.querySelector('.panel h3 .close');
-  if(oldClose){
-   const cleanClose=oldClose.cloneNode(true);
-   oldClose.replaceWith(cleanClose);
-   cleanClose.addEventListener('click',e=>{
-    e.preventDefault();e.stopPropagation();
-    release();sheet.classList.remove('wcZipClosing37');X.closeMenu();
-   });
-   const header=cleanClose.closest('h3');
-   header&&header.querySelector('#wcBagZipTrack37')?.remove();
-   header&&header.querySelector('#wcBagZipTip37')?.remove();
-  }
+  // Mantener la cremallera original de v37: el cierre se maneja en index.html.
   X.HOOKS.tab.push((tab,box)=>{
    if(tab!=='opts')return;
    // showTab() invoca los hooks antes de dibujar las Opciones originales.
