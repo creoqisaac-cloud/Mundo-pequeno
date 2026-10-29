@@ -335,7 +335,7 @@ window.WalesaMainland=(()=>{
    const bg=document.createElement('canvas');bg.width=256;bg.height=192;
    const ctx=bg.getContext('2d');const flip=hash(b.x,b.y)>.55;
    if(flip){ctx.translate(256,0);ctx.scale(-1,1)}
-   ctx.drawImage(base.bg,0,0);ctx.setTransform(1,0,0,1);
+   ctx.drawImage(base.bg,0,0);ctx.setTransform(1,0,0,1,0,0);
    // Papel y piso con un matiz suave, muebles siempre pixel-art nativos.
    const tone=zone(b.x,b.y)==='forest'?'#46795c':b.city?'#a8b4c3':
      zone(b.x,b.y)==='montana'?'#c29b77':'#e9b5c8';
