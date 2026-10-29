@@ -140,7 +140,7 @@ async function slideZipper(page){
   await page.evaluate(()=>document.getElementById('fonBtn').click());
   await page.locator('#game .fon.on').waitFor({state:'visible'});
 
-  // Seis apps nativas, mapa original con zoom y foto local en el borde del telefono.
+  // Seis apps nativas, mapa continental con zoom y foto local en el borde.
   const initialApps=await page.evaluate(()=>({
    keys:[...document.querySelectorAll('.fon .apps .app')].map(b=>b.dataset.a),
    columns:getComputedStyle(document.querySelector('.fon .apps')).gridTemplateColumns.split(' ').length
@@ -148,12 +148,13 @@ async function slideZipper(page){
   assert.deepEqual(initialApps.keys,['calls','missions','games','metro','weather','map']);
   assert.equal(initialApps.columns,3,'Dos filas de tres apps');
   await page.locator('#game .fon .app[data-a="map"]').click();
-  await page.locator('#game .fon #mapC2').waitFor({state:'attached',timeout:12000});
-  await page.locator('#game .fon .mapz button[data-z="1"]').click();
-  const zoom=await page.locator('#game .fon #mapC2').evaluate(el=>({
+  await page.locator('#game .fon #walesa-phone-map-root #walesa-streets-map').waitFor({state:'attached',timeout:12000});
+  await page.locator('#game .fon [data-nav="plus"]').click();
+  const zoom=await page.locator('#game .fon #walesa-streets-map').evaluate(el=>({
    width:el.width,height:el.height,parent:el.parentElement.className
   }));
-  assert.ok(zoom.width>300&&zoom.height>300,'Se reutiliza el mapa de alta resolucion');
+  assert.ok(zoom.width>300&&zoom.height>300,'El mapa continental se renderiza a alta resolucion');
+  assert.equal(await page.locator('#game .fon #mapC2').count(),0,'El mapa roto ya no se usa');
   await page.locator('#game .fon .hd button[data-back]').click();
   const imageData=await page.evaluate(()=>{
    const c=document.createElement('canvas');c.width=4;c.height=4;
