@@ -11,6 +11,7 @@ on:
       - 'tests/mainland-smoke.cjs'
       - 'tests/navigation-additive-smoke.cjs'
       - 'tests/phone-map-park-smoke.cjs'
+      - 'tests/visual-polish-smoke.cjs'
       - 'sw.js'
 
 permissions:
@@ -30,6 +31,7 @@ jobs:
           node --check tests/mainland-smoke.cjs
           node --check tests/navigation-additive-smoke.cjs
           node --check tests/phone-map-park-smoke.cjs
+          node --check tests/visual-polish-smoke.cjs
           node - <<'NODE'
           const fs=require('node:fs'),vm=require('node:vm');
           const html=fs.readFileSync('index.html','utf8');
@@ -51,6 +53,9 @@ jobs:
       - name: Probar mapa del celular y pavimento circular en Chromium móvil
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/phone-map-park-smoke.cjs
+      - name: Validar pulido visual y navegación cartográfica v58
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/visual-polish-smoke.cjs
       - name: Guardar capturas reales de la expansión
         if: always()
         uses: actions/upload-artifact@v4

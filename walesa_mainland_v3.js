@@ -43,7 +43,22 @@ window.WalesaMainland=(()=>{
   let c=seams?[243,217,187]:palette[Math.floor(hash(ring,brick)*palette.length)].slice();
   const light=(1-clamp(d/PLAZA.r,0,1))*13;
   c=c.map(v=>v+light);
+  // Cintas de caliza, medallón de mosaico y pétalos de terracota incrustados.
+  // Son parte del mismo suelo y no añaden colisiones ni mueven los objetos.
   if(Math.abs(d-71)<2.1||Math.abs(d-145)<2.3)c=[247,219,176];
+  if(d<60){
+   const spoke=Math.sin(angle*8),petal=Math.abs(spoke)<.13,ringArt=Math.abs(d-51)<2.3;
+   if(ringArt)c=[255,227,187];
+   else if(d>25&&d<49&&petal)c=[120,171,153];
+   else if(d>27&&d<48&&Math.sin(angle*8+Math.PI/2)>.95)c=[242,201,158];
+   else if(d<19&&d>12)c=[239,204,155];
+   else if(d<10)c=[171,202,173];
+  }
+  if(d>86&&d<137){
+   const wheel=Math.sin(angle*12),petal=Math.abs(wheel)<.042;
+   if(petal&&d>97&&d<123)c=[244,216,181];
+  }
+  if(Math.abs(d-184)<1.6)c=[253,228,190];
   if(d>PLAZA.r-4){const border=(d-PLAZA.r+4)/16;
    if(border<.5)c=c.map(v=>v*.77);
   }
@@ -146,8 +161,8 @@ window.WalesaMainland=(()=>{
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d'),im=ctx.createImageData(W,H),arr=im.data;
   const x0=tx*SZ,y0=ty*SZ;
   // Calculamos la altitud una vez por celda, para evitar millones de ruidos por fotograma.
-  const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N);
-  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=x0+i*step,y=y0+j*step,k=j*N+i;E[k]=height(x,y);SEA_MASK[k]=coast(x,y)}
+  const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N),F=new Float32Array(N*N);
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=x0+i*step,y=y0+j*step,k=j*N+i;E[k]=height(x,y);SEA_MASK[k]=coast(x,y);F[k]=clamp(V.vnoise(x/52,y/52)*.67+V.vnoise((x+83)/19,(y-55)/19)*.33,0,1)}
   for(let j=0;j<H;j++){
    const y=y0+j,iy=j>>3,tj=(j&7)/8;
    for(let i=0;i<W;i++){
@@ -164,8 +179,16 @@ window.WalesaMainland=(()=>{
     if(sea>.95)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
     else if(sea>.84)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
     else{
-     const f=clamp(((noise*.60+hash(x>>4,y>>4)*.4)*3.8)|0,0,3);
-     col=pal[f].slice();
+     // Transiciones cromáticas suaves, sin ruido de "parches cuadrados".
+     // Se interpola la paleta del motor base, con grano mínimo de pixel-art.
+     const surface=clamp((F[p]*(1-ti)+F[p+1]*ti)*(1-tj)+
+       (F[p+N]*(1-ti)+F[p+N+1]*ti)*tj+(small-.5)*.12,0,.999)*3;
+     const lo=surface|0,weight=surface-lo;
+     col=[
+      pal[lo][0]*(1-weight)+pal[Math.min(3,lo+1)][0]*weight,
+      pal[lo][1]*(1-weight)+pal[Math.min(3,lo+1)][1]*weight,
+      pal[lo][2]*(1-weight)+pal[Math.min(3,lo+1)][2]*weight
+     ];
      // Barrancos y estratos de altura: tonos de la paleta existente.
      if(elev>.36){
       const t=clamp((elev-.3)*1.3,0,.84);
@@ -244,6 +267,28 @@ window.WalesaMainland=(()=>{
    ctx.lineTo(b[0]-x0,b[1]-y0);ctx.strokeStyle='rgba(244,230,193,.56)';
    ctx.lineWidth=1.2;ctx.setLineDash([6,17]);ctx.stroke();ctx.restore();
   }
+  // Jardineras y pequeñas flores a la vera de los caminos. Patrón de terreno,
+  // independiente de la cámara y sin sprites repetidos en cada tile.
+  for(const {a,b,paved} of visible){
+   const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,
+    nx=-dy/len,ny=dx/len;
+   for(let t=21;t<len;t+=29){
+    const phase=Math.floor(t/29),h=hash((a[0]+dx*t/len)>>3,(a[1]+dy*t/len)>>3);
+    if(h<.43)continue;
+    for(const side of [-1,1]){
+     if(hash(phase+31,Math.floor(a[1]+side*47))<.55)continue;
+     const x=a[0]+dx*t/len+nx*side*(paved?26:23),
+       y=a[1]+dy*t/len+ny*side*(paved?26:23);
+     const px=Math.round(x-x0),py=Math.round(y-y0);
+     if(px<5||py<5||px>SZ-5||py>SZ-5||coast(x,y)>.79||
+      plazaDistance(x,y)<PLAZA.edge+10)continue;
+     ctx.fillStyle=paved?'#8da894':'#6b996d';
+     ctx.fillRect(px-3,py,6,2);ctx.fillRect(px-1,py-2,3,4);
+     ctx.fillStyle=h>.81?'#f4c6cc':h>.62?'#fff1ad':'#d6e7bc';
+     ctx.fillRect(px,py-3,2,2);ctx.fillRect(px-3,py,2,1);
+    }
+   }
+  }
   // Detalle superficial determinista en coordenadas globales, con textura
   // coherente entre tiles: flores, hierbas, piedritas y sombras de senderos.
   for(let yy=0;yy<SZ;yy+=12)for(let xx=0;xx<SZ;xx+=12){
@@ -309,8 +354,17 @@ window.WalesaMainland=(()=>{
  function facade(sprite,b,night){
   const c=document.createElement('canvas');c.width=sprite.c.width;c.height=sprite.c.height;
   const g=c.getContext('2d');g.drawImage(sprite.c,0,0);
-  const v=b.facade,urban=!!b.city,base=urban?12:8,front=urban?58:43;
+  const v=b.facade,urban=!!b.city,front=urban?58:43;
   const accent=b.roof,light=night?'#ffe4a2':'#f8f4e5';
+  // Luz rasante sobre las pinturas nativas; source-atop conserva todas
+  // las siluetas, ventanas, chimeneas y la transparencia del pixel-art.
+  g.save();g.globalCompositeOperation='source-atop';
+  const grd=g.createLinearGradient(5,5,c.width-5,c.height);
+  grd.addColorStop(0,night?'rgba(248,224,174,.075)':'rgba(255,250,221,.15)');
+  grd.addColorStop(.53,'rgba(255,255,255,0)');
+  grd.addColorStop(1,night?'rgba(33,33,67,.13)':'rgba(66,58,76,.115)');
+  g.fillStyle=grd;g.fillRect(0,0,c.width,c.height);
+  g.restore();
   g.lineWidth=1;g.strokeStyle='#765e60';g.fillStyle=accent;
   if(v===0||v===3){ // ático y tragaluz
    g.fillRect(urban?29:24,urban?4:19,urban?21:19,urban?10:9);
@@ -353,6 +407,24 @@ window.WalesaMainland=(()=>{
    }
    g.fillRect(urban?8:9,urban?14:38,urban?58:51,2);
   }
+  // Detalles que siguen la misma escala de 76x68 y 84x94 del artista base.
+  if(urban){
+   g.fillStyle=accent;g.globalAlpha=.8;g.fillRect(7,89,68,2);
+   g.fillStyle=light;g.fillRect(8,12,60,1);
+   if(v%3===1){g.strokeStyle='#eadcc8';g.lineWidth=1;
+    for(const x of [9,70]){g.beginPath();g.moveTo(x,17);g.lineTo(x,76);g.stroke()}}
+  }else{
+   if(v%3===0){
+    g.strokeStyle=accent;g.globalAlpha=.65;
+    for(let i=0;i<5;i++){g.beginPath();g.moveTo(16+i*8,24);
+     g.lineTo(23+i*8,28);g.stroke()}
+   }
+   if(v%4===1){
+    g.fillStyle='#6c9f7a';g.fillRect(11,55,9,2);
+    g.fillStyle='#ecb2bf';g.fillRect(13,54,2,2);
+   }
+  }
+  g.globalAlpha=1;
   return {...sprite,c};
  }
  function building(id,name,x,y,type='home',job=null){
@@ -483,6 +555,65 @@ window.WalesaMainland=(()=>{
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
   normalizePlazaRoads();
   adorn();decoratePlaza();
+ }
+
+ // Un mobiliario urbano distinto en cada distrito, sin inventar nuevas
+ // colisiones ni reemplazar las estructuras ya construidas.
+ const districtDetails=[];
+ function decorateDistricts(){
+  const spr=V.spr;
+  const spots=[
+   {name:'Paseo de los Jacarandás',x:3770,y:2670,k:'pueblo',icon:'🌸'},
+   {name:'Jardines del Altiplano',x:5555,y:2520,k:'meseta',icon:'🌿'},
+   {name:'Alameda del Sur',x:3980,y:3845,k:'administrativo',icon:'🌳'},
+   {name:'Sendero de los Helechos',x:5600,y:3810,k:'forest',icon:'🍃'},
+   {name:'Descanso de la Cordillera',x:3485,y:1130,k:'montana',icon:'⛰️'}
+  ];
+  for(const area of spots){
+   let anchor=null;
+   for(let radius=0;radius<=220&&!anchor;radius+=20){
+    for(let k=0;k<20&&!anchor;k++){
+     const ang=k*Math.PI/10,
+      x=Math.round(area.x+radius*Math.cos(ang)),
+      y=Math.round(area.y+radius*Math.sin(ang));
+     if(x<=ORX+20||x>=MW-55||y<=ORY+20||y>=MH-55||
+      coast(x,y)>.8||plazaDistance(x,y)<PLAZA.edge+65||
+      houses.some(h=>Math.hypot(h.x-x,h.y-y)<82)||
+      nearbyRoad(x,y,35))continue;
+     anchor={x,y,name:area.name,icon:area.icon};
+    }
+   }
+   if(!anchor)continue;
+   districtDetails.push(anchor);
+   const {x,y}=anchor;const forest=area.k==='forest',mountain=area.k==='montana',
+     urban=area.k==='administrativo';
+   if(spr.sign)V.addObj(main,spr.sign,x+24,y-11,null);
+   if(spr.bench&&!mountain){
+    V.addObj(main,spr.bench,x-34,y+11,null);
+    V.addObj(main,spr.bench,x+36,y+10,null);
+   }
+   if(spr.bush){
+    for(let k=0;k<5;k++){
+     const ang=k*2.4+.4,x0=x+Math.cos(ang)*(forest?49:37),
+      y0=y+Math.sin(ang)*(forest?39:28);
+     V.addObj(main,spr.bush[(k+Math.floor(hash(x,y)*3))%spr.bush.length],
+       x0,y0,null);
+    }
+   }
+   if(urban&&spr.pot){
+    V.addObj(main,spr.pot[0],x-16,y-35,null);
+    V.addObj(main,spr.pot[1],x+20,y-35,null);
+   }else if(mountain&&spr.rock){
+    V.addObj(main,spr.rock[0],x-24,y+23,null);
+    V.addObj(main,spr.rock[1],x+18,y+24,null);
+   }else if(forest&&spr.tree){
+    for(const dx of [-65,65])V.addObj(main,spr.tree.green,x+dx,y-23,null);
+   }
+   if(spr.lamp){
+    V.addObj(main,spr.lamp,x+53,y+17,null);
+    main.glows.push([x+53,y-7]);
+   }
+  }
  }
 
  const scenic=[];
@@ -649,10 +780,13 @@ window.WalesaMainland=(()=>{
    ['Ciudad del Sur',P.town.x,P.town.y,'🏙️'],
    ['Bosque Profundo',P.forest.x,P.forest.y,'🌲'],
    ['Ciudad Corazón',870,878,'🏠']
-  ].map(([name,x,y,icon])=>({name,x,y,icon}));
-  const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:b.icon||'🏪'}));
-  const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,icon:'🏡'}));
-  return [...landmarks,...scenic,...jobs,...homes];
+  ].map(([name,x,y,icon],i)=>({name,x,y,icon,category:i===5?'homes':'parks'}));
+  const jobs=main.build.filter(b=>b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,
+   icon:b.icon||'🏪',category:'shops'}));
+  const homes=main.build.filter(b=>!b.job).map(b=>({name:b.name,x:b.x,y:b.y+18,
+   icon:'🏡',category:'homes'}));
+  return [...landmarks,...scenic.map(p=>({...p,category:'parks'})),
+    ...districtDetails.map(p=>({...p,category:'parks'})),...jobs,...homes];
  }
  function ensureGuideBar(){
   if(guideBar)return guideBar;
@@ -673,8 +807,23 @@ window.WalesaMainland=(()=>{
   const X=Game?.X;if(!X||!guide)return;
   const hud=ensureGuideBar();
   if(X.M()!==main||X.st.scene!=='out'||X.st.mode!=='play'){hud.style.display='none';return}
-  if(Date.now()-lastGuideTick<250)return;lastGuideTick=Date.now();
-  const p=X.player,pts=guide.points;
+  const now=Date.now();if(now-lastGuideTick<250)return;lastGuideTick=now;
+  const p=X.player;
+  // Recálculo automático cuando el jugador se separa de la calle marcada.
+  // En el mapa anterior la flecha seguía señalando un giro ya perdido.
+  if(guide.connected&&now-(guide.lastReroute||0)>1800){
+   let closest=Infinity;
+   for(let i=1;i<guide.points.length;i++){
+    const a=guide.points[i-1],b=guide.points[i];
+    closest=Math.min(closest,distSegment(p.x,p.y,a,b));
+   }
+   if(closest>120){
+    const r=roadRoute({x:p.x,y:p.y},guide.dest);
+    guide.points=r.points;guide.connected=r.connected;
+    guide.step=1;guide.lastReroute=now;
+   }
+  }
+  const pts=guide.points;
   if(Math.hypot(p.x-guide.dest.x,p.y-guide.dest.y)<35){
    X.toast('📍 Llegaste a '+guide.name);guide=null;hud.style.display='none';return;
   }
@@ -685,14 +834,16 @@ window.WalesaMainland=(()=>{
     all=Math.hypot(guide.dest.x-p.x,guide.dest.y-p.y),a=Math.atan2(q[1]-p.y,q[0]-p.x),
     compass=['→','↘','↓','↙','←','↖','↑','↗'],
     arrow=compass[(Math.round(a/ (Math.PI/4))+8)%8];
-  hud._label.textContent=arrow+' '+guide.name+' · '+Math.round(all)+' u · próximo giro '+Math.round(d)+' u';
+  hud._label.textContent=arrow+' '+guide.name+' · '+Math.round(all)+
+   ' u · '+(guide.connected?'siguiente punto ':'rumbo orientativo ')+Math.round(d)+' u';
   hud.style.display=X.st.menu?'none':'block';
  }
  function startGuide(target){
   if(!main||!Game?.X)return null;
   const p=Game.X.player;
   const route=roadRoute({x:p.x,y:p.y},target);
-  guide={points:route.points,connected:route.connected,dest:target,name:target.name||'Destino',step:1};
+  guide={points:route.points,connected:route.connected,dest:target,
+   name:target.name||'Destino',step:1,lastReroute:Date.now()};
   lastGuideTick=0;updateGuide();
   return guide;
  }
@@ -717,7 +868,14 @@ window.WalesaMainland=(()=>{
    '<div style="display:flex;gap:5px;margin:7px 0;align-items:center;flex-wrap:wrap">'+
    '<button data-nav="minus" aria-label="Alejar mapa">−</button><button data-nav="plus" aria-label="Acercar mapa">＋</button>'+
    '<button data-nav="me">📍 Mi ubicación</button><button data-nav="all">🌍 Isla completa</button>'+
-   '</div><canvas id="walesa-streets-map" width="560" height="435" style="display:block;box-sizing:border-box;width:100%;height:auto;'+
+   '<button data-nav="style" aria-label="Cambiar estilo del mapa">🌿 Relieve</button>'+
+   '</div><div data-nav="filters" role="group" aria-label="Categorías de lugares" style="display:flex;gap:5px;overflow-x:auto;'+
+   'padding:3px 1px 6px;scrollbar-width:thin">'+
+   '<button data-filter="all" aria-pressed="true">✦ Todos</button>'+
+   '<button data-filter="parks" aria-pressed="false">🌿 Parques</button>'+
+   '<button data-filter="shops" aria-pressed="false">🏬 Servicios</button>'+
+   '<button data-filter="homes" aria-pressed="false">🏠 Casas</button></div>'+
+   '<canvas id="walesa-streets-map" width="560" height="435" style="display:block;box-sizing:border-box;width:100%;height:auto;'+
    'border:2px solid #bfd2c2;border-radius:12px;touch-action:none;background:#d6ebed" aria-label="Mapa de calles de Walesa, arrastra para explorar"></canvas>'+
    '<div style="margin-top:5px;font-size:10px;color:#62786b">Arrastra, pellizca o usa + / −. Toca un punto para elegir destino.</div>'+
    '<div style="display:flex;gap:6px;margin-top:8px;align-items:stretch"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:8px;'+
@@ -732,8 +890,35 @@ window.WalesaMainland=(()=>{
   const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d'),sel=wrap.querySelector('select'),
     status=wrap.querySelector('[data-nav="status"]'),search=wrap.querySelector('input[type="search"]'),
     results=wrap.querySelector('[data-nav="search-results"]'),CW=cv.width,CH=cv.height;
-  const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';sel.append(opt);
-  all.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;sel.append(o)});
+  let category='all',terrainMode=false,terrainPreview=null;
+  function refreshList(){
+   const previous=sel.value;sel.replaceChildren();
+   const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';
+   sel.append(opt);
+   all.forEach((p,i)=>{
+    if(category!=='all'&&p.category!==category)return;
+    const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;
+    sel.append(o);
+   });
+   if([...sel.options].some(o=>o.value===previous))sel.value=previous;
+  }
+  refreshList();
+  for(const b of wrap.querySelectorAll('[data-filter]')){
+   b.style.cssText='white-space:nowrap;flex:0 0 auto;padding:7px 10px;border-radius:18px;'+
+    'border:1px solid #bdd7c4;background:#f0f5eb;color:#4c6958;font:800 11px system-ui;cursor:pointer';
+   b.onclick=()=>{
+    category=b.dataset.filter;
+    for(const node of wrap.querySelectorAll('[data-filter]')){
+     const active=node.dataset.filter===category;
+     node.setAttribute('aria-pressed',String(active));
+     node.style.background=active?'#3f745d':'#f0f5eb';
+     node.style.color=active?'#fffef8':'#4c6958';
+    }
+    refreshList();repaint();
+   };
+  }
+  wrap.querySelector('[data-filter="all"]').style.background='#3f745d';
+  wrap.querySelector('[data-filter="all"]').style.color='#fffef8';
   let zoom=phone?3.2:2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null,raf=0;
   const pointers=new Map();let pinch=null,suppressTap=false;
   const clampCenter=()=>{
@@ -761,9 +946,22 @@ window.WalesaMainland=(()=>{
   function draw(){
    ctx.clearRect(0,0,CW,CH);ctx.fillStyle='#a6d8e6';ctx.fillRect(0,0,CW,CH);
    const v=view();m.mainland.sampleMap(ctx,v.ox,v.oy,v.k);
-   ctx.drawImage(m.ground,v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
-   // Distinción de hitos sin amontonar las viviendas a escala regional.
-   const candidates=all.filter((p,i)=>zoom>=6||i<11||p.icon!=='🏡');
+   // El mapa de calles queda limpio, sin la imagen antigua cuadrada encima.
+   // "Relieve" es opcional y usa una copia reducida hasta el zoom cercano.
+   if(terrainMode){
+    if(!terrainPreview){
+     terrainPreview=document.createElement('canvas');
+     terrainPreview.width=900;terrainPreview.height=440;
+     terrainPreview.getContext('2d').drawImage(m.ground,0,0,900,440);
+    }
+    ctx.globalAlpha=.84;
+    ctx.drawImage(zoom>8?m.ground:terrainPreview,
+      v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
+    ctx.globalAlpha=1;
+   }
+   // Filtro de destinos y detalle progresivo: los rótulos no se enciman.
+   const candidates=all.filter((p,i)=>category!=='all'?p.category===category:
+     zoom>=6||i<11||p.icon!=='🏡');
    for(const p of candidates){
     const s=screen(p);if(s.x<-35||s.x>CW+35||s.y<-25||s.y>CH+25)continue;
     const selected=target===p;
@@ -787,10 +985,27 @@ window.WalesaMainland=(()=>{
    ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fillStyle='rgba(54,124,221,.15)';ctx.fill();
    ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();
    ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();
+   // Brújula y escala del mundo (unidades del juego, no metros inventados).
+   ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillStyle='rgba(255,254,247,.92)';
+   ctx.beginPath();ctx.arc(CW-28,31,19,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#3d695a';ctx.font='900 15px system-ui';ctx.fillText('N',CW-28,26);
+   ctx.beginPath();ctx.moveTo(CW-28,29);ctx.lineTo(CW-33,39);ctx.lineTo(CW-23,39);
+   ctx.closePath();ctx.fillStyle='#df8b74';ctx.fill();
+   const units=[50,100,250,500,1000,2000].filter(q=>q*v.k<=130);
+   const measure=units.length?units[units.length-1]:50,px=measure*v.k;
+   ctx.fillStyle='rgba(255,254,247,.87)';ctx.fillRect(11,CH-32,Math.max(93,px+20),26);
+   ctx.strokeStyle='#3d695a';ctx.lineWidth=3;
+   ctx.beginPath();ctx.moveTo(21,CH-16);ctx.lineTo(21+px,CH-16);ctx.stroke();
+   ctx.lineWidth=1;for(const x of [21,21+px]){
+    ctx.beginPath();ctx.moveTo(x,CH-21);ctx.lineTo(x,CH-12);ctx.stroke();
+   }
+   ctx.fillStyle='#385b4e';ctx.font='bold 12px system-ui';
+   ctx.fillText(measure+' u',21+px/2,CH-24);ctx.restore();
    if(preview&&!preview.connected){
-    ctx.fillStyle='rgba(255,249,240,.93)';ctx.fillRect(7,CH-35,CW-14,27);
+    ctx.fillStyle='rgba(255,249,240,.93)';ctx.fillRect(7,CH-64,CW-14,27);
     ctx.fillStyle='#875a47';ctx.textAlign='center';ctx.font='bold 13px system-ui';
-    ctx.fillText('Ruta orientativa: no hay un camino continuo',CW/2,CH-21);
+    ctx.fillText('Ruta orientativa: no hay un camino continuo',CW/2,CH-50);
    }
   }
   function choose(p){
@@ -804,6 +1019,12 @@ window.WalesaMainland=(()=>{
   controls('minus').onclick=()=>zoomAt(1/1.5);
   controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
   controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
+  controls('style').onclick=()=>{
+   terrainMode=!terrainMode;
+   controls('style').textContent=terrainMode?'🗺️ Plano':'🌿 Relieve';
+   controls('style').setAttribute('aria-pressed',String(terrainMode));
+   repaint();
+  };
   controls('route').onclick=()=>{if(!target){status.textContent='Elige primero un destino.';return}
     if(X.M()!==main||X.st.scene!=='out'){
      status.textContent='La ruta se puede activar al salir al exterior del continente.';return;
@@ -895,7 +1116,7 @@ window.WalesaMainland=(()=>{
   m.biome=(x,y,mm)=>x>=0&&y>=0&&x<oldW&&y<oldH?origBiome(x,y,mm):biome(x,y);
   m.elevation=height;
   m.mainland={draw,coast,height,biome,zone,roadAt,nearbyRoad,sampleMap,original:{width:oldW,height:oldH},extent:{width:MW,height:MH},landmarks:P};
-  structures();nativePlaces();furnishRooms();
+  structures();decorateDistricts();nativePlaces();furnishRooms();
   return m;
  }
  function moveToPreview(){
@@ -938,11 +1159,43 @@ window.WalesaMainland=(()=>{
      g.fillRect(x,y,2+(i%3===0),1.3);
     }
    }
+   // Reflejos suaves del agua y halos cálidos alrededor de las farolas.
+   // Sólo se dibujan elementos cercanos para no sacrificar FPS en móvil.
+   if(atPark){
+    for(const r of [22,32,42]){
+     g.strokeStyle='rgba(169,220,229,'+(.22+.11*Math.sin(t*2+r)) +')';
+     g.lineWidth=1.1;g.beginPath();
+     g.ellipse(PLAZA.x-ox,PLAZA.y+12-oy,r,r*.36,0,0,Math.PI*2);
+     g.stroke();
+    }
+    if(evening)for(let i=0;i<12;i++){
+     const ang=i*Math.PI/6-.2,
+      x=PLAZA.x+Math.cos(ang)*170-ox,y=PLAZA.y+Math.sin(ang)*170-oy;
+     if(Math.hypot(x-(p.x-ox),y-(p.y-oy))>460)continue;
+     const lg=g.createRadialGradient(x,y,2,x,y,56);
+     lg.addColorStop(0,'rgba(255,229,159,.18)');
+     lg.addColorStop(1,'rgba(255,229,159,0)');
+     g.fillStyle=lg;g.fillRect(x-56,y-56,112,112);
+    }
+   }
+   if(regional==='costa'||regional==='forest'){
+    for(let i=0;i<22;i++){
+     const x=Math.floor(p.x/110)*110+(i%6-2)*95+hash(i+13,17)*73,
+      y=Math.floor(p.y/110)*110+(Math.floor(i/6)-1)*112+hash(i+4,65)*74,
+      cc=coast(x,y);
+     if(cc<.94||cc>1.06)continue;
+     const sx=x-ox+Math.sin(t+i)*5,sy=y-oy;
+     g.globalAlpha=.25+.12*Math.sin(t*1.4+i*2);
+     g.strokeStyle='#effcff';g.lineWidth=1;
+     g.beginPath();g.moveTo(sx-5,sy);g.lineTo(sx+5,sy);g.stroke();
+    }
+   }
+   g.globalAlpha=1;
    g.restore();
   });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
-   for(const p of scenic)list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
-  H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Una nueva parada de Walesa con el mobiliario y la vegetación del mundo original.')});
+   for(const p of [...scenic,...districtDetails])list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
+  H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Un rincón para descansar y conocer los paisajes de Walesa. Mira los jardines y sigue explorando los senderos cercanos.')});
   H.update.push(()=>{if(!main)return;updateGuide();moveToPreview();
    const m=X.M();if(m!==main||X.st.scene!=='out')return;
    const n=zone(X.player.x,X.player.y);
