@@ -8453,8 +8453,9 @@ window.Wardrobe=Wardrobe;
  .fon .call{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}.fon .call .av{width:96px;height:96px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 4px #f490b4}.fon .call canvas{width:84px;height:84px}
  #game.fon-on #dlg{z-index:46}#game.fon-on #choices{z-index:47}#game.fon-on #toast{z-index:48}
 
- .fon .wcWallpaperPick51{position:absolute;left:10px;bottom:15px;z-index:5;width:39px;height:36px;border:1px solid #d78ba9;border-radius:13px;background:linear-gradient(160deg,#fffcf7,#f9d9e7);color:#77435d;font-size:19px;display:grid;place-items:center;box-shadow:0 2px 0 #ad6c8a,0 3px 7px #62435530;touch-action:manipulation}
- .fon .wcWallpaperPick51:active{transform:translateY(1px);box-shadow:0 1px 0 #ad6c8a}
+ #game .wcWallpaperPick51{position:absolute;left:calc(50% - min(43vw, 165px) + 10px);bottom:calc(env(safe-area-inset-bottom) + 27px);z-index:45;width:39px;height:36px;border:1px solid #d78ba9;border-radius:13px;background:linear-gradient(160deg,#fffcf7,#f9d9e7);color:#77435d;font-size:19px;display:grid;place-items:center;box-shadow:0 2px 0 #ad6c8a,0 3px 7px #62435530;touch-action:manipulation}
+ #game:not(.fon-on) .wcWallpaperPick51{display:none}
+ #game .wcWallpaperPick51:active{transform:translateY(1px);box-shadow:0 1px 0 #ad6c8a}
  .fon.has-wallpaper .scr{background-position:center center;background-size:cover;background-repeat:no-repeat}
  .fon.has-wallpaper .bar,.fon.has-wallpaper .hd{background:#fff9f0b5;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
  .fon.has-wallpaper .apps .app{color:#513449;text-shadow:0 1px 1px #fffcf5}
@@ -8495,7 +8496,7 @@ window.Wardrobe=Wardrobe;
  const wallpaperInput51=document.createElement('input');
  wallpaperInput51.id='wcWallpaperInput51';wallpaperInput51.type='file';
  wallpaperInput51.accept='image/*';wallpaperInput51.hidden=true;
- fon.append(wallpaperButton51,wallpaperInput51);
+ gm.append(wallpaperButton51,wallpaperInput51);
  wallpaperButton51.addEventListener('click',e=>{
   e.preventDefault();e.stopPropagation();
   wallpaperInput51.value='';
