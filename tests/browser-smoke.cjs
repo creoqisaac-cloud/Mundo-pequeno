@@ -68,9 +68,13 @@ async function slideZipper(page){
   assert.equal(tabs51.display,'grid','Mochila: dos filas ordenadas');
   assert.equal(tabs51.columns,12,'Mochila: cuadricula de 12 columnas para dos filas 4+3');
   const rows51=await page.locator('#tabs button').evaluateAll(buttons=>{
-   const groups=new Map();
-   for(const b of buttons){const y=Math.round(b.getBoundingClientRect().top);groups.set(y,(groups.get(y)||0)+1)}
-   return [...groups.values()];
+   const positions=buttons.map(b=>b.getBoundingClientRect().top);
+   const groups=[];
+   for(const y of positions){
+    const row=groups.find(g=>Math.abs(y-g.y)<7);
+    if(row)row.count++;else groups.push({y,count:1});
+   }
+   return groups.map(g=>g.count);
   });
   assert.deepEqual(rows51,[4,3],'Se deben ver dos filas, una de cuatro y otra de tres');
 
