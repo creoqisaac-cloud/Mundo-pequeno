@@ -689,16 +689,17 @@ html:root {
 
 /* Pestañas: cuadrícula de 5 columnas con ícono y nombre, sin tener que deslizar */
 #game #tabs {
-  display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px;
+  display: grid !important; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 7px;
   overflow: visible !important; padding: 2px 16px 14px; margin: 0;
 }
 #game #tabs button {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  grid-column: span 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   min-height: 56px; padding: 7px 2px 6px; margin: 0;
   font: 800 10.5px/1.1 var(--round); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   color: #8a6878; background: var(--wc-card); border: 2px solid #f3e4d8; border-radius: 18px;
   box-shadow: 0 2px 0 #ead6c6; transition: transform .12s, background .2s;
 }
+#game #tabs button:nth-child(n+5) { grid-column: span 4; }
 #game #tabs button::before { font-size: 20px; line-height: 1; filter: saturate(.9); }
 #game #tabs button[data-t="tasks"]::before { content: '📝'; }
 #game #tabs button[data-t="mem"]::before { content: '💗'; }
