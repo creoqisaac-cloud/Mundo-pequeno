@@ -121,16 +121,86 @@ window.WalesaMainland=(()=>{
  function biome(x,y){
   const [u,v]=pos(x,y);
   if(u<0||u>1||v<0||v>1)return 'town';
-  return T.classify(u,v);
+  // Distorsión continua en coordenadas mundiales. Ni una sola celda usa
+  // bordes cuadrados del atlas de 32x32 de Procreate.
+  const bendX=(V.vnoise(x/150,y/150)-.5)*125+
+   (V.vnoise((x+690)/57,(y-320)/57)-.5)*37;
+  const bendY=(V.vnoise((x-380)/174,(y+610)/174)-.5)*96+
+   (V.vnoise((x+113)/49,(y+900)/49)-.5)*32;
+  return T.classify(clamp((x+bendX-ORX)/RW,0,1),clamp((y+bendY-ORY)/RH,0,1));
  }
  // Misma biblioteca cromática del suelo original, no una segunda paleta artificial.
  const COL={town:V.BIO.town.g,chile:V.BIO.chile.g,city:V.BIO.city.g,
-   shroom:V.BIO.shroom.g,candy:V.BIO.candy.g};
+   shroom:V.BIO.shroom.g,candy:V.BIO.candy.g,beach:V.BIO.beach.g};
  const SEA=[95,172,193],SAND=[232,219,188],W=SZ,H=SZ;
  const rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]};
  const PAL={};for(const [k,v] of Object.entries(COL))PAL[k]=v.map(rgb);
  // Las veredas heredan las cuatro tintas del mismo bioma del motor base.
  const PATH={};for(const [k,v] of Object.entries(V.BIO))PATH[k]=(v.path||['#e6d3ad','#d7c194','#f1e4c4','#c5ae82']);
+
+ // Mezcla orgánica MATERIAL por MATERIAL (no gradiente cúbico universal).
+ // La arena difumina polvo sobre el pasto, el dulce deja confeti, el asfalto
+ // se desvanece en adoquines y el valle de tamarindo aporta tierra rojiza.
+ const MAT=['town','chile','city','shroom','candy','beach'];
+ const TRANS={
+  'beach|town':{hue:[240,217,175],grain:'tuft',edge:.13},
+  'beach|candy':{hue:[245,224,194],grain:'sugar',edge:.20},
+  'beach|chile':{hue:[225,173,119],grain:'clay',edge:.12},
+  'candy|town':{hue:[230,207,177],grain:'petal',edge:.21},
+  'candy|city':{hue:[227,211,211],grain:'tile',edge:.16},
+  'candy|chile':{hue:[210,161,128],grain:'sugar',edge:.17},
+  'chile|city':{hue:[202,164,137],grain:'clay',edge:.12},
+  'chile|town':{hue:[166,159,109],grain:'tuft',edge:.15},
+  'chile|shroom':{hue:[145,129,114],grain:'spore',edge:.11},
+  'city|town':{hue:[195,202,176],grain:'tile',edge:.15},
+  'city|shroom':{hue:[166,184,176],grain:'spore',edge:.16},
+  'shroom|town':{hue:[137,171,139],grain:'spore',edge:.19},
+  'candy|shroom':{hue:[203,173,199],grain:'petal',edge:.17},
+  'beach|city':{hue:[224,206,187],grain:'tile',edge:.12}
+ };
+ const materialPair=(a,b)=>TRANS[[a,b].sort().join('|')]||
+  {hue:[190,181,151],grain:'tuft',edge:.12};
+ function organicNodes(x0,y0){
+  const step=20,n=Math.ceil(SZ/step)+2,weights=new Float32Array(n*n*MAT.length);
+  const stamps=[[0,0,3],[-35,0,1.3],[35,0,1.3],[0,-35,1.3],[0,35,1.3],
+    [-29,-29,.68],[29,-29,.68],[-29,29,.68],[29,29,.68],
+    [-57,0,.42],[57,0,.42],[0,-57,.42],[0,57,.42]];
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){
+   const x=x0+i*step,y=y0+j*step,off=(j*n+i)*MAT.length;
+   let total=0;
+   for(const [dx,dy,w] of stamps){
+    const k=MAT.indexOf(biome(x+dx,y+dy));
+    if(k>=0){weights[off+k]+=w;total+=w}
+   }
+   for(let k=0;k<MAT.length;k++)weights[off+k]/=total||1;
+  }
+  return {weights,n,step};
+ }
+ const biomeMix=(nodes,x,y)=>{
+  const {weights,n,step}=nodes,
+    u=clamp(x/step,0,n-1.0001),v=clamp(y/step,0,n-1.0001),
+    i=Math.floor(u),j=Math.floor(v),tx=u-i,ty=v-j,dom=[];
+  let first=0,second=1,w1=-1,w2=-1;
+  for(let k=0;k<MAT.length;k++){
+   const p=(j*n+i)*MAT.length+k,
+     q=p+MAT.length,r=p+n*MAT.length,
+     w=((weights[p]*(1-tx)+weights[q]*tx)*(1-ty)+
+       (weights[r]*(1-tx)+weights[r+MAT.length]*tx)*ty);
+   if(w>w1){second=first;w2=w1;first=k;w1=w}
+   else if(w>w2){second=k;w2=w}
+  }
+  return {a:MAT[first],b:MAT[second],wa:w1,wb:Math.max(0,w2)};
+ };
+ const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+ function tintTransition(col,pair,dominance,small){
+  const at=smooth(clamp((.55-dominance)/.35,0,1));
+  if(at<=0)return col;
+  const h=pair.hue,w=at*pair.edge;
+  return [col[0]*(1-w)+h[0]*w+small*1.8,
+    col[1]*(1-w)+h[1]*w+small*1.5,
+    col[2]*(1-w)+h[2]*w+small*1.1];
+ }
+
  const surfaceCache=new Map();
  function roadPattern(ctx,kind,paved){
   const key=(paved?'paved:':'stone:')+kind;let src=surfaceCache.get(key);
@@ -159,7 +229,7 @@ window.WalesaMainland=(()=>{
  function tile(tx,ty){
   const key=tx+','+ty;if(cache.has(key)){const v=cache.get(key);cache.delete(key);cache.set(key,v);return v}
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d'),im=ctx.createImageData(W,H),arr=im.data;
-  const x0=tx*SZ,y0=ty*SZ;
+  const x0=tx*SZ,y0=ty*SZ,materials=organicNodes(tx*SZ,ty*SZ);
   // Calculamos la altitud una vez por celda, para evitar millones de ruidos por fotograma.
   const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N),F=new Float32Array(N*N);
   for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=x0+i*step,y=y0+j*step,k=j*N+i;E[k]=height(x,y);SEA_MASK[k]=coast(x,y);F[k]=clamp(V.vnoise(x/52,y/52)*.67+V.vnoise((x+83)/19,(y-55)/19)*.33,0,1)}
@@ -172,12 +242,10 @@ window.WalesaMainland=(()=>{
     const k=(j*W+i)*4,noise=hash(x>>2,y>>2),small=hash(x,y),
       // El bioma se lee a través de una frontera irregular de microparcelas.
       // Mantiene los colores nativos y elimina el corte geométrico por regiones.
-      drift=hash(x>>3,y>>3),bk=biome(x+(drift-.5)*48,y+(hash((x>>3)+93,(y>>3)-61)-.5)*48),
-      pal=PAL[bk]||PAL.town;
+      mix=biomeMix(materials,i,j),bk=mix.a,pal=PAL[bk]||PAL.town;
     let col;
     // Lo que se ve como agua tiene EXACTAMENTE el umbral de colisión del motor (.95).
     if(sea>.95)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
-    else if(sea>.84)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
     else{
      // Transiciones cromáticas suaves, sin ruido de "parches cuadrados".
      // Se interpola la paleta del motor base, con grano mínimo de pixel-art.
@@ -189,6 +257,21 @@ window.WalesaMainland=(()=>{
       pal[lo][1]*(1-weight)+pal[Math.min(3,lo+1)][1]*weight,
       pal[lo][2]*(1-weight)+pal[Math.min(3,lo+1)][2]*weight
      ];
+     const bp=PAL[mix.b]||PAL.town,
+      other=[bp[lo][0]*(1-weight)+bp[Math.min(3,lo+1)][0]*weight,
+       bp[lo][1]*(1-weight)+bp[Math.min(3,lo+1)][1]*weight,
+       bp[lo][2]*(1-weight)+bp[Math.min(3,lo+1)][2]*weight];
+     // Frontera curvada: ruido de baja frecuencia + granulado del material.
+     const pair=materialPair(mix.a,mix.b),
+      jitter=(V.vnoise((x+390)/38,(y-156)/38)-.5)*.095+
+        (noise-.5)*.029,
+      blend=smooth(clamp(mix.wb/(mix.wa+mix.wb+.0001)+jitter,0,.54));
+     col=[
+      col[0]*(1-blend)+other[0]*blend,
+      col[1]*(1-blend)+other[1]*blend,
+      col[2]*(1-blend)+other[2]*blend
+     ];
+     col=tintTransition(col,pair,mix.wa-mix.wb,small);
      // Barrancos y estratos de altura: tonos de la paleta existente.
      if(elev>.36){
       const t=clamp((elev-.3)*1.3,0,.84);
@@ -200,6 +283,16 @@ window.WalesaMainland=(()=>{
      if(elev>.31&&(Math.floor(elev*13)!==Math.floor((elev+(c-a)*(1-ti)/8)*13))){
       col=[99+noise*28,72+noise*20,57+noise*18];
      }
+    }
+    // Orilla de arena a pasto, caramelo, ciudad o tamarindo, con anchura
+    // distinta según el material y frontera rizada, no una línea de píxeles.
+    if(sea<=.95&&sea>.63){
+     const pair=materialPair('beach',bk),surf=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11],
+      wave=(V.vnoise((x+51)/71,(y-39)/71)-.5)*.07,
+      shore=smooth((sea-.65+wave)/.255),tone=pair.grain==='clay'?[222,190,143]:
+        pair.grain==='sugar'?[248,225,191]:pair.grain==='tile'?[226,209,185]:surf;
+     col=[col[0]*(1-shore)+tone[0]*shore,
+       col[1]*(1-shore)+tone[1]*shore,col[2]*(1-shore)+tone[2]*shore];
     }
     // El suelo de ladrillo es parte del tile y de la colisión existente:
     // no es un objeto superpuesto ni una textura estirada.
@@ -293,10 +386,25 @@ window.WalesaMainland=(()=>{
   // coherente entre tiles: flores, hierbas, piedritas y sombras de senderos.
   for(let yy=0;yy<SZ;yy+=12)for(let xx=0;xx<SZ;xx+=12){
    const gx=x0+xx,gy=y0+yy,h=hash(gx>>2,gy>>2);
-   if(h<.44||coast(gx,gy)>.84||nearbyRoad(gx,gy,19))continue;
-   const bi=biome(gx,gy),e=height(gx,gy);
+   if(h<.44||coast(gx,gy)>.92||nearbyRoad(gx,gy,19))continue;
+   const blend=biomeMix(materials,xx,yy),bi=blend.a,e=height(gx,gy),
+    pair=materialPair(blend.a,blend.b),
+    boundary=blend.wb>.17&&blend.wa<.74;
    const px=xx+Math.floor(hash(gx+71,gy)*9),py=yy+Math.floor(hash(gx,gy+93)*9);
-   if(bi==='city'){
+   if(boundary&&h>.64){
+    const hue=pair.hue,ink='rgba('+hue.map(Math.round).join(',')+',.88)';
+    ctx.fillStyle=ink;
+    if(pair.grain==='sugar'||pair.grain==='petal'){
+     ctx.fillRect(px,py,3,2);ctx.fillRect(px+5,py-2,2,2);
+     ctx.fillStyle='rgba(255,239,225,.82)';ctx.fillRect(px+2,py-2,1,1);
+    }else if(pair.grain==='tile'){ctx.fillRect(px,py,5,3);
+     ctx.fillStyle='rgba(255,255,237,.72)';ctx.fillRect(px+1,py+1,3,1);
+    }else if(pair.grain==='clay'){
+     ctx.fillRect(px,py,4,2);ctx.fillRect(px+7,py+3,2,1);
+    }else if(pair.grain==='spore'){
+     ctx.fillRect(px,py,2,2);ctx.fillRect(px+4,py-3,1,1);
+    }else{ctx.fillRect(px,py,1,5);ctx.fillRect(px+3,py-2,2,4)}
+   }else if(bi==='city'){
     ctx.fillStyle=h>.91?'rgba(106,91,76,.20)':'rgba(248,238,219,.20)';
     ctx.fillRect(px,py,2+(h>.94?2:0),1);
    }else if(e>.53){
