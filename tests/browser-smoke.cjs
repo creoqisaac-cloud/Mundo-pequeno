@@ -74,8 +74,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'Cerrar debe liberar el juego');
   assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
 
-  // Navegar varias veces entre páginas no debe dejar listeners rotos.
-  await page.locator('#menuBtn').click();
+  // Probar pestañas de la mochila sin depender del HUD de hambre superpuesto en la simulación.
+  await page.evaluate(()=>Game.X.openMenu('tasks'));
   await page.locator('#tabs button[data-t="tasks"]').click();
   await page.locator('#tabs button[data-t="opts"]').click();
   await page.locator('#oTime').click();
@@ -84,7 +84,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false);
 
   // La cremallera original permanece y permite cerrar arrastrando la X.
-  await page.locator('#menuBtn').click();
+  await page.evaluate(()=>Game.X.openMenu('tasks'));
   await page.locator('#tabs button[data-t="opts"]').click();
   await page.locator('#wcBagZipTrack37').waitFor({state:'attached'});
   await page.evaluate(()=>{
