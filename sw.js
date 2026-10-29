@@ -1,5 +1,5 @@
-/* Isla de Walesa v50 · Caché compatible con GitHub Pages */
-const CACHE = 'walesa-v50-github-pages';
+/* Isla de Walesa v51 · Caché compatible con GitHub Pages */
+const CACHE = 'walesa-v51-github-pages';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './picnic_v31.js', './walesa_v32.js', './native_joystick40.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));

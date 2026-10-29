@@ -258,8 +258,8 @@ html:not(.js) .scene{display:none!important}
 .sheet.on .panel{transform:none}
 .panel h3{margin:0 18px 10px;font:900 20px/1 var(--round);display:flex;align-items:center;justify-content:space-between}
 .close{width:38px;height:38px;border-radius:50%;background:#efe4d6;font:900 16px/1 var(--round);color:var(--g-ink)}
-#tabs{display:flex;gap:6px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none}
-#tabs button{flex:none;font:900 13px/1 var(--round);padding:10px 12px;border-radius:16px;background:#efe4d6;color:#7a6658}
+#tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:0 18px 13px;overflow:visible}
+#tabs button{min-width:0;min-height:44px;font:900 13px/1.2 var(--round);padding:10px 12px;border-radius:16px;background:#efe4d6;color:#7a6658;text-align:center}
 #tabs button.on{background:var(--g-rose);color:#fff;box-shadow:0 3px 0 #b8577a}
 #tabBody,#shopBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 10px;touch-action:pan-y;min-height:200px}
 #tabBody h4{font:900 12px/1 var(--round);letter-spacing:.12em;text-transform:uppercase;color:#a08a7a;margin:16px 0 8px}
@@ -924,7 +924,7 @@ html:root {
  <div id="titleCov"><div class="logo">Isla de<br>Walesa<small>✿ hecha para ti ✿</small></div><div><div class="tap">Toca para empezar</div><div id="titleSub"></div></div></div>
  <div class="sheet" id="sheet"><div class="panel">
   <h3>Mochila <button class="close" aria-label="Cerrar">✕</button></h3>
-  <div id="tabs"><button data-t="tasks">Pendientes</button><button data-t="pets">Mascotas</button><button data-t="dex">Colección</button><button data-t="closet">Armario</button><button data-t="map">Mapa</button><button data-t="opts">Opciones</button></div>
+  <div id="tabs"><button data-t="tasks">Pendientes</button><button data-t="pets">Mascotas</button><button data-t="dex">Colección</button><button data-t="opts">Opciones</button></div>
   <div id="tabBody"></div>
  </div></div>
  <div class="sheet" id="shop"><div class="panel">
@@ -2439,7 +2439,7 @@ const Game=(()=>{
     if(save.shaken[key]===today())toast(o.kind==='nopal'?'Ya cortaste los chiles de hoy 🌵':'Ya no le queda nada hoy. Mañana habrá más.');
     else{save.shaken[key]=today();const item={fruit:'fruta',cotton:'algodon',nopal:'chile',tamarind:'tamarindo'}[o.kind]||'fruta',n=o.kind==='nopal'?2:1;invAdd(item,n);save.dex.i[item]=1;progress('fruit2');
      if(Math.random()<.05){addBells(40);toast(Talk.ITEMS[item][1]+' ¡Cayó '+Talk.ITEMS[item][0].toLowerCase()+' y una bolsita con 40 🔔!')}else{sfx.coin();toast(Talk.ITEMS[item][1]+' ¡Conseguiste '+(n>1?n+' ':'')+Talk.ITEMS[item][0].toLowerCase()+'!')}persist()}}
-   else if(it.type==='flavor'){if(it.k==='mirror'){openMenu('closet');return}
+   else if(it.type==='flavor'){if(it.k==='mirror'){st.menu=true;st.tab='closet';$('#shopTitle').textContent='Armario';$('#shop').classList.add('on');closet($('#shopBody'));sfx.sel();return}
     if(it.k==='bed'){const r=await ask('¿Dormir un rato?',['🌙 Hasta la noche','☀️ Hasta la mañana','Mejor no']);if(r<2){await iris(()=>{save.time=r===0?'night':'day';persist()});toast(r===0?'Buenas noches 🌙':'¡Buenos días! ☀️')}return}
     await say(it.k==='sign'?'Letrero':it.k==='fount'?'La fuente':'',Talk.FLAVOR[it.k])}
   }finally{st.busy=false;hud();checkFinale()}}
@@ -8450,11 +8450,91 @@ window.Wardrobe=Wardrobe;
  .fon.on{visibility:visible}
  .fon .call{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}.fon .call .av{width:96px;height:96px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 4px #f490b4}.fon .call canvas{width:84px;height:84px}
  #game.fon-on #dlg{z-index:46}#game.fon-on #choices{z-index:47}#game.fon-on #toast{z-index:48}
- .fon .call b{font:900 18px Nunito,sans-serif}.fon .call small{color:#8a6a78;font:800 12px Nunito,sans-serif}.fon .call .row{display:flex;gap:26px;margin-top:10px}.fon .call .row button{width:58px;height:58px;border-radius:50%;border:0;font-size:24px;color:#fff}`;document.head.appendChild(css);
+
+ .fon .wcWallpaperPick51{position:absolute;left:10px;bottom:15px;z-index:5;width:39px;height:36px;border:1px solid #d78ba9;border-radius:13px;background:linear-gradient(160deg,#fffcf7,#f9d9e7);color:#77435d;font-size:19px;display:grid;place-items:center;box-shadow:0 2px 0 #ad6c8a,0 3px 7px #62435530;touch-action:manipulation}
+ .fon .wcWallpaperPick51:active{transform:translateY(1px);box-shadow:0 1px 0 #ad6c8a}
+ .fon.has-wallpaper .scr{background-position:center center;background-size:cover;background-repeat:no-repeat}
+ .fon.has-wallpaper .bar,.fon.has-wallpaper .hd{background:#fff9f0b5;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+ .fon.has-wallpaper .apps .app{color:#513449;text-shadow:0 1px 1px #fffcf5}
+ .fon.has-wallpaper .apps .app span{box-shadow:0 3px 0 #6d4d5944,inset 0 1px 2px #fffd}
+ .fon .wcPhoneMap51{align-items:center;gap:9px;padding:12px 12px 24px}
+ .fon .wcMapIntro51{margin:0;color:#775a69;text-align:center;font:750 11px/1.45 Nunito,sans-serif}
+ .fon .wcPhoneMap51 #mapC2{max-width:100%;border:2px solid #fffaf3;box-shadow:0 3px 9px #70495b2d;border-radius:15px}
+ .fon .wcPhoneMap51 .mapz{gap:8px;margin:2px 0 0}
+ .fon .wcPhoneMap51 .mapz button{min-width:55px;min-height:35px;border:1px solid #ebc7d8;background:#fff8f9;color:#84546e}
+  .fon .call b{font:900 18px Nunito,sans-serif}.fon .call small{color:#8a6a78;font:800 12px Nunito,sans-serif}.fon .call .row{display:flex;gap:26px;margin-top:10px}.fon .call .row button{width:58px;height:58px;border-radius:50%;border:0;font-size:24px;color:#fff}`;document.head.appendChild(css);
  /* ── interfaz ── */
  const gm=$('#game');const btn=document.createElement('button');btn.id='fonBtn';btn.setAttribute('aria-label','Abrir tu teléfono');btn.textContent='📱';gm.appendChild(btn);
  const ban=document.createElement('div');ban.id='fonBanner';gm.appendChild(ban);
  const fon=document.createElement('div');fon.className='fon';fon.innerHTML='<div class="scr"></div><button class="home" aria-label="Cerrar"></button>';gm.appendChild(fon);const scr=fon.querySelector('.scr');
+
+ /* Fondo de pantalla: solo en este dispositivo. Se guarda comprimido aparte
+    para no llenar ni cambiar la partida walesa-ds-v1. */
+ const wallpaperKey51='walesa-fon-wallpaper-v1';
+ let wallpaper51='';
+ try{wallpaper51=localStorage.getItem(wallpaperKey51)||''}catch(_){}
+ function paintWallpaper(){
+  fon.classList.toggle('has-wallpaper',!!wallpaper51);
+  if(wallpaper51) {
+   scr.style.backgroundImage='linear-gradient(180deg,#fff9fa48,#ffe9ef28),url('+JSON.stringify(wallpaper51)+')';
+   scr.style.backgroundSize='cover';
+   scr.style.backgroundPosition='center';
+  }else{
+   scr.style.removeProperty('background-image');
+   scr.style.removeProperty('background-size');
+   scr.style.removeProperty('background-position');
+  }
+ }
+ const wallpaperButton51=document.createElement('button');
+ wallpaperButton51.type='button';wallpaperButton51.className='wcWallpaperPick51';
+ wallpaperButton51.id='wcWallpaperButton51';wallpaperButton51.textContent='🖼️';
+ wallpaperButton51.title='Elegir una foto de tu galería';
+ wallpaperButton51.setAttribute('aria-label','Cambiar fondo de pantalla desde la galería');
+ const wallpaperInput51=document.createElement('input');
+ wallpaperInput51.id='wcWallpaperInput51';wallpaperInput51.type='file';
+ wallpaperInput51.accept='image/*';wallpaperInput51.hidden=true;
+ fon.append(wallpaperButton51,wallpaperInput51);
+ wallpaperButton51.addEventListener('click',e=>{
+  e.preventDefault();e.stopPropagation();
+  wallpaperInput51.value='';
+  wallpaperInput51.click();
+ });
+ wallpaperInput51.addEventListener('change',async()=>{
+  const file=wallpaperInput51.files&&wallpaperInput51.files[0];
+  if(!file)return;
+  if(!file.type.startsWith('image/')){X.toast('Elige una fotografía de tu galería.');return}
+  try{
+   const url=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(reader.error||new Error('lectura'));
+    reader.readAsDataURL(file);
+   });
+   const img=await new Promise((resolve,reject)=>{
+    const photo=new Image();
+    photo.onload=()=>resolve(photo);
+    photo.onerror=()=>reject(new Error('imagen'));
+    photo.src=url;
+   });
+   const scale=Math.min(1,960/Math.max(img.naturalWidth,img.naturalHeight));
+   const c=document.createElement('canvas');
+   c.width=Math.max(1,Math.round(img.naturalWidth*scale));
+   c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+   const ctx=c.getContext('2d');
+   if(!ctx)throw Error('canvas');
+   ctx.fillStyle='#fff9f8';ctx.fillRect(0,0,c.width,c.height);
+   ctx.drawImage(img,0,0,c.width,c.height);
+   const compressed=c.toDataURL('image/jpeg',.77);
+   localStorage.setItem(wallpaperKey51,compressed);
+   wallpaper51=compressed;paintWallpaper();
+   G.sfx.tap&&G.sfx.tap();
+   X.toast('🖼️ Tu foto ya está en el fondo del celular ♡');
+  }catch(err){
+   console.warn('No se pudo guardar el fondo del teléfono',err);
+   X.toast('No se pudo guardar esa foto. Prueba otra más pequeña.');
+  }
+ });
+ paintWallpaper();
  fon.querySelector('.home').onclick=e=>{e.stopPropagation();close()};
  let openFlag=false;
  /* Gestos de teléfono: iniciar desde la parte inferior y deslizar hacia arriba.
@@ -8493,15 +8573,20 @@ window.Wardrobe=Wardrobe;
  function open(view){if(X.st.mg||X.st.busy&&!ringing)return;openFlag=true;X.st.menu=true;fon.classList.add('on');gm.classList.add('fon-on');(view||homeV)();G.sfx.sel&&G.sfx.sel()}
  function close(){if(!openFlag&&!fon.classList.contains('on'))return;phoneSwipe=null;openFlag=false;fon.classList.remove('on');gm.classList.remove('fon-on');X.st.menu=false;G.sfx.back&&G.sfx.back()}
  btn.addEventListener('click',e=>{e.stopPropagation();if(ringing){answer();return}openFlag?close():open()});
- const APPS=[['calls','📞','Llamadas','#bfe6fa'],['missions','📋','Encargos','#fff1a8'],['games','🕹️','Juegos','#e6d9ff'],['metro','🚇','Metro','#c8f0c0'],['weather','🌤️','Hoy','#fde3c8']];
- function homeV(){scr.innerHTML=bar()+`<div class="hd">♡ Hola, ${X.kname()}</div><div class="apps">${APPS.map(([k,i,n,c])=>`<button class="app" data-a="${k}"><span style="background:${c}">${i}</span>${n}${k==='missions'&&F().missions.filter(m=>!m.done).length?' ('+F().missions.filter(m=>!m.done).length+')':''}</button>`).join('')}</div>`;
-  scr.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();G.sfx.tap&&G.sfx.tap();({calls:callsV,missions:missV,games:gamesV,metro:metroV,arrival:arrivalV,weather:todayV})[b.dataset.a]()})}
+ const APPS=[['calls','📞','Llamadas','#bfe6fa'],['missions','📋','Encargos','#fff1a8'],['games','🕹️','Juegos','#e6d9ff'],['metro','🚇','Metro','#c8f0c0'],['weather','🌤️','Hoy','#fde3c8'],['map','🗺️','Mapa','#e3ecdb']];
+ function homeV(){paintWallpaper();scr.innerHTML=bar()+`<div class="hd">♡ Hola, ${X.kname()}</div><div class="apps">${APPS.map(([k,i,n,c])=>`<button class="app" data-a="${k}"><span style="background:${c}">${i}</span>${n}${k==='missions'&&F().missions.filter(m=>!m.done).length?' ('+F().missions.filter(m=>!m.done).length+')':''}</button>`).join('')}</div>`;
+  scr.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();G.sfx.tap&&G.sfx.tap();({calls:callsV,missions:missV,games:gamesV,metro:metroV,arrival:arrivalV,weather:todayV,map:mapV})[b.dataset.a]()})}
  const hd=t=>`<div class="hd"><button data-back>‹</button>${t}</div>`;const back=()=>scr.querySelectorAll('[data-back]').forEach(b=>b.onclick=e=>{e.stopPropagation();homeV()});
  function callsV(){const f=F();scr.innerHTML=bar()+hd('📞 Llamadas')+`<div class="lst">${f.log.slice(-6).reverse().map(c=>`<div class="it"><i>${c.miss?'📵':c.out?'↗️':'↙️'}</i><div><b>${nm(c.id)}</b><small>${c.miss?'Llamada perdida':c.out?'Llamaste':'Te llamó'} · ${c.t}</small></div></div>`).join('')}<div class="it" style="background:none;box-shadow:none"><b>Contactos</b></div>${NPC().map(id=>`<button class="it" data-c="${id}"><i>👤</i><div><b>${nm(id)}</b><small>${(save.friend[id]||0)>=6?'Muy buena amistad':'Amistad '+'♥'.repeat(Math.min(5,Math.ceil((save.friend[id]||0)/2)))}</small></div></button>`).join('')}</div>`;back();
   scr.querySelectorAll('[data-c]').forEach(b=>b.onclick=e=>{e.stopPropagation();call(b.dataset.c,true)})}
  function missV(){const f=F(),L=f.missions.slice().reverse();scr.innerHTML=bar()+hd('📋 Encargos')+`<div class="lst">${L.length?L.map(m=>`<div class="it"><i>${m.done?'✅':'📌'}</i><div><b>${nm(m.by)}</b><small>${m.txt}</small>${m.done?'<small>¡Listo!</small>':''}</div></div>`).join(''):'<div class="it"><i>📭</i><div><b>Sin encargos</b><small>Cuando un vecino te llame con un favor, aparecerá aquí.</small></div></div>'}</div>`;back()}
  function gamesV(){const L=X.ARCADE||[];scr.innerHTML=bar()+hd('🕹️ Juegos')+`<div class="lst">${L.map(a=>`<button class="it" data-g="${a[0]}"><i>${a[1]}</i><div><b>${a[2]}</b><small>${a[3]}</small></div></button>`).join('')}</div>`;back();
   scr.querySelectorAll('[data-g]').forEach(b=>b.onclick=e=>{e.stopPropagation();close();setTimeout(()=>X.startMG(b.dataset.g),120)})}
+ function mapV(){scr.innerHTML=bar()+hd('🗺️ Mapa')+
+   '<div class="lst wcPhoneMap51"><p class="wcMapIntro51">Explora la isla con sus caminos de siempre. Acércate, arrastra y toca un lugar para marcarlo.</p><canvas id="mapC" width="280" height="248" aria-label="Mapa interactivo de la isla"></canvas></div>';back();
+  // Se reutiliza el visor de la guía original, que observa #mapC y agrega zoom y destinos.
+  if(!X.M()||!X.M().ground)X.toast('El mapa se está preparando…');
+ }
  function metroV(){const M=window.Metro;scr.innerHTML=bar()+hd('🚇 Metro')+`<div class="lst">${M&&M.R?M.R.ST.map(s=>{const e=M.eta(s);return`<div class="it"><i>🚉</i><div><b>${s.name}</b><small>${e===0?'¡El tren está en el andén!':'Próximo tren en ~'+e+' s'}</small></div></div>`}).join(''):'<div class="it">El metro se está preparando…</div>'}</div>`;back()}
  function todayV(){const e=typeof V5!=='undefined'&&V5.event?V5.event():null,w=X.weather;const wn={sol:'Soleado',nubes:'Nublado',lluvia:'Lluvioso',nieve:'Nevado',petalos:'Lluvia de pétalos'}[w]||w;
   scr.innerHTML=bar()+hd('🌤️ Hoy')+`<div class="lst"><div class="it"><i>🌤️</i><div><b>${wn}</b><small>El clima de hoy en la isla</small></div></div><div class="it"><i>🎉</i><div><b>${e?e.name:'Día tranquilo'}</b><small>${e?(e.active?'¡Está pasando ahora!':'Empieza a las '+e.from):'Sin eventos especiales hoy'}</small></div></div><div class="it"><i>🌙</i><div><b>${gameHour()>=20||gameHour()<6?'De noche':'De día'}</b><small>${gameHour()>=20||gameHour()<6?'La Juguetería necesita quien la cuide…':'Los árboles frutales tienen fruta nueva cada día.'}</small></div></div></div>`;back()}
@@ -9013,7 +9098,7 @@ window.Wardrobe=Wardrobe;
   c.addEventListener('pointermove',e=>{if(!drag)return;const r=c.getBoundingClientRect(),s=(W/r.width)/(k0*z),dx=e.clientX-drag.x,dy=e.clientY-drag.y;moved=Math.max(moved,Math.abs(dx)+Math.abs(dy));if(z>1){cx=drag.cx-dx*s;cy=drag.cy-dy*s;draw()}});
   c.addEventListener('pointerup',async e=>{if(!drag)return;drag=null;if(moved>8)return;const r=c.getBoundingClientRect(),{k,ox,oy}=tf(),mx=(e.clientX-r.left)*(c.width/r.width),my=(e.clientY-r.top)*(c.height/r.height),wx=(mx-ox)/k,wy=(my-oy)/k;
    if(X.st.scene!=='out'){X.toast('Sal afuera para usar el mapa');return}let best=null,bd=(z>=2?26:34)/k;for(const p of PL()){const d=Math.hypot(p.x-wx,p.y-wy);if(d<bd){bd=d;best=p}}
-   const t=best?{x:best.x,y:best.y,label:best.n,mid:m.id}:{x:wx,y:wy,label:'Tu marca',mid:m.id};X.closeMenu();setTimeout(()=>{guide(t);X.toast('📍 '+t.label+' marcado. Sigue la flecha (o toca 🚶 arriba para ir caminando)')},120)})}
+   const t=best?{x:best.x,y:best.y,label:best.n,mid:m.id}:{x:wx,y:wy,label:'Tu marca',mid:m.id};if(document.querySelector('#game .fon.on')&&window.Fon)window.Fon.close();else X.closeMenu();setTimeout(()=>{guide(t);X.toast('📍 '+t.label+' marcado. Sigue la flecha (o toca 🚶 arriba para ir caminando)')},120)})}
  new MutationObserver(()=>{const c=document.getElementById('mapC');if(c&&!c.dataset.z){c.dataset.z=1;try{mapUI(c);const p=c.parentNode;}catch(e){console.error(e)}const t=document.querySelector('#tabBody .memtext');if(t&&/Toca un lugar/.test(t.textContent))t.textContent='Usa + y − para acercar, arrastra para moverte y toca un lugar para marcarlo con una flecha.'}}).observe(document.body,{childList:true,subtree:true});
  window.Guia={guide,get target(){return T},objectives,plan};
 })();
