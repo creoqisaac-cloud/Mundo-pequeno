@@ -46,3 +46,8 @@ La versión de código fuente y recursos originales, incluidos los iconos PNG, s
 - La partida sigue usando la clave `walesa-ds-v1`.
 
 Los sistemas nuevos están en `walesa_v32.js`, referenciado desde `index.html` y cacheado en `sw.js`.
+
+
+## v33 · Hospital de los Corazones
+
+El hospital ahora es un edificio en **Ciudad Corazón**, al sur del Salón de juegos, junto a los terrenos y la avenida central. Ya no ocupa el espacio junto al metro en la isla principal. Incluye interior con puerta, salida, Enfermera Mimi, farmacia, camilla, monitor y atención de mascotas. Mantiene `walesa-ds-v1` y el paseo con un solo acompañante.
