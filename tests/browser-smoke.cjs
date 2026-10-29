@@ -34,6 +34,10 @@ async function slideZipper(page){
   const c=document.querySelector('#sheet .panel h3 .close'),top=document.elementFromPoint(x,y);
   return{menu:Game.X.st.menu,top:top?.tagName+'.'+top?.className,
    same:top===c,drag:c.classList.contains('wcDragging37'),
+   rect:{x:c.getBoundingClientRect().x,y:c.getBoundingClientRect().y},
+   panelTransform:getComputedStyle(document.querySelector('#sheet .panel')).transform,
+   sheetClass:document.querySelector('#sheet').className,
+   viewport:[innerWidth,innerHeight],
    parent:c.parentElement?.outerHTML.slice(0,130)};
  },[x,y]);console.log('ZIP BEFORE',before);
  await page.mouse.move(x,y);
