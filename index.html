@@ -9512,7 +9512,7 @@ window.Wardrobe=Wardrobe;
     box.innerHTML='<p class="shop-hi">Objetos que de verdad van a tu mochila. También puedes regalar lo que compres.</p><div class="bal">🔔 '+save.bells.toLocaleString('es-MX')+'</div>'+Object.entries(SET).map(([group,items])=>'<h4>'+({alimentos:'🍡 Comida y merienda',regalos:'🎁 Souvenirs y regalos',salud:'🌦️ Salud y protección'}[group])+'</h4>'+items.map(([id,name,icon,price])=>X.buyRow(icon,name+(owned(id)?' · tienes '+save.inv[id]:''),group==='salud'?'Duradero o de recuperación':'Para usar, regalar o coleccionar',price,id)).join('')).join('');
     box.querySelectorAll('button.buy').forEach(b=>b.onclick=()=>{const id=b.dataset.id,x=Talk.ITEMS[id];if(x)buy(id,x[2])});
  })}
- H.tab.push((t,box)=>{if(t!=='tasks')return;const wrap=document.createElement('div');wrap.innerHTML='<button class="orow" id="shopEmoji32">🛍️ Abrir mercadito de objetos emoji <span>›</span></button><small class="memtext">Colecciona, come o regala objetos que mencionan los vecinos.</small>';box.appendChild(wrap);wrap.querySelector('button').onclick=()=>{X.closeMenu();shop()}});
+ // v36: los objetos emoji se venden únicamente en el puesto de los viernes.
  window.Items32={SET,shop};
 })();
 </script>
@@ -9550,7 +9550,7 @@ window.Wardrobe=Wardrobe;
     const rate=protectedRain()?-.38:raincoat()||boots()? .17:.43;
     s.wet=clamp(s.wet+dt*rate,0,100);
   }else s.wet=clamp(s.wet-dt*.32,0,100)}
-  if(s.wet>=94&&!s.sick){s.sick=true;s.reason='Resfriado por lluvia';X.toast('🤒 Te resfriaste. Busca el hospital o usa un botiquín.');persist()}
+  if(s.wet>=94&&!s.sick&&!(window.Mercado36&&Mercado36.shield())){s.sick=true;s.reason='Resfriado por lluvia';X.toast('🤒 Te resfriaste. Busca el hospital o usa un botiquín.');persist()}
   timer+=dt;if(timer>7){timer=0;persist()}
   const mark=Math.floor((100-s.hunger)/20);if(mark>once&&s.hunger<=20){once=mark;X.toast('🍎 Tienes hambre. Abre Mochila → Comer.')}else if(s.hunger>30)once=0;
  });
@@ -9722,6 +9722,150 @@ window.Wardrobe=Wardrobe;
   g.restore();
  };
  window.Wellness34={hunger,healthy,quick,refresh,shown:()=>shown};
+})();
+</script>
+<script>
+/* Mercado v36: feria de viernes, inventario con herramientas que producen efectos concretos. */
+(()=>{'use strict';
+ const X=Game.X,H=X.HOOKS,G=Game.G,V=World, max=(v,a,b)=>Math.max(a,Math.min(b,v));
+ // 36 artículos con uso específico. Los precios/nombres son los del catálogo existente.
+ const DATA=[
+ ['bento','🍱 Sacia a la jugadora y alimenta a su mascota','comida'],
+ ['sopa','🍲 Calienta, reduce humedad y repone hambre','comida'],
+ ['teMiel','🍵 Alivia un resfriado causado por la lluvia','salud'],
+ ['miel','🍯 Trata las picaduras de abeja','salud'],
+ ['vitaminas','💊 Evita resfriados por humedad durante 15 minutos','salud'],
+ ['botiquin','🩹 Cura una enfermedad o picadura','salud'],
+ ['termometro','🌡️ Examina hambre, humedad y enfermedad','salud'],
+ ['paraguas32','☂️ Abre o guarda el paraguas sobre tu atuendo','ropa'],
+ ['impermeable32','🧥 Superpone el impermeable a la ropa puesta','ropa'],
+ ['botas32','👢 Ponte o quítate las botas de lluvia','ropa'],
+ ['petCoat32','🐾 Abriga o descubre a la mascota activa','mascota'],
+ ['pijama','🛌 Descanso corto: recupera humedad y hambre','salud'],
+ ['silbato','📣 Llama a tu mascota desde cualquier punto cercano','mascota'],
+ ['pelota','⚽ Juega a la pelota para subir su cariño','mascota'],
+ ['pulseraAmistad','📿 Refuerza tu vínculo con quien paseas hoy','amistad'],
+ ['fotoPolaroid','📸 Haz una fotografía real dentro del juego','recuerdos'],
+ ['periodico','📰 Consulta clima y actividades del día','recuerdos'],
+ ['mapaTesoro','🗺️ Marca un cofre oculto para ir a buscarlo','explorar'],
+ ['cometa','🪁 Eleva una cometa visible desde la playa','explorar'],
+ ['confeti','🎊 Celebra con los vecinos presentes y gana amistad','amistad'],
+ ['radio','📻 Cambia la música a la de fiesta durante cinco minutos','recuerdos'],
+ ['hojaMusical','🎵 Dedica una melodía al vecino más cercano','amistad'],
+ ['recetario','📔 Cocina un bento usando pan y fruta','fabricar'],
+ ['costurero','🧵 Cose un pañuelo con hilo y tela','fabricar'],
+ ['selloCorreo','📮 Envía una carta a un vecino que ya conoces','amistad'],
+ ['insignia','🏅 Consulta tu ranking de amistades','recuerdos'],
+ ['relojito','⌚ Ajusta la hora ambiental: día, noche o automática','recuerdos'],
+ ['podometro','👟 Registra pasos reales al caminar por la isla','explorar'],
+ ['piedraLuna','🌙 Obtén una estrella al usarla bajo la luna','explorar'],
+ ['llaveroNube','🔑 Regresa junto a tu casita una vez al día','explorar'],
+ ['burbujaMarina','🫧 Juega con tu mascota haciendo burbujas','mascota'],
+ ['caracolEco','🐚 Descubre una concha en la costa cada día','explorar'],
+ ['cuaderno','📒 Escribe y relee cómo fue tu día','recuerdos'],
+ ['lapiz','✏️ Dibuja un corazón visible en el suelo','explorar'],
+ ['origami','🕊️ Regala una grulla al vecino que tienes enfrente','amistad'],
+ ['postal','💌 Envía una postal a cualquier vecino conocido','amistad']
+ ];
+ const descriptions=Object.fromEntries(DATA.map(x=>[x[0],x[1]]));
+  const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const state=save.mercado36||(save.mercado36={week:'',bought:{},cool:{},steps:0,journal:[],lastPos:null});
+ if(!state.cool)state.cool={};if(!state.journal)state.journal=[];
+ const sync=()=>G.save(),stock=()=>state.bought||(state.bought={});
+ function week(){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-(d.getDay()+2)%7);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+ function initWeek(){const w=week();if(state.week!==w){state.week=w;state.bought={};sync()}return w}
+ function featured(){const w=initWeek();let hash=2166136261>>>0;for(const c of w)hash=Math.imul(hash^c.charCodeAt(0),16777619)>>>0;
+  const rand=()=>{hash^=hash<<13;hash^=hash>>>17;hash^=hash<<5;return(hash>>>0)/4294967296};
+  const groups=[DATA.filter(d=>d[2]==='salud'||d[2]==='ropa'),DATA.filter(d=>d[2]==='mascota'||d[2]==='amistad'),DATA.filter(d=>d[2]==='comida'||d[2]==='explorar'||d[2]==='fabricar'||d[2]==='recuerdos')];
+  const choice=[];for(const [g,n] of groups.map(g=>[g,3])){const arr=g.map(x=>x[0]);for(let k=0;k<n;k++){const ix=Math.floor(rand()*arr.length);choice.push(arr.splice(ix,1)[0])}}
+  return choice;
+ }
+ const openFriday=()=>new Date().getDay()===5&&gameHour()>=9&&gameHour()<20;
+ function shop(){if(!openFriday()){X.toast('🛍️ El puesto abre viernes de 9:00 a 20:00.');return}initWeek();X.sheet('🛍️ Mercado de los Viernes',box=>{
+  const b=stock(),list=featured(),n=Object.values(b).reduce((a,x)=>a+(x||0),0),limit=4;
+  box.innerHTML=`<p class="shop-hi">Hangyodon: «Cada viernes saco una selección distinta. Hay una pieza por artículo y solo cuatro compras por visita semanal.»</p><div class="bal">🔔 ${save.bells.toLocaleString('es-MX')} · 🛍️ ${n}/${limit} compras esta semana</div>`+
+    list.map(id=>{const it=Talk.ITEMS[id],sold=b[id],pr=it[2];return `<div class="task"><div><b>${it[1]} ${esc(it[0])}</b><small>${esc(descriptions[id])}</small></div><button class="buy" data-market="${id}" ${sold||n>=limit?'disabled':''}>${sold?'Agotado':n>=limit?'Límite semanal':pr+' 🔔'}</button></div>`}).join('')+
+    `<p class="memtext">🎒 Usa lo comprado en Mochila → Tus objetos especiales. La selección cambia cada viernes; el inventario y tus logros no se borran.</p>`;
+  box.querySelectorAll('[data-market]').forEach(el=>el.onclick=()=>{const id=el.dataset.market;if(!openFriday()||!featured().includes(id)||stock()[id]||Object.values(stock()).reduce((a,x)=>a+x,0)>=4)return;const p=Talk.ITEMS[id][2];if(!X.payOr(p))return;stock()[id]=1;X.invAdd(id);save.dex.i[id]=1;sync();X.toast(Talk.ITEMS[id][1]+' Comprado · una unidad');X.reSheet()});
+ })}
+ // Prioridad sobre el antiguo puesto de cinco productos; no abre desde Misiones.
+ H.act.unshift(it=>it.type==='mercado'?(shop(),Promise.resolve()):null);
+ const hs=()=>window.Health32?.status;
+ const health=()=>hs()||null;
+ const pet=()=>X.activePet();
+ const nearby=(r=90)=> (X.NPCS||[]).filter(n=>Talk.P[n.id]&&Math.hypot(n.x-X.player.x,n.y-X.player.y)<r).sort((a,b)=>Math.hypot(a.x-X.player.x,a.y-X.player.y)-Math.hypot(b.x-X.player.x,b.y-X.player.y));
+ const bump=(id,k)=>{if(window.Life?.bump)Life.bump(id,k);else save.friend[id]=(save.friend[id]||0)+k;sync()};
+ const say=(t)=>X.toast(t);
+ const cd=(key,sec)=>{const t=Date.now(),last=state.cool[key]||0;if(t-last<sec*1000){say('⌛ Podrás usarlo de nuevo en '+Math.ceil((sec*1000-(t-last))/60000)+' min.');return false}state.cool[key]=t;return true};
+ const gift=(id,n=1)=>{X.invAdd(id,n);save.dex.i[id]=1;sync()};
+ const protectedGear=()=>{const g=save.rainGear34||(save.rainGear34={});return g};
+ function has(id){if(!(save.inv[id]>0)){say('No tienes ese objeto en la mochila.');return false}return true}
+ const alive=()=>X.st.mode==='play'&&!X.st.mg;
+ async function use(id){if(!descriptions[id]||!has(id)||!alive())return false;
+  let consumed=false;const s=health(),p=pet(),g=protectedGear();
+  switch(id){
+   case 'bento':if(!s)return false;s.hunger=max(s.hunger+46,0,100);if(p)p.hunger=max((p.hunger||0)+22,0,100);consumed=true;say('🍱 Comieron juntos. Tu hambre +46'+(p?' · '+p.name+' +22 saciedad':''));break;
+   case 'sopa':if(!s)return false;s.hunger=max(s.hunger+25,0,100);s.wet=max(s.wet-32,0,100);consumed=true;say('🍲 Te calentaste. +25 hambre · -32 humedad');break;
+   case 'teMiel':if(!s)return false;if(!s.sick||s.reason!=='Resfriado por lluvia'){say('🍵 Guárdalo para un resfriado por lluvia.');return false}s.sick=false;s.reason='';s.wet=max(s.wet-40,0,100);consumed=true;say('🍵 ¡Se te pasó el resfriado!');break;
+   case 'miel':if(!s)return false;if(!s.stings){say('🐝 No tienes picaduras.');return false}s.stings=0;if(s.reason==='Picadura de abejita'){s.sick=false;s.reason=''}consumed=true;say('🍯 Miel aplicada: picaduras curadas.');break;
+   case 'vitaminas':if(!s)return false;state.shieldUntil=Date.now()+15*60*1000;consumed=true;say('💊 Protegida del resfriado por 15 minutos.');break;
+   case 'botiquin':if(!s||(!s.sick&&!s.stings)){say('🩹 Sin heridas ni enfermedad. Consérvalo.');return false}Health32.cure();consumed=true;break;
+   case 'termometro':say(`🌡️ Hambre: ${Math.round(s?.hunger||0)}% · Humedad: ${Math.round(s?.wet||0)}% · ${s?.sick?'Enferma: '+s.reason:'Saludable'}`);break;
+   case 'paraguas32':g.umbrella=!g.umbrella;save.umbrella32=g.umbrella;say(g.umbrella?'☂️ Paraguas abierto':'☂️ Paraguas guardado');break;
+   case 'impermeable32':g.coat=!g.coat;say(g.coat?'🧥 Impermeable sobre tu atuendo':'🧥 Impermeable guardado');break;
+   case 'botas32':g.boots=!g.boots;say(g.boots?'👢 Botas encima de tu atuendo':'👢 Botas guardadas');break;
+   case 'petCoat32':if(!p){say('🐾 Elige primero tu mascota en Mochila → Mascotas.');return false}save.petCoats32=save.petCoats32||{};save.petCoats32[p.uid]=!save.petCoats32[p.uid];say((save.petCoats32[p.uid]?'🧥 Vestiste a ':'📦 Le quitaste el impermeable a ')+p.name);break;
+   case 'pijama':if(!s||!cd('rest',3600))return false;s.wet=max(s.wet-48,0,100);s.hunger=max(s.hunger+12,0,100);say('🛌 Una siesta cortita: -48 humedad y +12 saciedad.');break;
+   case 'silbato':if(!p){say('🐾 Selecciona una mascota que te acompañe.');return false}if(!cd('whistle',45))return false;X.petE.x=X.player.x+9;X.petE.y=X.player.y+9;say('📣 ¡'+p.name+' vino al silbido!');break;
+   case 'pelota':if(!p){say('🐾 Necesitas una mascota activa.');return false}if(!cd('petball',90))return false;p.love=max((p.love||0)+10,0,100);p.hunger=max((p.hunger||0)-7,0,100);state.ballUntil=Date.now()+7000;say('⚽ '+p.name+': +10 cariño, -7 saciedad por jugar.');break;
+   case 'pulseraAmistad':{const n=(X.NPCS||[]).find(n=>n.comp&&Talk.P[n.id]);if(!n){say('📿 Pasea con un vecino para compartir tu pulsera.');return false}if(!cd('bracelet'+n.id,86400))return false;bump(n.id,2);say('📿 +2 amistad con '+Talk.P[n.id].name);break}
+   case 'fotoPolaroid':state.photos=state.photos||[];state.photos.unshift({day:X.today(),x:Math.round(X.player.x),y:Math.round(X.player.y),friends:nearby(85).map(n=>Talk.P[n.id].name).slice(0,3)});state.photos=state.photos.slice(0,12);consumed=true;X.photo();break;
+   case 'periodico':{const d=new Date(),wd=d.getDay(),event={0:'Picnic',1:'Concierto nocturno',2:'Playa',3:'Torneo de pesca',4:'Fogata',5:'Mercadito',6:'Fiesta'}[wd];await X.ask('📰 Gaceta de Ciudad Corazón',[`📅 ${d.toLocaleDateString('es-MX')} · ${event}`,`🌦️ Clima de hoy: ${X.wx()}`,`🏁 Reparto: nivel ${save.delivery32?.level||1}`,'Guardar periódico']);break}
+   case 'mapaTesoro':if(X.st.scene!=='out'||X.M()!==V.MAIN){say('🗺️ Usa el mapa en la isla principal.');return false}if(state.chest){say('🗺️ Ya tienes un tesoro marcado cerca de la plaza.');return false}state.chest={x:V.MAIN.spots.plaza.x-86,y:V.MAIN.spots.plaza.y+85,day:X.today()};consumed=true;say('🗺️ ¡Tesoro señalado! Busca el cofre al suroeste de la plaza.');break;
+   case 'cometa':if(X.st.scene!=='out'||!X.M()||X.M()!==V.MAIN||V.islandD(X.player.x,X.player.y)<.75){say('🪁 Suéltala en la playa, cerca del mar.');return false}if(!cd('kite',120))return false;state.kiteUntil=Date.now()+90000;say('🪁 Tu cometa ondeará durante 90 segundos.');break;
+   case 'confeti':{const ns=nearby(85);if(!ns.length){say('🎊 Busca a tus vecinos para festejar juntos.');return false}for(const n of ns){bump(n.id,1);X.bubble(n,'🎊')}state.confettiUntil=Date.now()+8000;consumed=true;say('🎊 ¡Celebración con '+ns.length+' vecinos! +1 cariño a cada uno.');break}
+   case 'radio':state.radioUntil=Date.now()+300000;X.st.songT=0;say('📻 Música de fiesta activada por cinco minutos.');break;
+   case 'hojaMusical':{const n=nearby(75)[0];if(!n){say('🎵 Acércate a un vecino.');return false}G.sfx.note?.(76);bump(n.id,2);X.bubble(n,'🎵');consumed=true;say('🎵 '+Talk.P[n.id].name+' escuchó tu canción. +2 amistad.');break}
+   case 'recetario':if(!(save.inv.pan>0&&save.inv.fruta>0)){say('📔 Necesitas un pan 🥐 y una fruta 🍎.');return false}X.invAdd('pan',-1);X.invAdd('fruta',-1);gift('bento');say('📔 Cocinaste un bento 🍱 con pan y fruta.');break;
+   case 'costurero':if(!(save.inv.hilo>0&&save.inv.tela>0)){say('🧵 Necesitas un hilo y una tela de la Tiendita.');return false}X.invAdd('hilo',-1);X.invAdd('tela',-1);gift('panuelo');say('🧵 Cosiste un pañuelo elegante 🪡.');break;
+   case 'selloCorreo':{if(!save.inv.carta){say('📮 Necesitas papel de carta de la Tiendita.');return false}const ids=Object.keys(Talk.P).filter(k=>save.met?.[k]&&k!=='isaac');if(!ids.length){say('📮 Primero conoce a algunos vecinos.');return false}const a=await X.ask('📮 ¿A quién envías tu carta?',ids.map(k=>Talk.P[k].name).concat('Cancelar'));if(a>=ids.length)return false;X.invAdd('carta',-1);bump(ids[a],2);say('💌 Carta entregada a '+Talk.P[ids[a]].name+'. +2 amistad.');break}
+   case 'insignia':{const ids=Object.keys(save.friend||{}).sort((a,b)=>(save.friend[b]||0)-(save.friend[a]||0)).slice(0,5);await X.ask('🏅 Amistades más cercanas',ids.length?ids.map((id,i)=>`${i+1}. ${Talk.P[id]?.name||id} · ${save.friend[id]} ♡`).concat('Cerrar'):['Todavía no tienes amistades','Cerrar']);break}
+   case 'relojito':{const v=await X.ask('⌚ Hora ambiental',['☀️ Día','🌙 Noche','🕰️ Hora real','Cancelar']);if(v===3)return false;save.time=['day','night','auto'][v];X.st.songT=0;say('⌚ Ahora: '+['día','noche','hora real'][v]);break}
+   case 'podometro':{const count=Math.floor(state.steps||0);await X.ask('👟 Caminata registrada',[`Pasos: ${count}`,`Recorrido: ${(count*.65/1000).toFixed(2)} km`,'Cerrar']);break}
+   case 'piedraLuna':if(!X.night()||X.st.scene!=='out'){say('🌙 La piedra se activa de noche, al aire libre.');return false}if(state.moonDay===X.today()){say('🌙 Ya recibiste tu estrella de esta noche.');return false}state.moonDay=X.today();gift('estrella');say('🌠 La luna te regaló una estrella para tu mochila.');break;
+   case 'llaveroNube':if(X.st.scene!=='out'||X.M()!==V.MAIN){say('🔑 Solo funciona en la isla principal, al aire libre.');return false}if(state.homeDay===X.today()){say('🔑 La nube necesita recargarse hasta mañana.');return false}state.homeDay=X.today();await X.iris(()=>{X.player.x=870;X.player.y=901;X.player.dir=0;X.cam.x=X.player.x;X.cam.y=X.player.y;X.petE.x=X.player.x+8;X.petE.y=X.player.y+8});say('🔑 ¡De vuelta delante de tu casita!');break;
+   case 'burbujaMarina':if(!p){say('🫧 Necesitas una mascota activa.');return false}if(!cd('bubbles',120))return false;p.love=max((p.love||0)+6,0,100);state.bubblesUntil=Date.now()+10000;say('🫧 '+p.name+' persigue burbujas. +6 cariño.');break;
+   case 'caracolEco':if(X.st.scene!=='out'||X.M()!==V.MAIN||V.islandD(X.player.x,X.player.y)<.83){say('🐚 Acércate a la orilla de la playa para escuchar el eco.');return false}if(state.shellDay===X.today()){say('🐚 Ya encontraste la concha de hoy.');return false}state.shellDay=X.today();gift('concha');say('🐚 El eco te guió hasta una concha oculta.');break;
+   case 'cuaderno':{const opt=await X.ask('📒 Tu diario',['✍️ Escribir sobre hoy','📚 Leer páginas anteriores','Cerrar']);if(opt===2)return false;if(opt===0){const mood=await X.ask('¿Cómo estuvo tu día?',['😊 Alegre','🌧️ Melancólico','✨ Aventurero','😴 Tranquilo','Cancelar']);if(mood===4)return false;const text=['Alegre','Melancólico','Aventurero','Tranquilo'][mood];state.journal.unshift({day:X.today(),mood:text,place:X.M()?.name||'la isla'});state.journal=state.journal.slice(0,20);say('📒 Anotaste: '+text+' en '+(X.M()?.name||'la isla'));break}await X.ask('📚 Tus recuerdos',state.journal.length?state.journal.slice(0,7).map(x=>`${x.day} · ${x.mood} · ${x.place}`).concat('Cerrar'):['Todavía no has escrito','Cerrar']);break}
+   case 'lapiz':if(X.st.scene!=='out'){say('✏️ Dibuja fuera de los edificios.');return false}state.doodle={x:X.player.x+12,y:X.player.y+7,until:Date.now()+120000};say('✏️ Dibujaste un corazón en el suelo por dos minutos.');break;
+   case 'origami':{const n=nearby(80)[0];if(!n){say('🕊️ Busca a un vecino para regalar tu grulla.');return false}bump(n.id,3);X.bubble(n,'🕊️');consumed=true;say('🕊️ Grulla entregada a '+Talk.P[n.id].name+'. +3 cariño.');break}
+   case 'postal':{const ids=Object.keys(Talk.P).filter(k=>save.met?.[k]&&k!=='isaac');if(!ids.length){say('💌 Conoce a un vecino antes de enviar postales.');return false}const a=await X.ask('💌 Enviar postal de la isla',ids.map(k=>Talk.P[k].name).concat('Cancelar'));if(a>=ids.length)return false;bump(ids[a],1);consumed=true;say('💌 Postal enviada a '+Talk.P[ids[a]].name+'. +1 cariño.');break}
+   default:return false;
+  }
+  if(consumed)X.invAdd(id,-1);sync();return true;
+ }
+ // Mochila: la venta depende del viernes, el USO no.
+ function bag(){X.sheet('🎒 Tus objetos especiales',box=>{
+  const held=DATA.filter(d=>(save.inv[d[0]]||0)>0);box.innerHTML='<p class="shop-hi">Aquí todos tienen un efecto propio. Los artículos duraderos no se gastan; los consumibles se descuentan al usarlos.</p>'+(held.length?held.map(([id,desc])=>{
+   const x=Talk.ITEMS[id];return `<div class="task"><div><b>${x[1]} ${esc(x[0])} · ${save.inv[id]}</b><small>${esc(desc)}</small></div><button class="buy" data-use36="${id}">Usar</button></div>`}).join(''):'<p class="memtext">Aún no tienes objetos de esta colección. Visita el mercadito de los viernes.</p>')+`<p class="memtext">🛍️ El mercadito abre únicamente los viernes de 9 a 20 h, junto a la plaza.</p>`;
+  box.querySelectorAll('[data-use36]').forEach(el=>el.onclick=async()=>{const id=el.dataset.use36;X.closeMenu();try{await use(id)}catch(err){console.error('Mercado 36',err);X.toast('No se pudo usar el objeto. Inténtalo de nuevo.')} });
+ })}
+ H.tab.push((tab,box)=>{if(tab!=='tasks')return;const d=document.createElement('div');d.innerHTML='<h4>🎒 Objetos especiales</h4><button class="orow" id="openBag36">✨ Usar objetos emoji <span>›</span></button><small class="memtext">Descubre el efecto concreto de tus objetos y úsalos desde aquí.</small>';box.appendChild(d);d.querySelector('button').onclick=()=>{X.closeMenu();bag()}});
+ // Eventos de los objetos que permanecen en el mundo.
+ H.inter.push(list=>{if(!state.chest||X.st.scene!=='out'||X.M()!==V.MAIN)return;list.push({type:'marketTreasure36',x:state.chest.x,y:state.chest.y,r:22,hy:20,label:'Abrir cofre escondido'})});
+ H.act.unshift(it=>it.type==='marketTreasure36'?(gift('cristal'),delete state.chest,sync(),say('🗺️ ¡Cofre encontrado! Ganaste un cristal 💎'),Promise.resolve()):null);
+ const oldSong=H.song;H.song=()=>Date.now()<(state.radioUntil||0)&&X.st.scene==='out'&&!X.st.mg?'party':oldSong?.();
+ let px=null,py=null,acc=0;H.update.push(dt=>{if(X.st.scene!=='out'||!alive()||X.st.menu){px=py=null;return}const x=X.player.x,y=X.player.y;if(px!==null){const delta=Math.hypot(x-px,y-py);if(delta<28)acc+=delta;while(acc>=8){state.steps=(state.steps||0)+1;acc-=8}}px=x;py=y});
+ H.bill.push((bb,t)=>{if(X.st.scene!=='out'||!alive())return;
+   if(state.chest&&X.M()===V.MAIN)bb.push({x:state.chest.x,y:state.chest.y,draw:g=>{g.font='18px sans-serif';g.textAlign='center';g.fillText('🎁',0,-5)}});
+   if(Date.now()<(state.kiteUntil||0))bb.push({x:X.player.x+16,y:X.player.y+7,draw:g=>{g.strokeStyle='#c897b0';g.lineWidth=.7;g.beginPath();g.moveTo(0,-10);g.lineTo(14,-38-Math.sin(t*3)*4);g.stroke();g.font='17px sans-serif';g.textAlign='center';g.fillText('🪁',14,-39-Math.sin(t*3)*4)}});
+   if(state.doodle?.until>Date.now())bb.push({x:state.doodle.x,y:state.doodle.y,draw:g=>{g.font='10px sans-serif';g.textAlign='center';g.fillText('💗',0,0)}});
+   if(Date.now()<(state.ballUntil||0))bb.push({x:X.petE.x,y:X.petE.y,draw:g=>{g.font='14px sans-serif';g.textAlign='center';g.fillText('⚽',10*Math.sin(t*3),-7)}});
+   if(Date.now()<(state.bubblesUntil||0))bb.push({x:X.petE.x,y:X.petE.y,draw:g=>{g.font='13px sans-serif';g.textAlign='center';for(let i=0;i<3;i++)g.fillText('🫧',Math.sin(t*2+i)*8,-13-i*8-(t%4)*2)}});
+   if(Date.now()<(state.confettiUntil||0))bb.push({x:X.player.x,y:X.player.y,draw:g=>{g.font='14px sans-serif';g.textAlign='center';for(let i=0;i<4;i++)g.fillText('🎊',Math.sin(t*3+i*2)*25,-10-i*9)}});
+ });
+ // Las vitaminas protegen antes del evento de enfermedad por lluvia del módulo Salud32.
+ window.Mercado36={DATA,descriptions,featured,shop,bag,use,shield:()=>Date.now()<(state.shieldUntil||0),state,openFriday};
 })();
 </script>
 <script src="./picnic_v31.js"></script>
