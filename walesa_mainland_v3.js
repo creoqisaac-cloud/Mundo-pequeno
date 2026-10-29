@@ -43,7 +43,22 @@ window.WalesaMainland=(()=>{
   let c=seams?[243,217,187]:palette[Math.floor(hash(ring,brick)*palette.length)].slice();
   const light=(1-clamp(d/PLAZA.r,0,1))*13;
   c=c.map(v=>v+light);
+  // Cintas de caliza, medallón de mosaico y pétalos de terracota incrustados.
+  // Son parte del mismo suelo y no añaden colisiones ni mueven los objetos.
   if(Math.abs(d-71)<2.1||Math.abs(d-145)<2.3)c=[247,219,176];
+  if(d<60){
+   const spoke=Math.sin(angle*8),petal=Math.abs(spoke)<.13,ringArt=Math.abs(d-51)<2.3;
+   if(ringArt)c=[255,227,187];
+   else if(d>25&&d<49&&petal)c=[120,171,153];
+   else if(d>27&&d<48&&Math.sin(angle*8+Math.PI/2)>.95)c=[242,201,158];
+   else if(d<19&&d>12)c=[239,204,155];
+   else if(d<10)c=[171,202,173];
+  }
+  if(d>86&&d<137){
+   const wheel=Math.sin(angle*12),petal=Math.abs(wheel)<.042;
+   if(petal&&d>97&&d<123)c=[244,216,181];
+  }
+  if(Math.abs(d-184)<1.6)c=[253,228,190];
   if(d>PLAZA.r-4){const border=(d-PLAZA.r+4)/16;
    if(border<.5)c=c.map(v=>v*.77);
   }
@@ -146,8 +161,8 @@ window.WalesaMainland=(()=>{
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d'),im=ctx.createImageData(W,H),arr=im.data;
   const x0=tx*SZ,y0=ty*SZ;
   // Calculamos la altitud una vez por celda, para evitar millones de ruidos por fotograma.
-  const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N);
-  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=x0+i*step,y=y0+j*step,k=j*N+i;E[k]=height(x,y);SEA_MASK[k]=coast(x,y)}
+  const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N),F=new Float32Array(N*N);
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const x=x0+i*step,y=y0+j*step,k=j*N+i;E[k]=height(x,y);SEA_MASK[k]=coast(x,y);F[k]=clamp(V.vnoise(x/52,y/52)*.67+V.vnoise((x+83)/19,(y-55)/19)*.33,0,1)}
   for(let j=0;j<H;j++){
    const y=y0+j,iy=j>>3,tj=(j&7)/8;
    for(let i=0;i<W;i++){
@@ -164,8 +179,16 @@ window.WalesaMainland=(()=>{
     if(sea>.95)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
     else if(sea>.84)col=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11];
     else{
-     const f=clamp(((noise*.60+hash(x>>4,y>>4)*.4)*3.8)|0,0,3);
-     col=pal[f].slice();
+     // Transiciones cromáticas suaves, sin ruido de "parches cuadrados".
+     // Se interpola la paleta del motor base, con grano mínimo de pixel-art.
+     const surface=clamp((F[p]*(1-ti)+F[p+1]*ti)*(1-tj)+
+       (F[p+N]*(1-ti)+F[p+N+1]*ti)*tj+(small-.5)*.12,0,.999)*3;
+     const lo=surface|0,weight=surface-lo;
+     col=[
+      pal[lo][0]*(1-weight)+pal[Math.min(3,lo+1)][0]*weight,
+      pal[lo][1]*(1-weight)+pal[Math.min(3,lo+1)][1]*weight,
+      pal[lo][2]*(1-weight)+pal[Math.min(3,lo+1)][2]*weight
+     ];
      // Barrancos y estratos de altura: tonos de la paleta existente.
      if(elev>.36){
       const t=clamp((elev-.3)*1.3,0,.84);
@@ -243,6 +266,28 @@ window.WalesaMainland=(()=>{
    ctx.save();ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);
    ctx.lineTo(b[0]-x0,b[1]-y0);ctx.strokeStyle='rgba(244,230,193,.56)';
    ctx.lineWidth=1.2;ctx.setLineDash([6,17]);ctx.stroke();ctx.restore();
+  }
+  // Jardineras y pequeñas flores a la vera de los caminos. Patrón de terreno,
+  // independiente de la cámara y sin sprites repetidos en cada tile.
+  for(const {a,b,paved} of visible){
+   const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,
+    nx=-dy/len,ny=dx/len;
+   for(let t=21;t<len;t+=29){
+    const phase=Math.floor(t/29),h=hash((a[0]+dx*t/len)>>3,(a[1]+dy*t/len)>>3);
+    if(h<.43)continue;
+    for(const side of [-1,1]){
+     if(hash(phase+31,Math.floor(a[1]+side*47))<.55)continue;
+     const x=a[0]+dx*t/len+nx*side*(paved?26:23),
+       y=a[1]+dy*t/len+ny*side*(paved?26:23);
+     const px=Math.round(x-x0),py=Math.round(y-y0);
+     if(px<5||py<5||px>SZ-5||py>SZ-5||coast(x,y)>.79||
+      plazaDistance(x,y)<PLAZA.edge+10)continue;
+     ctx.fillStyle=paved?'#8da894':'#6b996d';
+     ctx.fillRect(px-3,py,6,2);ctx.fillRect(px-1,py-2,3,4);
+     ctx.fillStyle=h>.81?'#f4c6cc':h>.62?'#fff1ad':'#d6e7bc';
+     ctx.fillRect(px,py-3,2,2);ctx.fillRect(px-3,py,2,1);
+    }
+   }
   }
   // Detalle superficial determinista en coordenadas globales, con textura
   // coherente entre tiles: flores, hierbas, piedritas y sombras de senderos.
