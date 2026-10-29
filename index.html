@@ -258,8 +258,9 @@ html:not(.js) .scene{display:none!important}
 .sheet.on .panel{transform:none}
 .panel h3{margin:0 18px 10px;font:900 20px/1 var(--round);display:flex;align-items:center;justify-content:space-between}
 .close{width:38px;height:38px;border-radius:50%;background:#efe4d6;font:900 16px/1 var(--round);color:var(--g-ink)}
-#tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:0 18px 13px;overflow:visible}
-#tabs button{min-width:0;min-height:44px;font:900 13px/1.2 var(--round);padding:10px 12px;border-radius:16px;background:#efe4d6;color:#7a6658;text-align:center}
+#tabs{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:7px;padding:0 15px 13px;overflow:visible}
+#tabs button{grid-column:span 3;min-width:0;min-height:43px;font:900 11.5px/1.2 var(--round);padding:9px 4px;border-radius:15px;background:#efe4d6;color:#7a6658;text-align:center}
+#tabs button:nth-child(n+5){grid-column:span 4}
 #tabs button.on{background:var(--g-rose);color:#fff;box-shadow:0 3px 0 #b8577a}
 #tabBody,#shopBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 10px;touch-action:pan-y;min-height:200px}
 #tabBody h4{font:900 12px/1 var(--round);letter-spacing:.12em;text-transform:uppercase;color:#a08a7a;margin:16px 0 8px}
