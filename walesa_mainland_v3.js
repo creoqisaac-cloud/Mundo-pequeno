@@ -25,12 +25,68 @@ window.WalesaMainland=(()=>{
  [[5840,3650],[6060,3760]],[[5840,3650],[5550,3890]],[[5550,3890],[5320,4040]]
  ];
  const hash=(x,y)=>V.hash(x|0,y|0),clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+ // La zona de llegada conserva sus diez casas y comercios, pero el centro es
+ // una sola plaza circular transitable, sin cruces de senderos bajo el kiosco.
+ const PLAZA={x:P.village.x,y:P.village.y,r:186,edge:198};
+ const circleRoads=[];
+ const plazaDistance=(x,y)=>Math.hypot(x-PLAZA.x,y-PLAZA.y);
+ function plazaBrick(x,y){
+  if(Math.abs(x-PLAZA.x)>PLAZA.edge||Math.abs(y-PLAZA.y)>PLAZA.edge)return null;
+  const d=plazaDistance(x,y);if(d>PLAZA.edge)return null;
+  const angle=Math.atan2(y-PLAZA.y,x-PLAZA.x),ring=Math.floor(d/8),
+    walk=d*angle,brick=Math.floor((walk+(ring%2)*8)/16),
+    joint=((walk+(ring%2)*8)%16+16)%16;
+  // Aparejo concéntrico: cada hilada gira con la curva y evita que los
+  // ladrillos queden horizontales sobre senderos diagonales.
+  const seams=d%8<1||joint<.9;
+  const palette=[[200,142,120],[212,158,130],[223,175,146],[189,130,111],[229,186,156]];
+  let c=seams?[243,217,187]:palette[Math.floor(hash(ring,brick)*palette.length)].slice();
+  const light=(1-clamp(d/PLAZA.r,0,1))*13;
+  c=c.map(v=>v+light);
+  if(Math.abs(d-71)<2.1||Math.abs(d-145)<2.3)c=[247,219,176];
+  if(d>PLAZA.r-4){const border=(d-PLAZA.r+4)/16;
+   if(border<.5)c=c.map(v=>v*.77);
+  }
+  return {c,alpha:clamp((PLAZA.edge-d)/12,0,1)};
+ }
+ function normalizePlazaRoads(){
+  if(circleRoads.length)return;
+  const ringNodes=[],kept=[];
+  const crossing=(a,b)=>{
+   const dx=b[0]-a[0],dy=b[1]-a[1],cx=a[0]-PLAZA.x,cy=a[1]-PLAZA.y;
+   const aa=dx*dx+dy*dy,bb=2*(cx*dx+cy*dy),
+    cc=cx*cx+cy*cy-PLAZA.r*PLAZA.r,disc=bb*bb-4*aa*cc;
+   if(disc<0)return null;
+   return [-bb-Math.sqrt(disc),-bb+Math.sqrt(disc)].map(q=>q/(2*aa)).filter(t=>t>=0&&t<=1);
+  };
+  for(const [a,b] of seg){
+   const ia=plazaDistance(a[0],a[1])<PLAZA.r,ib=plazaDistance(b[0],b[1])<PLAZA.r;
+   if(ia&&ib)continue;
+   const xs=crossing(a,b);
+   if(ia!==ib&&xs?.length){
+    const t=xs[0],p=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+    ringNodes.push(p);kept.push(ia?[p,b]:[a,p]);
+   }else if(!ia&&!ib&&xs?.length===2){
+    const q=t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+    const p=q(xs[0]),r=q(xs[1]);ringNodes.push(p,r);
+    kept.push([a,p],[r,b]);
+   }else kept.push([a,b]);
+  }
+  seg.splice(0,seg.length,...kept);
+  for(let i=0;i<48;i++){
+   const a=i/48*2*Math.PI;
+   ringNodes.push([PLAZA.x+Math.cos(a)*PLAZA.r,PLAZA.y+Math.sin(a)*PLAZA.r]);
+  }
+  ringNodes.sort((a,b)=>Math.atan2(a[1]-PLAZA.y,a[0]-PLAZA.x)-
+   Math.atan2(b[1]-PLAZA.y,b[0]-PLAZA.x));
+  for(let i=0;i<ringNodes.length;i++)circleRoads.push([ringNodes[i],ringNodes[(i+1)%ringNodes.length]]);
+ }
  const distSegment=(x,y,a,b)=>{
   const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy),0,1);
   return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);
  };
- const roadAt=(x,y)=>{for(const [a,b] of seg)if(distSegment(x,y,a,b)<12)return true;return false};
- const nearbyRoad=(x,y,r=20)=>{for(const [a,b] of seg)if(distSegment(x,y,a,b)<r)return true;return false};
+ const roadAt=(x,y)=>{if(plazaDistance(x,y)<PLAZA.r)return true;for(const [a,b] of seg)if(distSegment(x,y,a,b)<12)return true;return false};
+ const nearbyRoad=(x,y,r=20)=>{if(plazaDistance(x,y)<PLAZA.r+r)return true;for(const [a,b] of seg)if(distSegment(x,y,a,b)<r)return true;return false};
  const pos=(x,y)=>[(x-ORX)/RW,(y-ORY)/RH];
  const zone=(x,y)=>{const [u,v]=pos(x,y);return T.district(u,v)};
  function coast(x,y){
@@ -122,6 +178,15 @@ window.WalesaMainland=(()=>{
       col=[99+noise*28,72+noise*20,57+noise*18];
      }
     }
+    // El suelo de ladrillo es parte del tile y de la colisión existente:
+    // no es un objeto superpuesto ni una textura estirada.
+    if(sea<.95){
+     const plaza=plazaBrick(x,y);
+     if(plaza&&plaza.alpha>0){
+      const a=plaza.alpha;col=[col[0]*(1-a)+plaza.c[0]*a,
+       col[1]*(1-a)+plaza.c[1]*a,col[2]*(1-a)+plaza.c[2]*a];
+     }
+    }
     arr[k]=clamp(col[0],0,255)|0;arr[k+1]=clamp(col[1],0,255)|0;arr[k+2]=clamp(col[2],0,255)|0;arr[k+3]=255;
    }
   }
@@ -136,12 +201,17 @@ window.WalesaMainland=(()=>{
   const strokes=(layer)=>{
    ctx.lineJoin='round';ctx.lineCap='round';
    for(const {a,b,paved} of visible){
-    ctx.beginPath();ctx.moveTo(a[0]-x0,a[1]-y0);ctx.lineTo(b[0]-x0,b[1]-y0);
     const tone=PATH[biome((a[0]+b[0])/2,(a[1]+b[1])/2)]||PATH.town;
+    const width=layer===0?35:24;
+    ctx.save();
+    ctx.translate(a[0]-x0,a[1]-y0);
+    const angle=Math.atan2(b[1]-a[1],b[0]-a[0]),len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    ctx.rotate(angle);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(len,0);
     ctx.strokeStyle=layer===0?(paved?'#d5c6b6':tone[3]):
       roadPattern(ctx,biome((a[0]+b[0])/2,(a[1]+b[1])/2),paved);
-    ctx.lineWidth=layer===0?32:layer===1?24:0;
-    ctx.stroke();
+    ctx.lineWidth=width;ctx.stroke();
+    ctx.restore();
    }
   };
   strokes(0);strokes(1);
@@ -250,13 +320,38 @@ window.WalesaMainland=(()=>{
    g.fillStyle=accent;g.fillRect(urban?8:10,front,urban?57:49,3);
    for(let x=urban?11:13;x<(urban?64:58);x+=7)g.fillRect(x,front-7,2,9);
    g.fillStyle=light;g.fillRect(urban?14:16,urban?53:56,urban?12:10,2);
-  }else{ // macetas y marquesinas
+  }else if(v===2||v===5){ // macetas y marquesinas
    for(const x of (urban?[12,31,52]:[15,45])){
     g.fillStyle='#956f55';g.fillRect(x,front+4,10,3);
     g.fillStyle='#518c56';g.fillRect(x+2,front,6,5);
     g.fillStyle='#f6adbf';g.fillRect(x+3,front,2,2);
    }
    g.fillStyle=accent;g.fillRect(urban?42:26,urban?57:58,urban?22:16,3);
+  }else if(v===6){ // persianas pintadas y marco de fachada
+   g.fillStyle=accent;
+   for(const x of (urban?[12,32,52]:[13,44]))for(const dx of [-3,12]){
+    g.fillRect(x+dx,urban?22:44,2,urban?13:9);
+   }
+   g.fillStyle=light;g.fillRect(urban?13:29,urban?12:38,urban?48:10,2);
+  }else if(v===7){ // baldosas florales y guirnalda
+   g.strokeStyle=accent;g.lineWidth=2;g.beginPath();
+   g.moveTo(urban?8:10,urban?18:39);g.quadraticCurveTo(40,urban?25:45,urban?69:60,urban?18:39);g.stroke();
+   for(let i=0;i<7;i++){const x=(urban?9:11)+i*8,y=(urban?19:41)+Math.sin(i*.8)*2;
+    g.fillStyle=i%2?'#fae3a4':'#ef9bad';g.fillRect(x,y,3,2);
+   }
+  }else if(v===8){ // ático con molduras y zócalo
+   g.fillStyle=accent;g.fillRect(urban?22:25,urban?2:20,urban?36:21,urban?7:7);
+   g.fillStyle=light;g.fillRect(urban?26:28,urban?4:22,urban?28:15,2);
+   g.strokeStyle=accent;g.lineWidth=2;g.strokeRect(urban?6:8,urban?61:55,urban?65:51,urban?24:7);
+  }else{ // fachada con celosías y jardineras
+   g.fillStyle=accent;
+   for(const x of (urban?[12,32,52]:[13,44])){
+    g.fillRect(x,urban?38:54,12,3);
+    g.fillStyle='#5a986c';g.fillRect(x+2,urban?36:52,8,2);
+    g.fillStyle='#f4cad0';g.fillRect(x+4,urban?35:51,2,2);
+    g.fillStyle=accent;
+   }
+   g.fillRect(urban?8:9,urban?14:38,urban?58:51,2);
   }
   return {...sprite,c};
  }
@@ -265,9 +360,19 @@ window.WalesaMainland=(()=>{
   // La ciudad combina edificios de varias plantas con casas bajas originales.
   // Cada tipología conserva las colisiones, puertas y sprites del motor.
   const districtHome=type==='city'&&!urban;
-  const styles=[['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d']];const urbanStyles=[['#e8e5df','#9aa3b7'],['#e9e1f0','#9989b7'],['#e1edf0','#7c9fa9'],['#f2e7d7','#b9967e'],['#e6e9dd','#929c7a']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
+  const styles=[
+   ['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],
+   ['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d'],
+   ['#f6e4d9','#bb7f83'],['#e0f1e9','#6eaca0'],['#f8eecf','#bc9c6e'],
+   ['#e1e9f6','#738dbe'],['#f6dfe5','#be8aa3'],['#f2eee6','#9f9fbe'],
+   ['#e6edda','#8d9b64'],['#fbe8d2','#d58c79'],['#dae8e8','#769aa4']];
+  const urbanStyles=[
+   ['#e8e5df','#9aa3b7'],['#e9e1f0','#9989b7'],['#e1edf0','#7c9fa9'],
+   ['#f2e7d7','#b9967e'],['#e6e9dd','#929c7a'],['#f1e1d8','#b87979'],
+   ['#e3e8f0','#889bb6'],['#ebe1d2','#af9876'],['#e4ebe7','#769e98'],
+   ['#f0e1e8','#af819c']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
     acc:urban?'#9eafbc':palette[1],icon:urban?'🏬':'🏠'};
-  const variant=Math.floor(hash(x+137,y-211)*6);b.facade=variant;
+  const variant=Math.floor(hash(x+137,y-211)*10);b.facade=variant;
   if(urban){b.acc=palette[1];b.icon=job==='shop'?'🛍️':job==='papers'?'📚':job==='delivery'?'📮':'🏠';
    b.day=facade(V.cityBuilding(b.wall,b.acc,b.icon,false),b,false);
    b.night=facade(V.cityBuilding(b.wall,b.acc,b.icon,true),b,true);
@@ -283,8 +388,12 @@ window.WalesaMainland=(()=>{
   if(!urban&&!job){
    if(spr.fence){V.addObj(main,spr.fence,x-40,yGarden,V.rectS(x-49,yGarden-4,18,4));
     V.addObj(main,spr.fence,x+40,yGarden,V.rectS(x+31,yGarden-4,18,4))}
-   if(seed%2===0&&spr.bush?.[0])V.addObj(main,spr.bush[0],side,yGarden,null);
+   if(seed%2===0&&spr.bush?.[seed%3])V.addObj(main,spr.bush[seed%3],side,yGarden,null);
    if(seed%3===0&&spr.bench)V.addObj(main,spr.bench,x+58,y+7,null);
+   if(spr.pot){
+    if(seed%3!==1)V.addObj(main,spr.pot[seed%2],x-32,y+6,null);
+    if(seed%3===0)V.addObj(main,spr.pot[(seed+1)%2],x+32,y+6,null);
+   }
   }else if(urban&&seed%2===0&&spr.lamp){
    V.addObj(main,spr.lamp,x+52,y+5,null);main.glows.push([x+52,y-19]);
   }
@@ -293,7 +402,7 @@ window.WalesaMainland=(()=>{
  function adorn(){
   const a=V.spr,rg=V.rng(514721);
   const clearNear=(x,y,rad)=>houses.some(b=>Math.hypot(b.x-x,b.y-y)<rad)||nearbyRoad(x,y,27)||Math.hypot(x-P.village.x,y-P.village.y)<115;
-  for(let k=0;k<3300;k++){
+  for(let k=0;k<4050;k++){
    const x=ORX+50+rg()*(RW-90),y=ORY+60+rg()*(RH-110);
    const u=(x-ORX)/RW,v=(y-ORY)/RH,z=height(x,y),b=biome(x,y),p=rg();
    if(coast(x,y)>.84||clearNear(x,y,28))continue;
@@ -309,7 +418,9 @@ window.WalesaMainland=(()=>{
    }else if(p>.37){
     V.addObj(main,a.tree[p>.88?'pink':'green'],x,y,V.circS(x,y-5,9));
    }else if(p>.18){
-    V.addObj(main,a.bush[0],x,y,null);
+    V.addObj(main,a.bush[Math.floor(hash(x+31,y+23)*a.bush.length)],x,y,null);
+   }else if(p>.12&&a.pot&&['pueblo','valle','meseta'].includes(zone(x,y))){
+    V.addObj(main,a.pot[Math.floor(hash(x,y+53)*a.pot.length)],x,y,null);
    }
   }
   // Hitos propios de la región, pero con sprites exclusivos del juego.
@@ -320,6 +431,29 @@ window.WalesaMainland=(()=>{
    V.addObj(main,a.lamp,x,y,V.rectS(x-2,y-3,4,3));main.glows.push([x,y-24]);
   }
  }
+ function decoratePlaza(){
+  const a=V.spr,nearHouse=(x,y)=>houses.some(b=>Math.hypot(b.x-x,b.y-y)<53);
+  // Arriates, faroles y rincones de lectura bordean el pavimento circular.
+  // Se utilizan objetos nativos, con espacios de paso despejados para puertas.
+  for(let i=0;i<24;i++){
+   const angle=i/24*Math.PI*2-.2,r=i%3===0?162:174;
+   const x=Math.round(PLAZA.x+Math.cos(angle)*r),
+    y=Math.round(PLAZA.y+Math.sin(angle)*r);
+   if(nearHouse(x,y))continue;
+   if(i%6===0&&a.lamp){
+    V.addObj(main,a.lamp,x,y,V.rectS(x-2,y-3,4,3));main.glows.push([x,y-24]);
+   }else if(i%4===0&&a.pot){
+    V.addObj(main,a.pot[i%2],x,y,null);
+   }else if(a.bush){
+    V.addObj(main,a.bush[i%3],x,y,null);
+   }
+  }
+  for(let i=0;i<8;i++){
+   const angle=i/8*Math.PI*2+.21,x=Math.round(PLAZA.x+Math.cos(angle)*119),
+    y=Math.round(PLAZA.y+Math.sin(angle)*119);
+   if(!nearHouse(x,y)&&a.bench)V.addObj(main,a.bench,x,y,null);
+  }
+ }
  function structures(){
   // Poblado radial: casas alrededor de la plaza, como el dibujo de Procreate.
   const colors=['Cinna','Melody','Purin','Rosa','Nube','Hiedra','Clavel','Estrella','Olivo','Amapola'];
@@ -327,6 +461,7 @@ window.WalesaMainland=(()=>{
    const a=(i/10)*Math.PI*2-Math.PI/2,r=i%2?265:225,
      x=Math.round(P.village.x+Math.cos(a)*r),y=Math.round(P.village.y+Math.sin(a)*r);
    building('radial'+i,'Casa '+colors[i],x,y,'home',null);
+   // Tramo residencial desde el anillo exterior, no un radio que atraviese la plaza.
    seg.push([[P.village.x,P.village.y],[x,y+16]]);
   }
   building('plaza-market','Mercado del Pueblo',P.village.x-100,P.village.y+140,'home','shop');
@@ -346,7 +481,8 @@ window.WalesaMainland=(()=>{
   building('forest-camp','Casa del Guardabosques',6040,3860,'home');
   building('ridge-lodge','Mirador de la Cordillera',3510,910,'home');
   building('ridge-post','Puesto del Paso Alto',5260,1120,'home');
-  adorn();
+  normalizePlazaRoads();
+  adorn();decoratePlaza();
  }
 
  const scenic=[];
@@ -432,6 +568,13 @@ window.WalesaMainland=(()=>{
   // Capa cartográfica adicional: red viaria, barrios y destinos, sin alterar el mundo jugable.
   ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
   for(const [a,b] of seg){ctx.beginPath();ctx.moveTo(ox+a[0]*k,oy+a[1]*k);ctx.lineTo(ox+b[0]*k,oy+b[1]*k);ctx.strokeStyle='#fff6de';ctx.lineWidth=2.7;ctx.stroke();ctx.strokeStyle='#ad956f';ctx.lineWidth=.8;ctx.stroke()}
+  // La rotonda se muestra también en el mapa de navegación.
+  const px=ox+PLAZA.x*k,py=oy+PLAZA.y*k;
+  ctx.beginPath();ctx.arc(px,py,PLAZA.r*k,0,Math.PI*2);
+  ctx.fillStyle='#dca58c';ctx.fill();ctx.strokeStyle='#f8e2bf';
+  ctx.lineWidth=Math.max(1,4*k);ctx.stroke();
+  ctx.beginPath();ctx.arc(px,py,65*k,0,Math.PI*2);
+  ctx.strokeStyle='#f5d4a6';ctx.lineWidth=Math.max(.8,2*k);ctx.stroke();
   const labels=[['PUEBLO DE WALESA',P.village.x,P.village.y],['MESETA ORIENTAL',P.plateau.x,P.plateau.y],['DISTRITO DEL SUR',P.town.x,P.town.y],['BOSQUE PROFUNDO',P.forest.x,P.forest.y],['CORDILLERA',3480,880],['CIUDAD CORAZÓN',1400,720]];
   ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   for(const [label,x,y] of labels){const px=ox+x*k,py=oy+y*k;ctx.lineWidth=2.6;ctx.strokeStyle='rgba(255,251,238,.94)';ctx.strokeText(label,px,py-7);ctx.fillStyle='#344e55';ctx.fillText(label,px,py-7);ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fillStyle='#e77972';ctx.fill()}
@@ -444,7 +587,7 @@ window.WalesaMainland=(()=>{
  function streets(){
   const previous=(main?.paths||[]).filter(p=>Array.isArray(p)&&p.length>=4&&p.every(Number.isFinite))
    .map(p=>[[p[0],p[1]],[p[2],p[3]]]);
-  return [...previous,...seg];
+  return [...previous,...seg,...circleRoads];
  }
  function graph(){
   if(streetGraph)return streetGraph;
@@ -554,28 +697,45 @@ window.WalesaMainland=(()=>{
   return guide;
  }
  function navigationTab(tab,box){
-  if(tab!=='map'||Game?.X?.M()!==main)return;
+  if(tab!=='map'||!main)return;
+  renderNavigator(box,false);
+ }
+ function mountPhone(box,closePhone){
+  if(!box||!main)return false;
+  renderNavigator(box,true,closePhone);return true;
+ }
+ function renderNavigator(box,phone=false,closePhone=null){
   const X=Game.X,m=main,all=destinations();
-  const wrap=document.createElement('section');wrap.style.cssText='color:#354b42;font:700 12px/1.4 system-ui,sans-serif';
-  wrap.innerHTML='<div style="display:flex;gap:5px;margin:0 0 8px;align-items:center;flex-wrap:wrap">'+
-   '<button data-nav="plus" aria-label="Acercar mapa">＋</button><button data-nav="minus" aria-label="Alejar mapa">－</button>'+
-   '<button data-nav="me">📍 Aquí</button><button data-nav="all">🌍 Completo</button>'+
-   '<span style="font-size:10px">Arrastra para explorar · toca para elegir</span></div>'+
-   '<canvas id="walesa-streets-map" width="560" height="395" style="display:block;width:100%;height:auto;'+
-   'max-height:45vh;object-fit:contain;border:2px solid #bfd2c2;border-radius:11px;touch-action:none;background:#d6ebed"></canvas>'+
-   '<div style="display:flex;gap:6px;margin-top:8px"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:7px;'+
-   'border:1px solid #b3c9b5;border-radius:8px;background:#fffaf1;color:#365344"></select>'+
-   '<button data-nav="route">🧭 Seguir ruta</button></div>'+
-   '<p data-nav="status" role="status" style="margin:7px 0 2px;min-height:32px">Elige un destino o toca una calle.</p>';
+  const wrap=document.createElement('section');wrap.className='walesa-map-live';
+  wrap.style.cssText='color:#354b42;font:700 12px/1.4 system-ui,sans-serif;'+
+    'width:100%;min-width:0;box-sizing:border-box;padding:'+(phone?'4px 1px 18px':'6px 3px 12px');
+  wrap.innerHTML='<div style="padding:6px 8px 8px;border-radius:12px;background:#fcf9f1;box-shadow:0 2px 8px #26473815">'+
+   '<div style="font-weight:900;color:#426b5b;font-size:13px">🗺 Walesa Maps <span style="font-size:10px;font-weight:600">· rutas de la isla</span></div>'+
+   '<input type="search" aria-label="Buscar destino" placeholder="🔎 Buscar plaza, tienda, casa…" style="display:block;box-sizing:border-box;width:100%;margin-top:7px;'+
+    'padding:10px;border:1px solid #afcbb7;border-radius:9px;background:#fff;color:#375344;font:700 12px system-ui" />'+
+   '<div data-nav="search-results" style="display:none;max-height:110px;overflow:auto;margin-top:4px"></div></div>'+
+   '<div style="display:flex;gap:5px;margin:7px 0;align-items:center;flex-wrap:wrap">'+
+   '<button data-nav="minus" aria-label="Alejar mapa">−</button><button data-nav="plus" aria-label="Acercar mapa">＋</button>'+
+   '<button data-nav="me">📍 Mi ubicación</button><button data-nav="all">🌍 Isla completa</button>'+
+   '</div><canvas id="walesa-streets-map" width="560" height="435" style="display:block;box-sizing:border-box;width:100%;height:auto;'+
+   'border:2px solid #bfd2c2;border-radius:12px;touch-action:none;background:#d6ebed" aria-label="Mapa de calles de Walesa, arrastra para explorar"></canvas>'+
+   '<div style="margin-top:5px;font-size:10px;color:#62786b">Arrastra, pellizca o usa + / −. Toca un punto para elegir destino.</div>'+
+   '<div style="display:flex;gap:6px;margin-top:8px;align-items:stretch"><select aria-label="Elegir destino" style="min-width:0;flex:1;padding:8px;'+
+   'border:1px solid #b3c9b5;border-radius:8px;background:#fffaf1;color:#365344;font:700 11px system-ui"></select>'+
+   '<button data-nav="route">🧭 Ir</button></div>'+
+   '<p data-nav="status" role="status" style="margin:7px 0 2px;min-height:32px;color:#4f6557">Elige un lugar o toca el mapa para marcarlo.</p>';
   box.replaceChildren(wrap);
-  for(const b of wrap.querySelectorAll('button')){
-   b.style.cssText='padding:8px 10px;border-radius:8px;background:#e5f0dd;color:#3b604b;font:800 12px system-ui;cursor:pointer';
+  for(const b of wrap.querySelectorAll('button:not([data-result])')){
+   b.style.cssText='padding:9px 10px;border:1px solid #b7d0b8;border-radius:9px;'+
+    'background:#e5f0dd;color:#3b604b;font:800 12px system-ui;cursor:pointer;touch-action:manipulation';
   }
   const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d'),sel=wrap.querySelector('select'),
-    status=wrap.querySelector('[data-nav="status"]'),CW=cv.width,CH=cv.height;
+    status=wrap.querySelector('[data-nav="status"]'),search=wrap.querySelector('input[type="search"]'),
+    results=wrap.querySelector('[data-nav="search-results"]'),CW=cv.width,CH=cv.height;
   const opt=document.createElement('option');opt.textContent='Elegir lugar…';opt.value='';sel.append(opt);
   all.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.icon+' '+p.name;sel.append(o)});
-  let zoom=2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null;
+  let zoom=phone?3.2:2.5,center={x:X.player.x,y:X.player.y},target=null,preview=null,down=null,raf=0;
+  const pointers=new Map();let pinch=null,suppressTap=false;
   const clampCenter=()=>{
    center.x=clamp(center.x,0,m.MW);center.y=clamp(center.y,0,m.MH);
   };
@@ -583,16 +743,37 @@ window.WalesaMainland=(()=>{
    const k=Math.min(CW/m.MW,CH/m.MH)*zoom;
    return {k,ox:CW/2-center.x*k,oy:CH/2-center.y*k};
   };
+  // Zoom alrededor del dedo (no salta al centro al pellizcar).
+  function zoomAt(factor,p={x:CW/2,y:CH/2}){
+   const anchor=world(p.x,p.y);
+   zoom=clamp(zoom*factor,1,16);
+   const k=view().k;
+   center.x=anchor.x-(p.x-CW/2)/k;
+   center.y=anchor.y-(p.y-CH/2)/k;
+   clampCenter();repaint();
+  }
+  function repaint(){
+   if(raf||!cv.isConnected)return;
+   raf=requestAnimationFrame(()=>{raf=0;if(cv.isConnected)draw()});
+  }
   const screen=p=>{const v=view();return {x:v.ox+p.x*v.k,y:v.oy+p.y*v.k}};
   const world=(x,y)=>{const v=view();return {x:clamp((x-v.ox)/v.k,0,m.MW),y:clamp((y-v.oy)/v.k,0,m.MH)}};
   function draw(){
    ctx.clearRect(0,0,CW,CH);ctx.fillStyle='#a6d8e6';ctx.fillRect(0,0,CW,CH);
    const v=view();m.mainland.sampleMap(ctx,v.ox,v.oy,v.k);
    ctx.drawImage(m.ground,v.ox,v.oy,m.baseMW*v.k,m.baseMH*v.k);
-   // El mapa general no dibuja 50 casas superpuestas: prioriza establecimientos.
-   for(const p of all.filter((p,i)=>i<6||p.icon!=='🏡')){
-    const s=screen(p);if(s.x<-15||s.x>CW+15||s.y<-15||s.y>CH+15)continue;
-    ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(p.icon,s.x,s.y-7);
+   // Distinción de hitos sin amontonar las viviendas a escala regional.
+   const candidates=all.filter((p,i)=>zoom>=6||i<11||p.icon!=='🏡');
+   for(const p of candidates){
+    const s=screen(p);if(s.x<-35||s.x>CW+35||s.y<-25||s.y>CH+25)continue;
+    const selected=target===p;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=(selected?'24':'20')+'px sans-serif';
+    ctx.fillText(p.icon,s.x,s.y-13);
+    if(selected||zoom>5&&p.icon!=='🏡'){
+     ctx.font='bold 15px system-ui';ctx.lineWidth=3;ctx.strokeStyle='rgba(255,254,248,.96)';
+     ctx.strokeText(p.name,s.x,s.y+10);ctx.fillStyle='#365449';ctx.fillText(p.name,s.x,s.y+10);
+    }
    }
    if(preview){
     ctx.save();ctx.lineWidth=5;ctx.lineJoin='round';ctx.lineCap='round';
@@ -602,7 +783,15 @@ window.WalesaMainland=(()=>{
     if(!preview.connected)ctx.setLineDash([7,5]);ctx.stroke();ctx.restore();
    }
    if(target){const q=screen(target);ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);ctx.fillStyle='#e27e68';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke()}
-   const p=screen(X.player);ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+   const p=screen(X.player);
+   ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fillStyle='rgba(54,124,221,.15)';ctx.fill();
+   ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle='#367cdd';ctx.fill();
+   ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();
+   if(preview&&!preview.connected){
+    ctx.fillStyle='rgba(255,249,240,.93)';ctx.fillRect(7,CH-35,CW-14,27);
+    ctx.fillStyle='#875a47';ctx.textAlign='center';ctx.font='bold 13px system-ui';
+    ctx.fillText('Ruta orientativa: no hay un camino continuo',CW/2,CH-21);
+   }
   }
   function choose(p){
    target=p;preview=roadRoute({x:X.player.x,y:X.player.y},target);
@@ -611,28 +800,90 @@ window.WalesaMainland=(()=>{
    draw();
   }
   const controls=k=>wrap.querySelector('[data-nav="'+k+'"]');
-  controls('plus').onclick=()=>{zoom=clamp(zoom*1.5,1,12);draw()};
-  controls('minus').onclick=()=>{zoom=clamp(zoom/1.5,1,12);draw()};
-  controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=3;draw()};
-  controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;draw()};
+  controls('plus').onclick=()=>zoomAt(1.5);
+  controls('minus').onclick=()=>zoomAt(1/1.5);
+  controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
+  controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
   controls('route').onclick=()=>{if(!target){status.textContent='Elige primero un destino.';return}
-    startGuide(target);X.closeMenu();X.toast('🧭 Ruta activada. Sigue la indicación superior.')};
+    if(X.M()!==main||X.st.scene!=='out'){
+     status.textContent='La ruta se puede activar al salir al exterior del continente.';return;
+    }
+    startGuide(target);
+    if(phone&&closePhone)closePhone();
+    else X.closeMenu();
+    X.toast('🧭 Ruta activada. Sigue las indicaciones superiores.');
+  };
   sel.onchange=()=>{const id=Number(sel.value);if(sel.value!==''){
-   const p=all[id];center={x:p.x,y:p.y};clampCenter();choose(p)
+   const p=all[id];center={x:p.x,y:p.y};clampCenter();choose(p);
   }};
-  const point=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height}};
-  cv.addEventListener('pointerdown',e=>{const p=point(e);down={...p,cx:center.x,cy:center.y};cv.setPointerCapture?.(e.pointerId)});
-  cv.addEventListener('pointermove',e=>{if(!down)return;
-   const p=point(e),v=view();center.x=down.cx-(p.x-down.x)/v.k;center.y=down.cy-(p.y-down.y)/v.k;
-   clampCenter();draw()});
-  cv.addEventListener('pointerup',e=>{if(!down)return;const p=point(e),travel=Math.hypot(p.x-down.x,p.y-down.y);down=null;
-   if(travel>10)return;
-   const pos=world(p.x,p.y);
-   let best=null,bd=22;
-   for(const a of all){const q=screen(a),d=Math.hypot(q.x-p.x,q.y-p.y);if(d<bd){bd=d;best=a}}
-   choose(best||{...pos,name:zone(pos.x,pos.y).replace(/^./,c=>c.toUpperCase())});
+  function selectTarget(i){
+   if(!all[i])return;sel.value=String(i);
+   center={x:all[i].x,y:all[i].y};zoom=Math.max(zoom,3.8);clampCenter();
+   choose(all[i]);search.value=all[i].name;results.style.display='none';
+  }
+  search.addEventListener('input',()=>{
+   const q=search.value.trim().toLocaleLowerCase('es-MX');
+   results.replaceChildren();
+   const matches=q?all.map((p,i)=>({...p,i})).filter(p=>p.name.toLocaleLowerCase('es-MX').includes(q)).slice(0,7):[];
+   results.style.display=matches.length?'block':'none';
+   for(const p of matches){
+    const item=document.createElement('button');item.type='button';
+    item.setAttribute('data-result',p.name);
+    item.textContent=p.icon+' '+p.name;
+    item.style.cssText='display:block;text-align:left;width:100%;font:700 11px system-ui;'+
+     'background:#fff;color:#355844;border:0;border-bottom:1px solid #dae8d6;padding:8px';
+    item.onclick=()=>selectTarget(p.i);results.append(item);
+   }
   });
-  cv.addEventListener('pointercancel',()=>down=null);
+  const point=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height}};
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  cv.addEventListener('pointerdown',e=>{
+   e.preventDefault();const p=point(e);
+   pointers.set(e.pointerId,p);cv.setPointerCapture?.(e.pointerId);
+   if(pointers.size===1){
+    down={...p,cx:center.x,cy:center.y};
+    suppressTap=false;
+   }else if(pointers.size===2){
+    const [a,b]=[...pointers.values()],mid=midpoint(a,b);
+    pinch={distance:Math.max(dist(a,b),1),zoom,mid,anchor:world(mid.x,mid.y)};
+    down=null;suppressTap=true;
+   }
+  });
+  cv.addEventListener('pointermove',e=>{
+   if(!pointers.has(e.pointerId))return;
+   const p=point(e);pointers.set(e.pointerId,p);
+   if(pinch&&pointers.size===2){
+    const [a,b]=[...pointers.values()],mid=midpoint(a,b);
+    zoom=clamp(pinch.zoom*dist(a,b)/pinch.distance,1,16);
+    const k=view().k;
+    center.x=pinch.anchor.x-(mid.x-CW/2)/k;
+    center.y=pinch.anchor.y-(mid.y-CH/2)/k;
+    clampCenter();repaint();return;
+   }
+   if(!down||pointers.size!==1)return;
+   const v=view();center.x=down.cx-(p.x-down.x)/v.k;
+   center.y=down.cy-(p.y-down.y)/v.k;
+   if(dist(p,down)>8)suppressTap=true;
+   clampCenter();repaint();
+  });
+  cv.addEventListener('pointerup',e=>{
+   if(!pointers.has(e.pointerId))return;
+   const p=point(e),wasSingle=pointers.size===1;
+   pointers.delete(e.pointerId);const tapped=wasSingle&&down&&dist(p,down)<9&&!suppressTap;
+   down=null;pinch=null;
+   if(!tapped){if(pointers.size===1)suppressTap=true;return}
+   const pos=world(p.x,p.y);
+   let best=null,bd=29;
+   for(const a of all){const q=screen(a),d=dist(q,p);if(d<bd){bd=d;best=a}}
+   choose(best||{...pos,name:'Punto marcado'});
+  });
+  cv.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);down=null;pinch=null});
+  cv.addEventListener('wheel',e=>{
+   e.preventDefault();
+   zoomAt(e.deltaY<0?1.18:1/1.18,point(e));
+  },{passive:false});
+
   draw();
  }
 
@@ -663,6 +914,32 @@ window.WalesaMainland=(()=>{
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
   H.tab.push(navigationTab);
+  H.ground.push((g,ox,oy,t)=>{
+   if(!main||X.M()!==main||X.st.scene!=='out')return;
+   const p=X.player,regional=zone(p.x,p.y),atPark=plazaDistance(p.x,p.y)<300;
+   if(!atPark&&!['forest','pueblo','valle'].includes(regional))return;
+   const evening=X.night(),count=evening?24:19,baseX=Math.floor(p.x/150)*150,baseY=Math.floor(p.y/150)*150;
+   g.save();
+   for(let i=0;i<count;i++){
+    const gx=baseX+(i%6-2)*75+hash(i,31)*55,
+      gy=baseY+(Math.floor(i/6)-1)*90+hash(i,51)*60;
+    if(coast(gx,gy)>.85||nearbyRoad(gx,gy,11)&&!atPark)continue;
+    const phase=i*2.37+hash(i,71)*6.28,
+     x=gx+Math.sin(t*.7+phase)*12-ox,
+     y=gy+Math.cos(t*.43+phase)*9-oy;
+    if(evening){
+     const a=.28+.27*(.5+.5*Math.sin(t*2.3+phase));
+     g.globalAlpha=a;g.fillStyle='#fff1a4';
+     g.beginPath();g.arc(x,y-6,1.3,0,Math.PI*2);g.fill();
+     g.globalAlpha=a*.21;g.beginPath();g.arc(x,y-6,6,0,Math.PI*2);g.fill();
+    }else{
+     g.globalAlpha=.24+.12*Math.sin(t+phase);
+     g.fillStyle=i%4===0?'#f5d3a3':i%3===0?'#e9bdd2':'#f5ead5';
+     g.fillRect(x,y,2+(i%3===0),1.3);
+    }
+   }
+   g.restore();
+  });
   H.inter.push(list=>{if(Game.X.M()!==main||Game.X.st.scene!=='out')return;
    for(const p of scenic)list.push({type:'v3Scenic',p,x:p.x,y:p.y,r:24,hy:30,label:'Conocer '+p.name})});
   H.act.unshift(o=>{if(o.type==='v3Scenic')return X.say(o.p.name,'Una nueva parada de Walesa con el mobiliario y la vegetación del mundo original.')});
@@ -683,5 +960,5 @@ window.WalesaMainland=(()=>{
  }
  document.addEventListener('DOMContentLoaded',register,{once:true});
  if(document.readyState!=='loading')register();
- return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,landmarks:P,get original(){return main}};
+ return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,destinations,startGuide,mountPhone,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();
