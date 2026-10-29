@@ -32,3 +32,17 @@ La versión de código fuente y recursos originales, incluidos los iconos PNG, s
 - Si paseas con **un solo NPC**, aparecerá **🧺 ¿Hacemos un picnic?** al hablarle; el picnic también lo reconoce como invitado.
 - Es posible compartir el picnic con invitados citados, sin permitir que varios NPCs te sigan durante el paseo.
 - El juego mantiene la misma clave de guardado `walesa-ds-v1`.
+
+
+## Actualización v32
+
+- Reparto en motoneta con 20 niveles, objetivos crecientes, rivales desde el nivel 3 y tramos controlados desde el 5.
+- Hospital en la isla con consultas, tratamiento de mascotas y farmacia.
+- Saciedad, humedad por lluvia, picaduras de abejas y enfermedad curable.
+- Impermeable, botas, paraguas y abrigo impermeable para mascotas.
+- 77 nuevos objetos emoji, compras en mochila, y recompensas físicas por encargos y favores.
+- Diálogos de saludo variados según el personaje y su historial.
+- El paseo sigue limitado a **un solo acompañante**; se conserva el picnic de v31.
+- La partida sigue usando la clave `walesa-ds-v1`.
+
+Los sistemas nuevos están en `walesa_v32.js`, referenciado desde `index.html` y cacheado en `sw.js`.
