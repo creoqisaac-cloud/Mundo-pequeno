@@ -12,6 +12,8 @@ on:
       - 'tests/navigation-additive-smoke.cjs'
       - 'tests/phone-map-park-smoke.cjs'
       - 'tests/visual-polish-smoke.cjs'
+      - 'tests/browser-smoke.cjs'
+      - '.github/workflows/validate-expansion.yml'
       - 'sw.js'
 
 permissions:
@@ -32,6 +34,7 @@ jobs:
           node --check tests/navigation-additive-smoke.cjs
           node --check tests/phone-map-park-smoke.cjs
           node --check tests/visual-polish-smoke.cjs
+          node --check tests/browser-smoke.cjs
           node - <<'NODE'
           const fs=require('node:fs'),vm=require('node:vm');
           const html=fs.readFileSync('index.html','utf8');
