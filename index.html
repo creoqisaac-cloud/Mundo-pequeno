@@ -9983,71 +9983,13 @@ window.Wardrobe=Wardrobe;
   X.invAdd(id,-1);if(window.Life?.bump)Life.bump(near.id,1);else{save.friend[near.id]=(save.friend[near.id]||0)+1;G.save()}
   X.toast('💗 '+npc.name+' recibió tu regalo. +1 amistad.');return true;
  }
- // Joystick analogico: un puntero propio; los toques en el mundo dejan de dar órdenes de caminar.
- const game=document.getElementById('game');const joy=document.createElement('div');joy.id='wcJoystick37';joy.setAttribute('role','group');joy.setAttribute('aria-label','Palanca virtual de movimiento');joy.innerHTML='<span class="wcJoyZone37"></span><span class="wcJoyKnob37"></span>';game.appendChild(joy);
- const knob=joy.querySelector('.wcJoyKnob37'),zone=joy.querySelector('.wcJoyZone37');let pointer=null,vx=0,vy=0,editing=false;
- function release(){pointer=null;vx=vy=0;knob.style.transform='translate(0,0)'}
- function renderJoystick(){joy.classList.toggle('on',!!cfg.enabled||editing);joy.classList.toggle('editing38',editing);joy.style.left=cfg.x+'%';joy.style.top=cfg.y+'%';joy.style.width=cfg.size+'px';joy.style.height=cfg.size+'px';joy.style.opacity=cfg.opacity/100;zone.style.width=zone.style.height=cfg.deadzone*2+'%';release()}
- function locate(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,R=Math.max(12,cfg.size*cfg.travel/100);let dx=e.clientX-cx,dy=e.clientY-cy;const l=Math.hypot(dx,dy),mag=Math.min(1,l/R);if(l>R){dx*=R/l;dy*=R/l}knob.style.transform=`translate(${dx}px,${dy}px)`;const dead=cfg.deadzone/100;const power=mag<=dead?0:clamp((mag-dead)/Math.max(.05,1-dead)*cfg.sensitivity/100,0,1.4);vx=l>0?dx/Math.max(.01,Math.hypot(dx,dy))*power:0;vy=l>0?dy/Math.max(.01,Math.hypot(dx,dy))*power:0}
- joy.addEventListener('pointerdown',e=>{if(!cfg.enabled||pointer!==null||X.st.mg||X.st.menu||X.st.busy||X.st.poseLock||X.st.mode!=='play')return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;try{joy.setPointerCapture(pointer)}catch(_){}X.player.path=null;X.player.pending=null;locate(e)});
- joy.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;e.preventDefault();locate(e)});
- for(const ev of ['pointerup','pointercancel','lostpointercapture'])joy.addEventListener(ev,e=>{if(e.pointerId===pointer)release()});
- window.addEventListener('blur',release);document.addEventListener('visibilitychange',()=>{if(document.hidden)release()});
- function vector(){if(editing)return null;if(!cfg.enabled||pointer===null||X.st.busy||X.st.poseLock||X.st.menu||X.st.mg||X.st.mode!=='play'){if(pointer!==null&& (X.st.busy||X.st.poseLock||X.st.menu||X.st.mg))release();return cfg.enabled?{x:0,y:0}:null}return{x:vx,y:vy}}
-
- // Ajuste en el propio escenario, sin porcentajes ni controles técnicos.
- const guide=document.createElement('div');guide.id='wcJoyGuide38';
- guide.innerHTML='<div class="bar38" role="dialog" aria-label="Acomoda tu palanca"><b>🕹️ Coloca tu palanca</b><p>Arrástrala con el dedo a donde te quede cómoda.</p><div class="row38"><button data-s="98">Pequeña</button><button data-s="126">Normal</button><button data-s="154">Grande</button></div><div class="row38"><button data-cancel>Cancelar</button><button data-done>✓ Listo</button></div><button data-touch>👆 Prefiero tocar el suelo</button></div>';game.appendChild(guide);
- css.textContent+="#game #wcJoystick37.editing38{display:flex!important;z-index:98!important;opacity:1!important;border:3px dashed #fff7f1!important;box-shadow:0 0 0 5px #db82a8aa,0 4px 20px #23152b77!important}\n#game #wcJoyGuide38{position:absolute;inset:0;z-index:96;display:none;background:linear-gradient(#35274170,#35274110 45%,#35274140);touch-action:none}\n#game #wcJoyGuide38.on{display:block}\n#game #wcJoyGuide38 .bar38{position:absolute;top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(335px,calc(100% - 28px));background:#fffaf6f5;border-radius:24px;padding:14px;box-shadow:0 9px 0 #c49db078,0 12px 26px #23152b55;text-align:center;color:#754e64;font:800 13px Nunito,sans-serif}\n#game #wcJoyGuide38 b{font-size:18px}#game #wcJoyGuide38 p{font-size:12px;margin:5px 0 9px;line-height:1.3}\n#game #wcJoyGuide38 .row38{display:flex;gap:7px;margin:8px 0}\n#game #wcJoyGuide38 button{flex:1;min-height:40px;border-radius:13px;background:#f5e0ea;font:900 12px Nunito,sans-serif;padding:7px;color:#744963}\n#game #wcJoyGuide38 button.selected{background:#fbd0e3;outline:2px solid #c96a97}\n#game #wcJoyGuide38 button[data-done]{background:#c96596;color:white}\n#game #wcJoyGuide38 button[data-touch]{width:100%;background:transparent;text-decoration:underline;min-height:28px}\n@media(max-height:640px){#game #wcJoyGuide38 .bar38{top:6px;padding:8px}#game #wcJoyGuide38 p{margin:1px 0}}";
- let placementPointer=null,previous=null;
- function reposition(e){const r=game.getBoundingClientRect(),w=Math.max(1,r.width),h=Math.max(1,r.height);
-  const minX=Math.min(49,(cfg.size/2+8)/w*100),minY=Math.min(49,(cfg.size/2+8)/h*100);
-  cfg.x=clamp((e.clientX-r.left)/w*100,minX,100-minX);cfg.y=clamp((e.clientY-r.top)/h*100,minY,100-minY);
-  joy.style.left=cfg.x+'%';joy.style.top=cfg.y+'%'}
- joy.addEventListener('pointerdown',e=>{if(!editing)return;
-  e.preventDefault();e.stopImmediatePropagation();placementPointer=e.pointerId;
-  try{joy.setPointerCapture(e.pointerId)}catch(_){}reposition(e)},true);
- joy.addEventListener('pointermove',e=>{if(!editing||e.pointerId!==placementPointer)return;
-  e.preventDefault();e.stopImmediatePropagation();reposition(e)},true);
- for(const t of ['pointerup','pointercancel'])joy.addEventListener(t,e=>{
-  if(!editing||e.pointerId!==placementPointer)return;e.preventDefault();e.stopImmediatePropagation();
-  placementPointer=null;try{joy.releasePointerCapture(e.pointerId)}catch(_){}},true);
- function updateSizes(){guide.querySelectorAll('[data-s]').forEach(b=>b.classList.toggle('selected',+b.dataset.s===cfg.size))}
- function showSetup(){if(editing)return;previous={...cfg};release();editing=true;cfg.enabled=false;
-  X.player.path=null;X.player.pending=null;
-  if(X.st.menu)X.closeMenu();guide.classList.add('on');updateSizes();renderJoystick();joy.style.opacity='1'}
- function finish(ok,touch){placementPointer=null;editing=false;release();guide.classList.remove('on');
-  if(ok){cfg.enabled=true;cfg.configured=true;cfg.v38OK=true}
-  else if(touch){cfg.enabled=false;cfg.configured=true;cfg.v38OK=true}
-  else Object.assign(cfg,previous||defaults);
-  previous=null;renderJoystick();G.save();
-  if(ok)X.toast('🕹️ ¡Listo! Mueve la palanca para caminar.');
-  if(touch)X.toast('👆 Volviste al movimiento táctil.')}
- guide.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{cfg.size=+b.dataset.s;updateSizes();renderJoystick();joy.style.opacity='1'});
- guide.querySelector('[data-done]').onclick=()=>finish(true,false);
- guide.querySelector('[data-cancel]').onclick=()=>finish(false,false);
- guide.querySelector('[data-touch]').onclick=()=>finish(false,true);
- H.tab.push((t,box)=>{if(t!=='opts')return;queueMicrotask(()=>{
-  if(X.st.tab!=='opts'||!box.isConnected||box.querySelector('#wcJoyOpt38'))return;
-  const btn=document.createElement('button');btn.id='wcJoyOpt38';btn.className='orow';
-  btn.innerHTML='🕹️ Cómo caminar <span>'+(cfg.enabled?'Palanca':'Tocando el suelo')+'</span>';
-  btn.onclick=()=>{if(box.querySelector('#wcJoyChoice38'))return;
-   const group=document.createElement('div');group.id='wcJoyChoice38';group.className='wcJoyChoice37';
-   group.innerHTML='<div class="row38" style="display:flex;gap:8px;margin:8px 0"><button class="orow" data-touch style="flex:1;justify-content:center">👆 Tocar suelo</button><button class="orow" data-joy style="flex:1;justify-content:center">🕹️ Palanca</button></div>'+(cfg.enabled?'<button class="orow" data-adjust>✋ Mover mi palanca <span>›</span></button>':'');
-   btn.after(group);
-   group.querySelector('[data-touch]').onclick=()=>{cfg.enabled=false;cfg.v38OK=true;cfg.configured=true;release();renderJoystick();G.save();X.showTab('opts')};
-   group.querySelector('[data-joy]').onclick=showSetup;
-   const adj=group.querySelector('[data-adjust]');if(adj)adj.onclick=showSetup;
-  };box.insertBefore(btn,box.firstChild);
- })});
-
- renderJoystick();
- window.WalesaJoystick37={enabled:()=>!!cfg.enabled&&!editing,vector,release,setup:showSetup,config:cfg};
- window.WalesaJoystick38=window.WalesaJoystick37;
+ // v39: joystick anterior retirado. Movimiento táctil seguro hasta cargar el nuevo control.
+ window.WalesaJoystick37={enabled:()=>false,vector:()=>null,release:()=>{}};
  window.WalesaBag37={render:bagUI,useOther};
 })();
 </script>
 <script src="./picnic_v31.js"></script>
+<script src="./native_joystick39.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
