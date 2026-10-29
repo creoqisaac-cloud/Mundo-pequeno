@@ -1584,8 +1584,14 @@ const World=(()=>{
   for(const b of CITY.build)MAIN.build.push(Object.assign({},b,{x:b.x+o[0],y:b.y+o[1]}));MAIN.plots=CITY.plots.map(p=>Object.assign({},p,{x:p.x+o[0],y:p.y+o[1]}));MAIN.centers.city=[2140,560];
   const bio=MAIN.biome;MAIN.biome=(x,y,m)=>x>1580||(x>1380&&Math.abs(y-662)<70&&Math.hypot((x-750)/700,(y-660)/620)>.86)?'city':bio(x,y,m)}
  MAIN.paths.push([1110,602,1110,650]);
- MAIN.paths.push([2340,912,2550,950]); /* conexión sureste con los nuevos caminos */
- function islandDf(m){const so=m.seed%997;if(m.cityOff){const isl=(x,y)=>Math.hypot((x-m.cx)/m.rx,(y-m.cy)/m.ry)+(vnoise((x+so)/70,y/70)-.5)*.13+(vnoise(x/22,(y+so)/22)-.5)*.035,cty=(x,y)=>Math.pow(Math.pow(Math.abs(x-2140)/530,6)+Math.pow(Math.abs(y-660)/480,6),1/6)+(vnoise((x+so)/60,y/60)-.5)*.05,brg=(x,y)=>Math.pow(Math.pow(Math.abs(x-1540)/210,6)+Math.pow(Math.abs(y-662)/48,6),1/6)*.95;return(x,y)=>Math.min(isl(x,y),cty(x,y),brg(x,y))}if(m.square)return(x,y)=>{const nx=Math.abs(x-m.cx)/m.rx,ny=Math.abs(y-m.cy)/m.ry;return Math.pow(Math.pow(nx,6)+Math.pow(ny,6),1/6)+(vnoise((x+so)/60,y/60)-.5)*.05};return(x,y)=>Math.hypot((x-m.cx)/m.rx,(y-m.cy)/m.ry)+(vnoise((x+so)/70,y/70)-.5)*.13+(vnoise(x/22,(y+so)/22)-.5)*.035}
+ MAIN.paths.push([2340,912,2550,950],[2550,950,2695,930]);
+ MAIN.roads.push([2550,930,2700,930]);
+ MAIN.build.push({id:'expMirador',job:'expOffice',city:1,x:2585,y:862,wall:'#e5f0e8',acc:'#7eaa85',icon:'🗺️',name:'Mirador del Gran Continente'});
+ /* El malecón este forma parte del suelo de Ciudad Corazón y llega a la
+    siguiente región a pie. La isla de v51 permanece completa y jugable. */
+ function islandDf(m){const so=m.seed%997;if(m.cityOff){const isl=(x,y)=>Math.hypot((x-m.cx)/m.rx,(y-m.cy)/m.ry)+(vnoise((x+so)/70,y/70)-.5)*.13+(vnoise(x/22,(y+so)/22)-.5)*.035,cty=(x,y)=>Math.pow(Math.pow(Math.abs(x-2140)/530,6)+Math.pow(Math.abs(y-660)/480,6),1/6)+(vnoise((x+so)/60,y/60)-.5)*.05,brg=(x,y)=>Math.pow(Math.pow(Math.abs(x-1540)/210,6)+Math.pow(Math.abs(y-662)/48,6),1/6)*.95,
+   este=(x,y)=>Math.pow(Math.pow(Math.abs(x-2610)/185,6)+Math.pow(Math.abs(y-930)/112,6),1/6);
+  return(x,y)=>Math.min(isl(x,y),cty(x,y),brg(x,y),este(x,y))}if(m.square)return(x,y)=>{const nx=Math.abs(x-m.cx)/m.rx,ny=Math.abs(y-m.cy)/m.ry;return Math.pow(Math.pow(nx,6)+Math.pow(ny,6),1/6)+(vnoise((x+so)/60,y/60)-.5)*.05};return(x,y)=>Math.hypot((x-m.cx)/m.rx,(y-m.cy)/m.ry)+(vnoise((x+so)/70,y/70)-.5)*.13+(vnoise(x/22,(y+so)/22)-.5)*.035}
 
  /* Genera el suelo en rebanadas (generador) para que la pantalla nunca se congele */
  function* genGround(m){
