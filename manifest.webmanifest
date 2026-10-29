@@ -1,0 +1,20 @@
+{
+  "name": "Isla de Walesa",
+  "short_name": "Walesa",
+  "description": "Una carta y una isla hechas para ti.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12281b",
+  "theme_color": "#12281b",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
