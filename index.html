@@ -5645,7 +5645,7 @@ const Life=(()=>{const V=World,X=Game.X,H=X.HOOKS,G=Game.G,pick=a=>a[Math.floor(
  const GLY=['☀','☾','✦'],WORD=['sale el sol','despierta la luna','brilla la estrella'];
  const riddle=o=>'«Primero '+WORD[o[0]]+', luego '+WORD[o[1]]+' y al final '+WORD[o[2]]+'.»';
  const ST=()=>save.isl||(save.isl={});const S=m=>{const s=ST();return s[m.id]||(s[m.id]={})};
- const myst=()=>{const m=X.M();return m&&!m.main&&!m.city&&!m.dream&&X.st.scene==='out'?m:null};
+ const myst=()=>{const m=X.M();return m&&!m.main&&!m.city&&!m.dream&&!m.topography&&X.st.scene==='out'?m:null};
  /* dónde va cada cosa en esta isla (siempre igual para la misma isla) */
  const F={};
  function feats(m){if(F[m.id])return F[m.id];const R=V.rng(m.seed*7+3),spot=(minD,maxD)=>{for(let i=0;i<300;i++){const x=40+R()*(m.MW-80),y=40+R()*(m.MH-80),d=m.islandD(x,y);if(d<minD||d>maxD||V.blockedOut(x,y,14))continue;if(Math.hypot(x-m.pier.x,y-m.pier.y)<90)continue;return[x,y]}return[m.cx,m.cy]};
@@ -8074,7 +8074,7 @@ window.Wardrobe=Wardrobe;
   if(this.curMood()==='happy'&&this.z===0&&Math.random()<dt*1.4)this.vy=55};
  /* ── Doki: escondido en las islas misteriosas ── */
  let rolled='';
- H.update.push(dt=>{const m=X.M();if(!m||m.main||m.city||m.kind==='nube'||X.st.scene!=='out')return;
+ H.update.push(dt=>{const m=X.M();if(!m||m.main||m.city||m.topography||m.kind==='nube'||X.st.scene!=='out')return;
   if(rolled!==m.id){rolled=m.id;if(uniq().doki)return;save.dokiTry=(save.dokiTry||0)+1;const lucky=Math.random()<.12||save.dokiTry>=6;if(!lucky)return;
    let x=0,y=0;for(let k=0;k<200;k++){x=60+Math.random()*(m.MW-120);y=60+Math.random()*(m.MH-120);if(m.islandD(x,y)<.8&&!V.blockedOut(x,y,8)&&Math.hypot(x-m.pier.x,y-m.pier.y)>220)break}
    X.wild.push({id:'doki',sp:'doki',var:0,x,y,hx:x,hy:y,tx:x,ty:y,wait:2,dir:2,frame:0,anim:0,t:0,legend:1})}
@@ -9062,7 +9062,7 @@ window.Wardrobe=Wardrobe;
  const iname=k=>{if(!k)return'';if(String(k).startsWith('f:'))return'un pescado';const I=Talk.ITEMS[k];return I?I[0].toLowerCase():k};
  const plural=k=>({hongo:'hongos',concha:'conchas',dulce:'caramelos',chile:'chiles',cristal:'cristales',estrella:'estrellas',flor:'flores'}[k]||iname(k));
  const nm=id=>(Talk.P[id]||{name:id}).name;
- const isMyst=m=>!!(m&&!m.main&&!m.city&&!m.dream);
+ const isMyst=m=>!!(m&&!m.main&&!m.city&&!m.dream&&!m.topography);
  /* ── estilos ── */
  const css=document.createElement('style');css.textContent=
   '#game #choices{max-height:calc(100% - 210px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;padding:2px 4px 8px;scrollbar-width:none}#game #choices::-webkit-scrollbar{display:none}'+
