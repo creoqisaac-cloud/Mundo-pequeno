@@ -244,7 +244,7 @@ window.WalesaMainland=(()=>{
   // Cada tipología conserva las colisiones, puertas y sprites del motor.
   const districtHome=type==='city'&&!urban;
   const styles=[['#f8e9d8','#c88670'],['#e7eef8','#769cbd'],['#f4e2ef','#ad83a8'],['#e6f0dc','#87a16f'],['#fff0d5','#d5a16d'],['#e6e1f3','#8576b1'],['#f0e3d7','#8f9d9d']];const urbanStyles=[['#e8e5df','#9aa3b7'],['#e9e1f0','#9989b7'],['#e1edf0','#7c9fa9'],['#f2e7d7','#b9967e'],['#e6e9dd','#929c7a']];const palette=(urban?urbanStyles:styles)[Math.floor(hash(x>>4,y>>4)*(urban?urbanStyles.length:styles.length))];const b={id:'v3_'+id,name,x,y,job:job||undefined,city:urban?1:0,districtHome,wall:palette[0],roof:palette[1],
-    acc:urban?'#9eafbc':roof,icon:urban?'🏬':'🏠'};
+    acc:urban?'#9eafbc':palette[1],icon:urban?'🏬':'🏠'};
   const variant=Math.floor(hash(x+137,y-211)*6);b.facade=variant;
   if(urban){b.acc=palette[1];b.icon=job==='shop'?'🛍️':job==='papers'?'📚':job==='delivery'?'📮':'🏠';
    b.day=facade(V.cityBuilding(b.wall,b.acc,b.icon,false),b,false);
