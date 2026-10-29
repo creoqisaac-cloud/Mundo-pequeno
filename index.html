@@ -8441,7 +8441,12 @@ window.Wardrobe=Wardrobe;
  .fon .lst{flex:1;overflow-y:auto;padding:4px 10px 10px;display:flex;flex-direction:column;gap:7px;-webkit-overflow-scrolling:touch}
  .fon .it{display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:9px 10px;box-shadow:0 2px 0 #eadbe3;border:0;text-align:left;font:700 12px Nunito,sans-serif;color:#3a2630;width:100%}
  .fon .it b{display:block;font-size:13px}.fon .it small{display:block;color:#8a6a78;font-size:10.5px}.fon .it i{font-style:normal;font-size:22px}
- .fon .home{margin:8px auto 0;width:44px;height:6px;border-radius:3px;background:#3a2630;border:0;opacity:.6}
+ .fon .home{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;flex:0 0 38px;margin:4px auto 0;width:170px;max-width:90%;border:0;border-radius:18px;background:transparent;color:#633c55;touch-action:none;cursor:pointer;opacity:1}
+ .fon .home:before{content:'';display:block;width:52px;height:5px;border-radius:9px;background:#5a3547;box-shadow:0 1px 0 #ffe5f1}
+ .fon .home:after{content:'↑ Desliza para guardar';font:800 10px Nunito,sans-serif;line-height:1.2}
+ .fon .home:active{background:#ffffff44}
+ .fon:not(.on){pointer-events:none;visibility:hidden}
+ .fon.on{visibility:visible}
  .fon .call{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}.fon .call .av{width:96px;height:96px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 4px #f490b4}.fon .call canvas{width:84px;height:84px}
  #game.fon-on #dlg{z-index:46}#game.fon-on #choices{z-index:47}#game.fon-on #toast{z-index:48}
  .fon .call b{font:900 18px Nunito,sans-serif}.fon .call small{color:#8a6a78;font:800 12px Nunito,sans-serif}.fon .call .row{display:flex;gap:26px;margin-top:10px}.fon .call .row button{width:58px;height:58px;border-radius:50%;border:0;font-size:24px;color:#fff}`;document.head.appendChild(css);
@@ -8451,9 +8456,41 @@ window.Wardrobe=Wardrobe;
  const fon=document.createElement('div');fon.className='fon';fon.innerHTML='<div class="scr"></div><button class="home" aria-label="Cerrar"></button>';gm.appendChild(fon);const scr=fon.querySelector('.scr');
  fon.querySelector('.home').onclick=e=>{e.stopPropagation();close()};
  let openFlag=false;
+ /* Gestos de teléfono: iniciar desde la parte inferior y deslizar hacia arriba.
+    Las listas se siguen desplazando con normalidad y no disparan el gesto. */
+ let phoneSwipe=null;
+ const startedAtBottom=(target,x,y)=>{
+   const bounds=fon.getBoundingClientRect(),onPhone=fon.contains(target);
+   const onBar=!!(target.closest&&target.closest('.fon .home'));
+   if(target.closest&&target.closest('.fon .lst'))return false;
+   if(target.closest&&target.closest('button')&&!onBar)return false;
+   const inPhoneX=x>=bounds.left-18&&x<=bounds.right+18;
+   const inBottom=y>=bounds.bottom-105&&y<=bounds.bottom+18;
+   const atScreenBottom=y>=innerHeight-70&&inPhoneX;
+   return inPhoneX&&(onBar||(onPhone&&inBottom)||atScreenBottom);
+ };
+ const saveSwipe=(x,y,target,id)=>{
+   if(!openFlag||!startedAtBottom(target,x,y)){phoneSwipe=null;return}
+   phoneSwipe={x,y,id,t:performance.now()};
+ };
+ const endSwipe=(x,y,id)=>{
+   const start=phoneSwipe;phoneSwipe=null;
+   if(!start||!openFlag||start.id!==id)return false;
+   const rise=start.y-y,side=Math.abs(start.x-x);
+   if(rise<70||side>Math.max(55,rise*.8))return false;
+   close();return true;
+ };
+ gm.addEventListener('touchstart',e=>{if(e.touches.length!==1){phoneSwipe=null;return}const t=e.touches[0];saveSwipe(t.clientX,t.clientY,e.target,t.identifier)},{capture:true,passive:true});
+ gm.addEventListener('touchmove',e=>{if(!phoneSwipe||e.touches.length!==1)return;const t=e.touches[0];if(t.identifier!==phoneSwipe.id)return;if(phoneSwipe.y-t.clientY>20&&Math.abs(phoneSwipe.x-t.clientX)<85&&e.cancelable)e.preventDefault()},{capture:true,passive:false});
+ gm.addEventListener('touchend',e=>{const t=[...e.changedTouches].find(q=>phoneSwipe&&q.identifier===phoneSwipe.id);if(!t)return;if(endSwipe(t.clientX,t.clientY,t.identifier)&&e.cancelable)e.preventDefault()},{capture:true,passive:false});
+ gm.addEventListener('touchcancel',()=>{phoneSwipe=null},{capture:true,passive:true});
+ /* Ratón o lápiz: arrastrar desde el borde inferior funciona también en PC. */
+ gm.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch'&&e.isPrimary)saveSwipe(e.clientX,e.clientY,e.target,e.pointerId)},true);
+ gm.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'&&endSwipe(e.clientX,e.clientY,e.pointerId)){e.preventDefault();e.stopPropagation()}},true);
+ window.addEventListener('keydown',e=>{if(openFlag&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close()}},true);
  function bar(){const d=new Date();return`<div class="bar"><span>${String(gameHour()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</span><span>📶 ♡ 🔋</span></div>`}
  function open(view){if(X.st.mg||X.st.busy&&!ringing)return;openFlag=true;X.st.menu=true;fon.classList.add('on');gm.classList.add('fon-on');(view||homeV)();G.sfx.sel&&G.sfx.sel()}
- function close(){openFlag=false;fon.classList.remove('on');gm.classList.remove('fon-on');X.st.menu=false;G.sfx.back&&G.sfx.back()}
+ function close(){if(!openFlag&&!fon.classList.contains('on'))return;phoneSwipe=null;openFlag=false;fon.classList.remove('on');gm.classList.remove('fon-on');X.st.menu=false;G.sfx.back&&G.sfx.back()}
  btn.addEventListener('click',e=>{e.stopPropagation();if(ringing){answer();return}openFlag?close():open()});
  const APPS=[['calls','📞','Llamadas','#bfe6fa'],['missions','📋','Encargos','#fff1a8'],['games','🕹️','Juegos','#e6d9ff'],['metro','🚇','Metro','#c8f0c0'],['weather','🌤️','Hoy','#fde3c8']];
  function homeV(){scr.innerHTML=bar()+`<div class="hd">♡ Hola, ${X.kname()}</div><div class="apps">${APPS.map(([k,i,n,c])=>`<button class="app" data-a="${k}"><span style="background:${c}">${i}</span>${n}${k==='missions'&&F().missions.filter(m=>!m.done).length?' ('+F().missions.filter(m=>!m.done).length+')':''}</button>`).join('')}</div>`;
