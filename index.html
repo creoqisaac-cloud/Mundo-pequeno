@@ -1558,8 +1558,7 @@ const World=(()=>{
  const MAIN={id:'main',MW:1500,MH:1320,cx:750,cy:660,rx:700,ry:620,seed:1023,main:true,
   build:[{id:'home',room:0,x:870,y:878,wall:'#fde3ea',roof:'#e8708f',name:'Tu casita'},{id:'cinnaH',room:1,x:480,y:566,wall:'#eef6fb',roof:'#6aa0c8',name:'Casa de Cinnamoroll'},{id:'melodyH',room:2,x:1020,y:566,wall:'#e0f0d8',roof:'#e48aa8',name:'Casa de My Melody'},{id:'kuromiH',room:3,x:630,y:878,wall:'#e1d8ee',roof:'#5d4a7e',name:'Casa de Kuromi'},
    {id:'hall',job:'papers',x:620,y:482,wall:'#f4ead8',roof:'#7a9a6a',name:'Ayuntamiento',sign:'scroll',flag:true},{id:'shop',job:'shop',x:880,y:482,wall:'#fff3f6',roof:'#e8456f',name:'Boutique Kitty',sign:'bow',awning:['#ef7a9a','#ffffff']},
-   {id:'pizza',job:'pizza',x:506,y:758,wall:'#fbeedc',roof:'#c9563c',name:'Pizzería Purin',sign:'pizza',awning:['#e2553f','#fff6e6']},{id:'post',job:'delivery',x:994,y:758,wall:'#e8f3fb',roof:'#4f86c6',name:'Correo Nube',sign:'mail',awning:['#5a9be0','#ffffff']},
-   {id:'hospital32',job:'hospital32',x:1110,y:918,wall:'#f9fef9',roof:'#65b9ba',name:'Hospital de los Corazones',sign:'heart',awning:['#ffffff','#a8dbd8']}],
+   {id:'pizza',job:'pizza',x:506,y:758,wall:'#fbeedc',roof:'#c9563c',name:'Pizzería Purin',sign:'pizza',awning:['#e2553f','#fff6e6']},{id:'post',job:'delivery',x:994,y:758,wall:'#e8f3fb',roof:'#4f86c6',name:'Correo Nube',sign:'mail',awning:['#5a9be0','#ffffff']}],
   stands:[{id:'cotton',job:'cotton',x:750,y:232,c:['#f490b4','#ffffff'],icon:'cotton',name:'Puesto de algodón'},{id:'pinata',job:'pinata',x:1250,y:640,c:['#e8456f','#f2c230'],icon:'pinata',name:'Puesto de piñatas'}],
   spots:{tree:{x:750,y:366},gazebo:{x:896,y:660},picnic:{x:632,y:660},mail:{x:714,y:586},sign:{x:792,y:706},plaza:{x:750,y:640},pier:{x:750,y:1300}},
   pier:{x:740,y:1218,w:20,h:96},boat:{x:776,y:1304},pond:{x:250,y:598,rx:44,ry:24,c1:'#55a6d4',c2:'#3f8fc4',edge:'#2f6048'},
@@ -1574,7 +1573,8 @@ const World=(()=>{
    {id:'mascotas',job:'mascotas',city:1,x:760,y:278,wall:'#e3f6ee',acc:'#4fa67a',icon:'🐾',name:'Tienda de mascotas'},{id:'autos',job:'autos',city:1,x:900,y:278,wall:'#e3eefb',acc:'#5a7fd6',icon:'👟',name:'Zapatería Pasitos'},
    {id:'helados',job:'helados',city:1,x:300,y:628,wall:'#fff3dc',acc:'#f29a5c',icon:'🍦',name:'Heladería Chococat'},{id:'arcade',job:'arcade',city:1,x:440,y:628,wall:'#2e2a4a',acc:'#f490b4',icon:'🕹️',name:'Salón de juegos'},
    {id:'inmob',job:'inmob',city:1,x:760,y:628,wall:'#f4ead8',acc:'#7a9a6a',icon:'🏡',name:'Bienes raíces'},{id:'pasteles',job:'pasteles',city:1,x:900,y:628,wall:'#fde9f3',acc:'#f490b4',icon:'🧁',name:'Pastelería'},
-   {id:'tren',job:'train',city:1,x:420,y:150,wall:'#f1e3d3',acc:'#5a7fd6',icon:'🚆',name:'Estación de tren'}],
+   {id:'tren',job:'train',city:1,x:420,y:150,wall:'#f1e3d3',acc:'#5a7fd6',icon:'🚆',name:'Estación de tren'},
+   {id:'hospital32',job:'hospital32',city:1,x:530,y:810,wall:'#f5fffb',acc:'#64b9b0',icon:'💗',name:'Hospital de los Corazones'}],
   plots:[{id:'p1',x:300,y:800,price:2500},{id:'p2',x:440,y:800,price:3500},{id:'p3',x:760,y:800,price:5000},{id:'p4',x:900,y:800,price:6500},{id:'p5',x:760,y:150,price:9000},{id:'p6',x:900,y:150,price:12000}]};
  MAIN.build.push({id:'station',job:'train',x:1110,y:596,wall:'#f1e3d3',roof:'#5a7fd6',name:'Estación de tren',sign:'heart',awning:['#5a9be0','#ffffff']});
  /* La ciudad ahora es parte de la isla: un barrio al este, unido por un puente */
@@ -2965,7 +2965,7 @@ const Game=(()=>{
 
  /* ── Correo Nube: reparto en motoneta ── */
  MG.delivery={start(){const W=G.W,c=save.delivery32||(save.delivery32={level:1,best:0,wins:0}),level=Math.max(1,Math.min(20,c.level||1)),goal=4+level*2;Object.assign(this,{level,goal,checkT:0,checkDone:0,rival:level>=3?rnd(.8,1.4):0,rivalBoxes:0,t:0,dur:45+(level-1)*8,y:0,speed:80,x:W/2,tx:W/2,objs:[],next:28,del:0,miss:0,stun:0,slow:0,over:false,fly:[]});G.hint('📦 Nivel '+level+' · objetivo: '+goal+' entregas. '+(level>=3?'🏁 ¡Un mensajero rival también reparte! ':'')+'Desliza para conducir y acércate a los buzones.');setTimeout(()=>{if(Game.st.mg===this)G.hint('')},3200);this.hud()},
-  hud(){G.hud('📦 '+this.del+'/'+this.goal+(this.level>=3?' · 🛵 '+Math.floor(this.rivalBoxes):''),'⏱ '+Math.max(0,Math.ceil(this.dur-this.t))+' · Nv '+this.level)},
+  hud(){G.hud('📦 '+this.del+'/'+this.goal+(this.level>=3?' · 🛵 '+this.rivalBoxes:''),'⏱ '+Math.max(0,Math.ceil(this.dur-this.t))+' · Nv '+this.level)},
   down(x){this.tx=x},move(x){this.tx=x},
   road(){const W=G.W,rw=Math.min(W*.66,170);return{l:W/2-rw/2,r:W/2+rw/2}},
   update(dt){if(this.over)return;const W=G.W,H=G.H,R=this.road(),py=H*.76;this.t+=dt;
@@ -7486,6 +7486,7 @@ window.Wardrobe=Wardrobe;
   moda:{floor:['#efe4ff','#e2d4f7'],kp:'kuromi',props:[['rack',44,104,['#f490b4','#9b6bd0','#7ad0e6']],['rack',212,104,['#3a2630','#e8456f','#ffffff']],['mirror',30,160],['mannequin',220,160]],look:['Vestidos, faldas y suéteres de temporada.','Un espejo enorme con foquitos alrededor.'],act:'👗 Ver la ropa'},
   salon:{floor:['#fde3ea','#f6d2dc'],kp:'mimmy',props:[['salonchair',48,112],['salonchair',208,112],['mirror',24,104],['plant',230,170],['bottles',40,164]],look:['Sillas de peluquería rosas que suben y bajan.','Botellitas de champú de fresa y de nube.'],act:'✂️ Cambiar mi look'},
   mascotas:{floor:['#e3f6ee','#d2ecdf'],kp:'pochacco',props:[['petbed',44,112],['petbed',212,112],['foodbags',36,162],['tank',214,158]],look:['Camitas acolchonadas para mascotas.','Una pecera con burbujitas.'],act:'🐾 Ver la tienda'},
+  hospital32:{floor:['#e8f9f4','#d9f1ed'],kp:'mimmy',props:[['medcab',42,106],['medbed',213,116],['heartmonitor',42,163],['petclinic',213,163]],look:['🩹 Vendas, botiquines y medicinas están ordenados en la vitrina.','🛏️ Camilla con sábanas limpias; huele a jabón y a flores.'],act:'🩺 Hablar con Enfermera Mimi'},
   autos:{floor:['#e3eefb','#d3e1f3'],kp:'keroppi',props:[['shoeshelf',40,104],['shoeshelf',216,104],['bench2',46,160],['mirror',222,160]],look:['Tenis, botitas y zapatillas de todos los colores.','Una banquita para probarte los zapatos.'],act:'👟 Ver zapatos'},
   helados:{floor:['#fff3dc','#f6e5c6'],kp:'chococat',props:[['freezer',58,112],['table',212,112],['table',60,160],['table',200,160]],look:['Una vitrina helada con quince sabores.','Mesitas con servilleteros en forma de cono.'],act:'🍦 Atender la heladería'},
   arcade:{floor:['#3a3458','#332e50'],dark:'rgba(40,20,80,.18)',kp:'badtz',props:[['cabinet',36,104],['cabinet',62,104],['cabinet',194,104],['cabinet',220,104],['claw',40,160],['plant',226,170]],look:['Las maquinitas hacen bip bip y brillan.','Una máquina de garra llena de peluches.'],act:'🕹 Jugar'},
@@ -7549,7 +7550,12 @@ window.Wardrobe=Wardrobe;
   toys:()=>sp('toys',40,50,20,48,g=>{P.wc(g,P.RR(1,1,38,47,1.6),'#e3f6ee',{lw:.5});for(let r=0;r<3;r++){P.ln(g,[[3,15+r*15],[37,15+r*15]],'#4fa67a',.8);for(let k=0;k<3;k++){const x=9+k*11,y=10+r*15,c=['#d9a56a','#f490b4','#7ad0e6','#f6d26b','#c8b5e8'][(k+r*2)%5];P.wc(g,P.E(x,y+1,3.6,3.4),c,{lw:.35});P.wc(g,P.E(x-2.6,y-2,1.3,1.3),c,{lw:.3});P.wc(g,P.E(x+2.6,y-2,1.3,1.3),c,{lw:.3});P.dot(g,x-1,y,.5,'#3a2630');P.dot(g,x+1,y,.5,'#3a2630')}}}),
   blocks:()=>sp('blocks',34,22,17,21,g=>{for(let i=0;i<5;i++)P.wc(g,P.RR(2+(i%3)*10+(i>2?5:0),i>2?3:12,9,9,1),['#e8456f','#f6d26b','#7ad0e6','#8bd18b','#9b6bd0'][i],{lw:.35,gloss:.3})}),
   lowtable:()=>sp('lowtable',40,22,20,21,g=>{P.wc(g,P.RR(2,6,36,7,2),'#8a5e3c',{lw:.5});P.wc(g,P.E(14,6,4,2.6),'#fffaf3',{lw:.35});P.wc(g,P.E(26,6,3,2),'#c8f0c0',{lw:.3});P.wc(g,P.RR(-1+1,14,8,6,2),'#f490b4',{lw:.3});P.wc(g,P.RR(32,14,8,6,2),'#f490b4',{lw:.3})})};
- const SOL={shelf:[36,12],rack:[34,8],mirror:[14,6],mannequin:[14,6],salonchair:[20,8],bottles:[26,6],petbed:[28,8],foodbags:[26,8],tank:[30,8],shoeshelf:[36,12],bench2:[32,6],freezer:[56,10],table:[30,8],plant:[12,6],basket:[26,6],cabinet:[18,8],claw:[24,8],models:[34,8],sofa:[42,8],cakes:[56,10],oven:[38,12],boxes:[30,10],mailwall:[36,6],bookshelf:[36,12],flag:[8,4],flowers:[32,8],ribbons:[36,12],breads:[36,12],easel:[20,6],paints:[30,6],stools:[66,8],piano:[42,8],guitars:[34,8],drums:[30,8],toys:[36,12],blocks:[30,8],lowtable:[36,8]};
+
+ PR.medcab=()=>sp('medcab33',39,48,19,46,g=>{P.wc(g,P.RR(1,1,37,45,2),'#d5efeb',{lw:.6});for(let r=0;r<3;r++){P.wc(g,P.RR(3,3+r*14,33,12,1),'#f9ffff',{lw:.35});for(let i=0;i<4;i++){const x=6+i*8,y=6+r*14;P.wc(g,P.RR(x,y,5,7,1),['#a5d7d5','#f4afc6','#efe4ac','#bcb4eb'][(i+r)%4],{lw:.3});if(i===2&&r===0)P.heart(g,x+2.5,y+3.2,1.5,'#e77796')}}});
+ PR.medbed=()=>sp('medbed33',57,36,28,34,g=>{P.wc(g,P.RR(3,8,51,19,4),'#f1fbfc',{lw:.6});P.wc(g,P.RR(6,10,46,11,3),'#b8e8e2',{lw:.4});P.wc(g,P.RR(7,10,14,9,3),'#fff',{lw:.3});P.wc(g,P.RR(15,19,35,5,2),'#ecf6fb',{lw:.4});for(let x of[8,48])P.ln(g,[[x,27],[x,34]],'#79b1b5',1.6);P.heart(g,35,14,3,'#df7b97')});
+ PR.heartmonitor=()=>sp('monitor33',28,34,14,33,g=>{P.wc(g,P.RR(1,1,26,21,2),'#c7e7e4',{lw:.5});P.wc(g,P.RR(4,4,20,14,1),'#275c68',{lw:.35});P.ln(g,[[5,12],[10,12],[12,8],[15,16],[18,10],[23,10]],'#8beaaf',.9);P.ln(g,[[14,22],[14,31]],'#7fadb0',1.4);P.wc(g,P.E(14,31,8,2),'#8dafaf',{lw:.35})});
+ PR.petclinic=()=>sp('petclinic33',34,26,17,25,g=>{P.wc(g,P.E(17,18,16,6),'#9dd4cb',{lw:.45});P.wc(g,P.E(17,15,12,4),'#fff9f2',{lw:.3});P.wc(g,P.E(12,8,5,5),'#f6e0bb',{lw:.4});P.wc(g,P.E(22,8,5,5),'#f6e0bb',{lw:.4});P.wc(g,P.E(17,12,6,6),'#f6e0bb',{lw:.4});P.heart(g,17,17,2.4,'#ec82a3')});
+ const SOL={shelf:[36,12],rack:[34,8],mirror:[14,6],mannequin:[14,6],salonchair:[20,8],bottles:[26,6],petbed:[28,8],foodbags:[26,8],tank:[30,8],shoeshelf:[36,12],bench2:[32,6],freezer:[56,10],table:[30,8],plant:[12,6],basket:[26,6],cabinet:[18,8],claw:[24,8],models:[34,8],sofa:[42,8],cakes:[56,10],oven:[38,12],boxes:[30,10],mailwall:[36,6],bookshelf:[36,12],flag:[8,4],flowers:[32,8],ribbons:[36,12],breads:[36,12],easel:[20,6],paints:[30,6],stools:[66,8],piano:[42,8],guitars:[34,8],drums:[30,8],toys:[36,12],blocks:[30,8],lowtable:[36,8],medcab:[35,12],medbed:[52,13],heartmonitor:[24,8],petclinic:[30,9]};
  /* ── el cuarto ── */
  function makeRoom(b,th){const D=T[th],wall=b.wall||'#fdf1e6',acc=b.acc||b.roof||'#e8708f',f0=D.floor[0],f1=D.floor[1],icon=b.icon&&b.icon.length<4?b.icon:({shop:'🛍',papers:'🏛',pizza:'🍕',delivery:'📦'}[th]||'♡');
   const bg=P.paint(256,192,0,0,g=>{g.fillStyle=wall;g.fillRect(0,0,256,62);for(let i=0;i<16;i++){g.fillStyle=i%2?'rgba(255,255,255,.16)':'rgba(0,0,0,.025)';g.fillRect(i*16,0,8,58)}
@@ -7564,7 +7570,7 @@ window.Wardrobe=Wardrobe;
   /* el mostrador y quien atiende */
   const counter=P.paint(100,30,50,29,g=>{P.wc(g,P.RR(2,10,96,18,2),acc,{lw:.55,gloss:.15});P.wc(g,P.RR(0,5,100,7,2),'#c9a27e',{lw:.55,hl:.3});g.fillStyle='rgba(255,255,255,.35)';for(let i=0;i<6;i++)P.heart(g,12+i*15,19,2.2,'rgba(255,255,255,.6)');P.wc(g,P.RR(70,-1,14,8,2),'#9b87b8',{lw:.4});P.wc(g,P.E(20,4,4,2.2),'#f6d26b',{lw:.35,gloss:.5});P.dot(g,20,1.4,.9,'#f6d26b')},{clean:1});
   const kp=D.kp&&V.NPCDEF[D.kp]?D.kp:null;
-  if(kp)o.push({y:74,draw:(g,ox,oy,t)=>{const p=X.player,near=Math.hypot(p.x-128,p.y-96)<40,fr=near?(Math.floor(t*4)%2?11:12):0,s=V.charSprite(V.NPCDEF[kp],0,fr);g.drawImage(s.c,Math.round(128-s.ax-ox),Math.round(76-s.ay-oy+Math.sin(t*2)*.5))}});
+  if(kp)o.push({y:74,draw:(g,ox,oy,t)=>{const p=X.player,near=Math.hypot(p.x-128,p.y-96)<40,fr=near?(Math.floor(t*4)%2?11:12):0,s=V.charSprite(V.NPCDEF[kp],0,fr);g.drawImage(s.c,Math.round(128-s.ax-ox),Math.round(76-s.ay-oy+Math.sin(t*2)*.5));if(th==='hospital32'){g.save();g.translate(128-ox,76-oy);P.wc(g,P.RR(-8,-28,16,7,2),'#fffefb',{lw:.35});P.wc(g,P.RR(-1,-26,2,4,.3),'#e3769d',{ink:0});g.fillStyle='#e3769d';g.fillRect(-3,-25,6,1.4);g.restore()}}});
   add(counter,128,92,{t:'r',x:78,y:76,w:100,h:16});
   for(const [k,x,y,arg] of D.props){const s=PR[k](arg),sz=SOL[k]||[20,6];add(s,x,y,{t:'r',x:x-sz[0]/2,y:y-sz[1],w:sz[0],h:sz[1]})}
   return{bg:bg.c,objs:o,solids:so,flav:[],name:b.name,special:true,gift:false,noWin:true,dark:D.dark||null,_th:th,_b:b}}
@@ -7583,7 +7589,7 @@ window.Wardrobe=Wardrobe;
   await X.iris(()=>{CUR=cur;X.st.scene='in';X.st.room=key;X.player.x=128;X.player.y=170;X.player.dir=1;X.player.path=null;X.cam.x=128;X.cam.y=140});X.placeTag(b.name);
   const kp=T[th].kp;if(kp&&Talk.P[kp]&&!save.ev['in'+key+X.today()]){save.ev['in'+key+X.today()]=1;setTimeout(()=>{if(X.st.room===key)X.toast('💬 '+Talk.P[kp].name+': '+greet(th,kp))},700)}}
  async function leave(){const b=CUR&&CUR.b;G.sfx.door&&G.sfx.door();await X.iris(()=>{X.st.scene='out';if(b){X.player.x=b.x;X.player.y=b.y+16}X.player.dir=0;X.player.path=null;X.cam.x=X.player.x;X.cam.y=X.player.y});CUR=null}
- const GREET={shop:['¡Bienvenida! Hoy llegaron cositas nuevas.','Pásale, pásale, todo está bonito.'],moda:['¡Tengo justo lo que te va a quedar increíble!','Hoy toca estrenar, ¿no?'],salon:['¡Siéntate! Hoy te dejamos más linda que nunca.'],mascotas:['¡Guau! Bienvenida a la tienda de mascotas.'],autos:['¡Croac! Tenemos tenis nuevos.'],helados:['¿Ya probaste el de fresa con nube?'],arcade:['Hmph. A ver si me ganas hoy.'],inmob:['Bienvenida. Tengo terrenos con vista al mar.'],pasteles:['¡Recién salidos del horno!'],pizza:['¡Hay muchos pedidos hoy!'],delivery:['Los paquetes te esperan, ¡vuela!'],papers:['Hay solicitudes nuevas de los vecinos.'],cafe:['¿Un cafecito calientito?'],flores:['Las flores de hoy están preciosas.'],libros:['Llegó un cuento nuevo de estrellas.'],hotel:['Bienvenida al hotel. ¿En qué le ayudo?'],listones:['¡Listones nuevos de lunares!'],pan:['¡Pan recién horneado!'],pintura:['¿Pintamos algo bonito hoy?'],ramen:['¡Un ramen con carita para la mejor clienta!'],musica:['¿Escuchamos la cajita musical?'],jugueteria:['¡Los peluches te estaban esperando!'],te:['El té de fresa está listo.'],depto:['Buenos días. Todo tranquilo en el edificio.']};
+ const GREET={shop:['¡Bienvenida! Hoy llegaron cositas nuevas.','Pásale, pásale, todo está bonito.'],moda:['¡Tengo justo lo que te va a quedar increíble!','Hoy toca estrenar, ¿no?'],salon:['¡Siéntate! Hoy te dejamos más linda que nunca.'],mascotas:['¡Guau! Bienvenida a la tienda de mascotas.'],autos:['¡Croac! Tenemos tenis nuevos.'],helados:['¿Ya probaste el de fresa con nube?'],arcade:['Hmph. A ver si me ganas hoy.'],inmob:['Bienvenida. Tengo terrenos con vista al mar.'],pasteles:['¡Recién salidos del horno!'],pizza:['¡Hay muchos pedidos hoy!'],delivery:['Los paquetes te esperan, ¡vuela!'],hospital32:['Bienvenida. ¿Te encuentras bien? Estoy aquí para cuidarte.','Si te picó una abeja o te mojaste, podemos ayudarte.'],papers:['Hay solicitudes nuevas de los vecinos.'],cafe:['¿Un cafecito calientito?'],flores:['Las flores de hoy están preciosas.'],libros:['Llegó un cuento nuevo de estrellas.'],hotel:['Bienvenida al hotel. ¿En qué le ayudo?'],listones:['¡Listones nuevos de lunares!'],pan:['¡Pan recién horneado!'],pintura:['¿Pintamos algo bonito hoy?'],ramen:['¡Un ramen con carita para la mejor clienta!'],musica:['¿Escuchamos la cajita musical?'],jugueteria:['¡Los peluches te estaban esperando!'],te:['El té de fresa está listo.'],depto:['Buenos días. Todo tranquilo en el edificio.']};
  const greet=(th)=>{try{if(window.Charla&&Charla.shop){const s=Charla.shop(th,T[th]&&T[th].kp);return s||'¿Qué necesitas hoy?'}}catch(e){console.error(e)}const a=GREET[th]||['¡Bienvenida!'];return a[Math.floor(Math.random()*a.length)]};
  /* hablar con quien atiende en los lugares de la ciudad */
  async function keeper(it){const D=T[it.th],kp=D.kp,nmK=Talk.P[kp]?Talk.P[kp].name:it.b.name,v=Talk.P[kp]&&Talk.P[kp].voice;
@@ -9430,8 +9436,105 @@ window.Wardrobe=Wardrobe;
  window.WalesaMeet={invite,store,point,atArcade:()=>store().find(q=>q.day===X.today()&&q.zone==='arcade')?.id||null};
 })();
 </script>
+<script>
+/* v32 · objetos reales, colecciones emoji y recompensas que se entregan */
+(()=>{'use strict';const X=Game.X,H=X.HOOKS;
+ const SET={
+  alimentos:[['pudin','Pudín de caramelo','🍮',220],['sopa','Sopa caliente','🍲',210],['sandwich','Sándwich de corazón','🥪',180],['pan','Pan dulce','🥐',110],['manzana','Manzana fresca','🍎',75],['fresa','Fresas','🍓',95],['pera','Pera','🍐',90],['sandia','Rebanada de sandía','🍉',95],['platano','Plátano','🍌',90],['cereza','Cerezas','🍒',130],['limon','Limón','🍋',70],['zanahoria','Zanahoria','🥕',90],['champi','Champiñones','🍄',130],['panque','Panqué de canela','🍰',220],['donas','Donitas','🍩',180],['chocolate','Chocolate','🍫',160],['miel','Miel de abejas','🍯',190],['leche','Leche tibia','🥛',100],['jugo','Jugo de fruta','🧃',120],['agua','Botella de agua','💧',65],['onigiri','Bolita de arroz','🍙',150],['ramen','Ramen','🍜',280],['bento','Bento de picnic','🍱',330],['ensaladaV','Ensalada verde','🥗',180],['pescado','Pescadito cocido','🍣',240],['limonada','Limonada','🥤',120],['paleta','Paleta de fresa','🍧',130]],
+  regalos:[['postal','Postal de la isla','💌',140],['costurero','Costurero de Mimmy','🧵',380],['selloCorreo','Sello postal de nube','📮',300],['teFlores','Té floral de Melody','🍵',260],['cristalMorado','Cristal de Kuromi','🔮',470],['silbato','Silbato de Pochacco','📣',180],['hojaMusical','Hoja musical','🎵',210],['insignia','Insignia de amistad','🏅',400],['periodico','Periódico de Chococat','📰',180],['panuelo','Pañuelo elegante','🪡',250],['burbujaMarina','Burbuja de cristal','🫧',220],['recetario','Recetario de vecinos','📔',350],['llaveroNube','Llavero de nube','🔑',290],['confeti','Confeti de fiesta','🎊',140],['pulseraAmistad','Pulsera de amistad','📿',400],['fotoPolaroid','Foto instantánea','📸',300],['medallaR','Medalla de repartidora','🥇',550],['cintaRosa','Cinta rosa','🎀',120],['origami','Grulla de origami','🕊️',160],['caracolEco','Concha de eco','🐚',250],['florSeca','Flor preservada','🌹',140],['conchaCorazon','Concha corazón','💗',210],['piedraLuna','Piedra lunar','🌙',430],['lapiz','Lápiz de colores','✏️',85],['cuaderno','Cuaderno de cuentos','📒',170],['relojito','Reloj de bolsillo','⌚',500],['mapaTesoro','Mapa del tesoro','🗺️',550],['cometa','Cometa de playa','🪁',460],['pelota','Pelota para jugar','⚽',240],['flotador','Flotador de patito','🛟',340],['campanilla','Campanilla','🔔',250],['corona','Corona de cartón','👑',380],['trofeo','Trofeo de juegos','🏆',650],['podometro','Podómetro','👟',420],['radio','Radio pequeña','📻',520],['paquete','Paquete decorativo','📦',140],['taza','Taza del picnic','☕',320],['vela','Velita perfumada','🕯️',260],['pelucheGato','Peluche gatito','🐱',650],['estampa','Estampa brillante','✨',120]],
+  salud:[['impermeable32','Impermeable de lluvia','🧥',680],['botas32','Botas para lluvia','👢',440],['paraguas32','Paraguas plegable','☂️',360],['petCoat32','Impermeable para mascota','🐾',450],['botiquin','Botiquín portátil','🩹',330],['vitaminas','Vitaminas de fresa','💊',180],['teMiel','Té con miel','🍯',170],['termometro','Termómetro','🌡️',280],['pijama','Pijama de descanso','🛌',320],['mascarilla','Mascarilla suave','😷',100]]};
+ for(const group of Object.values(SET))for(const [id,name,icon,price] of group)if(!Talk.ITEMS[id])Talk.ITEMS[id]=[name,icon,price];
+ // Nuevos objetos también aparecen como tesoros en el museo/colección y en la mochila.
+ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const owned=id=>(save.inv[id]||0)>0;
+ const buy=(id,price)=>{if(!Talk.ITEMS[id]||!X.payOr(price))return;X.invAdd(id);save.dex.i[id]=1;X.toast(Talk.ITEMS[id][1]+' ¡Comprado!');X.reSheet()};
+ function shop(){X.sheet('🛍️ Mercadito de objetos emoji',box=>{
+    box.innerHTML='<p class="shop-hi">Objetos que de verdad van a tu mochila. También puedes regalar lo que compres.</p><div class="bal">🔔 '+save.bells.toLocaleString('es-MX')+'</div>'+Object.entries(SET).map(([group,items])=>'<h4>'+({alimentos:'🍡 Comida y merienda',regalos:'🎁 Souvenirs y regalos',salud:'🌦️ Salud y protección'}[group])+'</h4>'+items.map(([id,name,icon,price])=>X.buyRow(icon,name+(owned(id)?' · tienes '+save.inv[id]:''),group==='salud'?'Duradero o de recuperación':'Para usar, regalar o coleccionar',price,id)).join('')).join('');
+    box.querySelectorAll('button.buy').forEach(b=>b.onclick=()=>{const id=b.dataset.id,x=Talk.ITEMS[id];if(x)buy(id,x[2])});
+ })}
+ H.tab.push((t,box)=>{if(t!=='tasks')return;const wrap=document.createElement('div');wrap.innerHTML='<button class="orow" id="shopEmoji32">🛍️ Abrir mercadito de objetos emoji <span>›</span></button><small class="memtext">Colecciona, come o regala objetos que mencionan los vecinos.</small>';box.appendChild(wrap);wrap.querySelector('button').onclick=()=>{X.closeMenu();shop()}});
+ window.Items32={SET,shop};
+})();
+</script>
+<script>
+/* v32 · enfermería, hambre, humedad y protección contra lluvia */
+(()=>{'use strict';const X=Game.X,H=X.HOOKS,G=Game.G;
+ const s=save.health32||(save.health32={hunger:86,wet:0,stings:0,sick:false,reason:'',last:Date.now(),notified:0});
+ s.hunger=Math.max(0,Math.min(100,Number(s.hunger??86)));s.wet=Math.max(0,Math.min(100,Number(s.wet||0)));
+ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const you=()=>X.kname();let timer=0,once=0;
+ const pet=()=>X.activePet();
+ const raincoat=()=>save.outfit==='impermeable'&&!!save.inv.impermeable32;
+ const boots=()=>save.shoes==='botasLluvia'&&!!save.inv.botas32;
+ const umbrella=()=>!!save.umbrella32&&!!save.inv.paraguas32;
+ const protectedRain=()=>raincoat()&&boots()||umbrella();
+ const persist=()=>G.save();
+ const snackIds=['galleta','fruta','pizza','ensalada','baya','galletasC','sandwich','pudin','sopa','pan','manzana','fresa','pera','sandia','platano','cereza','limon','zanahoria','champi','panque','donas','chocolate','leche','jugo','agua','onigiri','ramen','bento','ensaladaV','pescado','limonada','paleta','te','teMiel','cupcake','helado','dulce','algodon','miel'];
+ async function feed(){const all=snackIds.filter(k=>(save.inv[k]||0)>0&&Talk.ITEMS[k]);if(!all.length){X.toast('🍎 No traes comida. Compra algo en el mercadito.');return}let offset=0;while(true){const page=all.slice(offset,offset+6),more=offset+6<all.length,opts=page.map(k=>Talk.ITEMS[k][1]+' '+Talk.ITEMS[k][0]+' ×'+save.inv[k]).concat(more?['🍽️ Ver más comida','Mejor luego']:['Mejor luego']);const i=await X.ask('🍽️ ¿Qué vas a comer?',opts);if(more&&i===page.length){offset+=6;continue}if(i>=page.length)return;const k=page[i];X.invAdd(k,-1);s.hunger=clamp(s.hunger+(k==='pizza'||k==='ramen'||k==='bento'?42:k==='sopa'||k==='sandwich'?34:22),0,100);if(k==='sopa'||k==='teMiel')s.wet=clamp(s.wet-18,0,100);persist();X.toast('😋 ¡Qué rico! Hambre '+Math.round(s.hunger)+'%');return}}
+ function cure(){s.sick=false;s.reason='';s.stings=0;s.wet=0;s.hunger=Math.max(s.hunger,40);persist();X.toast('💗 Te sientes mucho mejor.')}
+ function sting(){s.stings++;if(s.stings===1){s.sick=true;s.reason='Picadura de abejita';s.wet=Math.max(s.wet,25);X.toast('🐝 ¡Picadura! Ve al hospital o usa un botiquín.');}else X.toast('🐝 Otra picadura. ¡Necesitas descansar!');persist()}
+ function treatment(){if(!s.sick){X.toast('💚 ¡Todo bien! No necesitas tratamiento.');return}const have=['botiquin','medicina','teMiel'].filter(k=>save.inv[k]>0);return X.ask('🩹 Recuperarte',have.map(k=>Talk.ITEMS[k][1]+' Usar '+Talk.ITEMS[k][0]).concat('Ir al hospital','Cancelar')).then(k=>{if(k<have.length){X.invAdd(have[k],-1);cure()}else if(k===have.length)X.toast('🏥 El hospital está en Ciudad Corazón, al lado de la avenida central y los terrenos.')})}
+ async function hospital(){const a=['🩺 Consulta médica · 120 🔔','💝 Curación de mascotas · 80 🔔','🛍️ Botiquín y equipo de lluvia','💬 ¿Cómo me cuido?','Nada, gracias'];const i=await X.ask('Enfermera Mimi · Hospital de los Corazones',a);
+  if(i===3){await X.say('Enfermera Mimi','Si te pican las abejitas o te empapas de lluvia puedes enfermar. Abrígate, come y cuida a tus mascotas. En la farmacia hay impermeables y botiquines.');return}
+  if(i===0){if(!s.sick&&s.hunger>25&&s.wet<20){await X.say('Enfermera Mimi','¡Estás muy bien! Come y descansa para seguir así.');return}if(!X.payOr(120))return;cure();await X.say('Enfermera Mimi','Te abrigamos y atendimos. Aquí tienes una sopita de recuperación. 🍲');X.invAdd('sopa');save.dex.i.sopa=1;persist()}
+  if(i===1){const p=pet();if(!p){X.toast('🐾 Trae una mascota contigo.');return}if(!X.payOr(80))return;p.hunger=100;p.love=Math.max(70,p.love);persist();X.toast('🐾 '+p.name+' está sanito y con la pancita llena.');}
+  if(i===2){const ks=['botiquin','vitaminas','teMiel','impermeable32','botas32','paraguas32','petCoat32'];const j=await X.ask('Farmacia y ropa de lluvia',ks.map(k=>Talk.ITEMS[k][1]+' '+Talk.ITEMS[k][0]+' · '+Talk.ITEMS[k][2]+' 🔔').concat('Cerrar'));if(j>=ks.length)return;const id=ks[j];if(!X.payOr(Talk.ITEMS[id][2]))return;X.invAdd(id);save.dex.i[id]=1;X.toast('🛍️ '+Talk.ITEMS[id][0]+' guardado en la mochila.');persist()}
+ }
+ H.act.unshift(it=>it.type==='job'&&it.b?.job==='hospital32'&&it.inside?hospital():null);
+ H.update.push(dt=>{
+  if(X.st.mode!=='play'||X.st.mg)return;const active=X.st.scene==='out'&&!X.st.menu&&!X.st.busy;
+  if(active){s.hunger=clamp(s.hunger-dt*.065,0,100);if(X.wx()==='lluvia'){
+    const rate=protectedRain()?-.38:raincoat()||boots()? .17:.43;
+    s.wet=clamp(s.wet+dt*rate,0,100);
+  }else s.wet=clamp(s.wet-dt*.32,0,100)}
+  if(s.wet>=94&&!s.sick){s.sick=true;s.reason='Resfriado por lluvia';X.toast('🤒 Te resfriaste. Busca el hospital o usa un botiquín.');persist()}
+  timer+=dt;if(timer>7){timer=0;persist()}
+  const mark=Math.floor((100-s.hunger)/20);if(mark>once&&s.hunger<=20){once=mark;X.toast('🍎 Tienes hambre. Abre Mochila → Comer.')}else if(s.hunger>30)once=0;
+ });
+ H.screen.push((f,B,w2s,t,dt)=>{if(X.st.scene==='out'&&!X.st.mg&&X.st.mode==='play'){
+   const px=Math.max(5,X.W-94);f.save();f.fillStyle='rgba(30,39,58,.68)';f.beginPath();f.roundRect(px,38,89,33,5);f.fill();
+   f.font='8px sans-serif';f.textAlign='left';f.fillStyle='#fff';f.fillText('🍎',px+4,49);f.fillText('🌧',px+4,62);
+   for(const [v,y,c] of [[s.hunger,43,'#f5bd69'],[s.wet,56,'#8ccbf6']]){f.fillStyle='rgba(255,255,255,.2)';f.fillRect(px+21,y,63,5);f.fillStyle=c;f.fillRect(px+21,y,63*v/100,5)}
+   if(s.sick){f.font='12px sans-serif';f.fillText('🤒',px-16,55)}f.restore()
+ }});
+ H.bill.push((bb,t)=>{if(X.st.scene!=='out'||X.st.mg)return;
+   if(umbrella()&&X.wx()==='lluvia')bb.push({x:X.player.x,y:X.player.y+2,draw:g=>{g.font='25px sans-serif';g.textAlign='center';g.fillText('☂️',0,-40)}});
+   const p=pet();if(p&&save.petCoats32?.[p.uid]&&save.inv.petCoat32&&X.wx()==='lluvia')bb.push({x:X.petE.x,y:X.petE.y+1,draw:g=>{g.fillStyle='#78c9c3';g.strokeStyle='#245c63';g.lineWidth=.8;g.beginPath();g.moveTo(-9,-17);g.lineTo(10,-17);g.lineTo(8,-6);g.lineTo(-8,-6);g.closePath();g.fill();g.stroke();g.font='9px sans-serif';g.fillText('💧',-3,-8)}});
+ });
+ H.tab.push((t,box)=>{if(t==='tasks'){
+   const d=document.createElement('div');d.innerHTML='<h4>💗 Bienestar</h4><div class="task"><div><b>🍎 Saciedad: '+Math.round(s.hunger)+'% · 🌧️ Mojada: '+Math.round(s.wet)+'%</b><small>'+(s.sick?'🤒 '+s.reason:'😊 Saludable')+' · '+(protectedRain()?'Protegida de la lluvia':'Sin protección completa')+'</small></div></div><button class="orow" id="eat32">🍽️ Comer algo <span>›</span></button><button class="orow" id="rain32">🧥 Ropa de lluvia <span>›</span></button><button class="orow" id="care32">🩹 Usar botiquín / medicina <span>›</span></button>';
+   box.appendChild(d);d.querySelector('#eat32').onclick=()=>{X.closeMenu();feed()};d.querySelector('#care32').onclick=()=>{X.closeMenu();treatment()};d.querySelector('#rain32').onclick=async()=>{X.closeMenu();const opts=[save.inv.impermeable32?'🧥 Equipar impermeable':'🧥 Comprar impermeable en el mercadito',save.inv.botas32?'👢 Equipar botas':'👢 Comprar botas en el mercadito',save.inv.paraguas32?(umbrella()?'☂️ Guardar paraguas':'☂️ Abrir paraguas'):'☂️ Comprar paraguas en el mercadito','Cerrar'];const k=await X.ask('🌧️ Protección de lluvia',opts);if(k===3)return;if(!save.inv[['impermeable32','botas32','paraguas32'][k]]){window.Items32?.shop();return}if(k===0){save.outfit='impermeable';save.owned.outfit=save.owned.outfit||[];if(!save.owned.outfit.includes('impermeable'))save.owned.outfit.push('impermeable');}if(k===1){save.shoes='botasLluvia';save.owned.shoes=save.owned.shoes||[];if(!save.owned.shoes.includes('botasLluvia'))save.owned.shoes.push('botasLluvia')}if(k===2)save.umbrella32=!save.umbrella32;persist();X.toast('🌧️ Equipo actualizado')}};
+  if(t==='pets'){const p=pet();if(!p)return;const d=document.createElement('div');d.innerHTML='<button class="orow" id="pcoat32">🐾 '+(save.petCoats32?.[p.uid]?'Quitar':'Poner')+' impermeable a '+String(p.name).replace(/[&<>]/g,'')+' <span>›</span></button><small class="memtext">La barra naranja de cada mascota indica cuánto ha comido. Dale alimento desde su menú de interacción.</small>';box.appendChild(d);d.querySelector('button').onclick=()=>{if(!save.inv.petCoat32){X.toast('🛍️ Compra un impermeable para mascota en el mercadito.');return}save.petCoats32=save.petCoats32||{};save.petCoats32[p.uid]=!save.petCoats32[p.uid];persist();X.showTab('pets')}}
+ });
+ Object.defineProperty(window,'Health32',{value:{sting,cure,feed,shop:hospital,get speed(){return s.sick?.78:s.hunger<18?.85:1},status:s}});
+})();
+</script>
+<script>
+/* v32 · presentaciones variadas sin repetir la misma frase entre visitas */
+(()=>{'use strict';const X=Game.X,prev=Talk.build;
+ Talk.build=function(id,ctx){const steps=prev.apply(this,arguments);if(!steps?.length||!Talk.P[id]||!ctx?.save?.met?.[id])return steps;
+  const h=gameHour(),hour=h<6?'noche':h<12?'mañana':h<19?'tarde':'noche',w=ctx.weather;
+  const world={sol:['el cielo está precioso','hoy pega rico el sol','el día invita a explorar'],lluvia:['qué bonitas suenan las gotas','me traje un poco de té para la lluvia','los charcos parecen espejos'],nubes:['las nubes dibujan historias','hay luz suave entre las nubes','hoy todo parece pintado'],petalos:['el viento trae pétalos','los árboles nos saludan','el aire huele a flores'],nieve:['está nevando despacito','hace frío de bufanda']}[w]||['hoy es buen día'];
+  const specific={cinna:['Tengo una ruta nueva de cartas.','¡Traje noticias desde las nubes!','¿Has visto los buzones de hoy?'],melody:['Traigo una receta especial.','Hoy cosí una flor pequeñita.','Me acordé de nuestras pláticas.'],kuromi:['¡Te iba a retar a un juego!','No te imaginas lo que preparé.','Hoy sí vengo de buen humor.'],pom:['Se me antojó un pudín enorme.','Vengo de una siesta histórica.','Guardé un pedacito de pizza.'],pochacco:['Hoy corrí tres veces al muelle.','¿Te apuntas a un desafío?','Encontré una pelota nueva.'],keroppi:['Las ranas andan cantando.','¡Kero! Vi una hoja gigante.','El estanque está brillando.'],badtz:['No digas que te estaba esperando.','Tengo un plan secreto.','¿Otra revancha?'],mimmy:['Acabo de terminar un bordado.','Traigo un moño nuevo.','Hoy tejí algo colorido.'],chococat:['Tengo una noticia fresca.','Mi periódico está lleno de sorpresas.','Descubrí algo curioso.'],tuxedo:['Qué placer verla de nuevo.','Estrené mi mejor pañuelo.','Le preparé una taza de té.'],hangyo:['Acabo de alimentar a los pececitos.','Hoy ensayé un chiste nuevo.','Las mascotas tienen novedades.']};
+  const lines=[
+   'Qué gusto encontrarte esta '+hour+', '+X.kname()+'.',
+   '¡'+X.kname()+'! '+world[0]+'.',
+   'Justo iba a buscarte. '+(specific[id]||['Tengo algo que contarte.'])[0],
+   '¡Qué sorpresa verte aquí! '+world[1%world.length]+'.',
+   'Ven, platícame cómo te ha ido.',
+   (specific[id]||['Me alegra verte.'])[1%((specific[id]||['Me alegra verte.']).length)],
+   'Hace rato pensé en ti. '+world[2%world.length]+'.',
+   'Me alegra que podamos charlar sin prisa.',
+   (specific[id]||['Hola de nuevo.'])[2%((specific[id]||['Hola de nuevo.']).length)],
+   '¿Sabes qué? Creo que hoy va a pasar algo bonito.',
+   '¡Qué día tan diferente! ¿Cómo vas de aventuras?',
+   'Te veo con ganas de descubrir algo, ¿me equivoco?'
+  ];
+  const hist=save.hello32||(save.hello32={});const rec=hist[id]||(hist[id]={seq:-1,recent:[]});let ix=(rec.seq+1+Math.floor(Math.random()*4))%lines.length;for(let i=0;i<lines.length&&rec.recent.includes(ix);i++)ix=(ix+1)%lines.length;rec.seq=ix;rec.recent.push(ix);if(rec.recent.length>6)rec.recent.shift();
+  const first=steps.find(s=>typeof s.say==='string');if(first)first.say=lines[ix];return steps;
+ };
+})();
+</script>
 <script src="./picnic_v31.js"></script>
-<script src="./walesa_v32.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
