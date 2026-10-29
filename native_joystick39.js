@@ -42,7 +42,7 @@ try{
  function enabled(){return c.enabled===true&&!editing&&playable()&&joy.isConnected}
  function release(){held=null;dx=dy=0;knob.style.transform='translate(0px,0px)'}
  function updateUI(){joy.classList.toggle('on',enabled());joy.classList.toggle('editing',editing)}
- function vector(){if(!enabled()){release();updateUI();return null;}updateUI();return{x:dx,y:dy};}
+ function vector(){try{if(!enabled()){release();updateUI();return null;}updateUI();return{x:dx,y:dy};}catch(err){console.warn('Se restableció el control táctil',err);c.enabled=false;try{release()}catch(_){}return null;}}
  function center(e){
   const r=joy.getBoundingClientRect(),xx=e.clientX-r.left-r.width/2,yy=e.clientY-r.top-r.height/2,dist=Math.hypot(xx,yy),max=c.size*.33;
   const mul=dist?Math.min(1,max/dist):0;
