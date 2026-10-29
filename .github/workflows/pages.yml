@@ -44,6 +44,11 @@ jobs:
           }
           console.log(scripts.length + ' bloques JavaScript válidos');
           NODE
+      - name: Probar controles nativos sin regresiones
+        run: |
+          node --check native_joystick40.js
+          node --check sw.js
+          node tests/joystick-smoke.cjs
       - name: Configurar Pages
         uses: actions/configure-pages@v5
         with:
