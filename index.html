@@ -2909,7 +2909,7 @@ const Game=(()=>{
   if(st.mg){st.mg.update(dt,t);st.mg.draw(t)}
   else{
    if(st.mode==='play'&&!st.menu){for(const h of HOOKS.update)h(dt,t);updPlayer(dt);if(st.scene==='out'){for(const n of NPCS)updNPC(n,dt);bugUpdate(dt);ambient(dt);updWild(dt);updPet(dt)}}
-   if(st.mode==='title'){for(const n of NPCS)updNPC(n,dt);const P=V.MAIN.spots.plaza;cam.x=P.x+Math.sin(t*.12)*220;cam.y=P.y+Math.sin(t*.09)*170}
+   if(st.mode==='title'){for(const n of NPCS)updNPC(n,dt);const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;cam.x=P.x+Math.sin(t*.12)*220;cam.y=P.y+Math.sin(t*.09)*170}
    else{let fxp=player.x,fyp=player.y;if(st.talkWith){fxp=(player.x+st.talkWith.x)/2;fyp=(player.y+st.talkWith.y)/2}if(st.focus){fxp=st.focus.x;fyp=st.focus.y}const k=Math.min(1,dt*5);cam.x+=(fxp-cam.x)*k;cam.y+=(fyp-cam.y)*k}
    if(st.scene==='out'){if(M())drawScene(t,dt)}else drawRoom(t,dt);drawWeather(t,dt);
    if(st.mode==='play'){const pn=zoneName();if(pn!==st.place){st.place=pn;placeTag(pn)}actBtn(st.busy||st.menu?null:nearest())}}
@@ -2967,7 +2967,7 @@ const Game=(()=>{
  async function enter(){Desk.hide();$('#game').classList.add('on');layout();Sound.init();petTick();
   if(!V.map||!V.rooms){loading(true,'Preparando tu isla…',0);const iv=setInterval(()=>{$('#loadBar').style.width=Math.round(V.progress*100)+'%'},100);await V.prepare();clearInterval(iv);loading(false)}
   if(!NPCS.length)setNPCs();newDay();hud();st.songT=0;
-  if(st.mode==='off'){st.mode='title';const P=V.MAIN.spots.plaza;player.x=P.x;player.y=P.y+60;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
+  if(st.mode==='off'){st.mode='title';const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;player.x=P.x;player.y=P.y+60;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
   cancelAnimationFrame(st.raf);st.last=performance.now();st.raf=requestAnimationFrame(loop)}
  function leave(){closeMenu();cancelAnimationFrame(st.raf);st.raf=0;if(st.mg)endMG();$('#game').classList.remove('on');Sound.stop();Desk.show()}
  document.addEventListener('visibilitychange',()=>{if(document.hidden){window.WalesaJoystick37?.release?.();Sound.stop(true);for(const k in keys)keys[k]=false;steer=null}else{st.songT=0;if(!$('#game').classList.contains('on')&&save.music&&$('#env').classList.contains('open'))Sound.play('box')}});
