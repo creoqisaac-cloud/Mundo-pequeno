@@ -392,18 +392,21 @@ window.WalesaMainland=(()=>{
    b.room=rooms.length;rooms.push(room);
   }
  }
+ let overview=null;
  function sampleMap(ctx,ox,oy,k){
-  const img=ctx.createImageData(190,145),D=img.data;
-  for(let j=0;j<145;j++)for(let i=0;i<190;i++){
-   const x=i/190*MW,y=j/145*MH,l=(j*190+i)*4;
+  if(!overview){const tc=document.createElement('canvas');tc.width=380;tc.height=290;
+   const img=tc.getContext('2d').createImageData(tc.width,tc.height),D=img.data;
+  for(let j=0;j<290;j++)for(let i=0;i<380;i++){
+   const x=i/380*MW,y=j/290*MH,l=(j*380+i)*4;
    const inOld=x<oldW&&y<oldH,cc=inOld?baseD(x,y):coast(x,y);
    const bi=inOld?origBiome(x,y,main):biome(x,y),
      e=inOld?0:height(x,y),v=PAL[bi]||PAL.town,n=v[e>.5?0:e>.25?1:2];
    const out=cc>.98?[69,151,189]:cc>.91?[232,219,188]:n;
    D[l]=out[0];D[l+1]=out[1];D[l+2]=out[2];D[l+3]=255;
   }
-  const tc=document.createElement('canvas');tc.width=190;tc.height=145;tc.getContext('2d').putImageData(img,0,0);
-  ctx.drawImage(tc,ox,oy,MW*k,MH*k);
+   tc.getContext('2d').putImageData(img,0,0);overview=tc;
+  }
+  ctx.drawImage(overview,ox,oy,MW*k,MH*k);
   // Capa cartográfica adicional: red viaria, barrios y destinos, sin alterar el mundo jugable.
   ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
   for(const [a,b] of seg){ctx.beginPath();ctx.moveTo(ox+a[0]*k,oy+a[1]*k);ctx.lineTo(ox+b[0]*k,oy+b[1]*k);ctx.strokeStyle='#fff6de';ctx.lineWidth=2.7;ctx.stroke();ctx.strokeStyle='#ad956f';ctx.lineWidth=.8;ctx.stroke()}
