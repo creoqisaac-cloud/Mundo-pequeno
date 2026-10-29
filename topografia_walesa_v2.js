@@ -82,8 +82,15 @@ function height(u,v,forest=false){
 function coast(u,v){
  if(u<0||u>1||v<0||v>1)return 1.3;
  const sea=interp(u,v,(s,x,y)=>s===7?1.3:(s===1&&(y===0||y===31)?1.17:.17));
+ // Costa orgánica: sustitución del antiguo borde cuadrado de la muestra.
+ // El contorno se ondula en coordenadas globales, conserva su forma al guardar
+ // y dibuja una franja de playa antes del agua que realmente bloquea el paso.
  const border=Math.min(u,1-u,v,1-v);
- return Math.max(sea,border<.009?1.1:0);
+ const waves=Math.sin(u*53+v*17)*.0035+Math.sin(v*83-u*29)*.0027+
+   Math.sin(u*147+v*91)*.0011;
+ const wave=cap((.027-border+waves)/.027);
+ const shore=.80+.55*(wave*wave*(3-2*wave));
+ return Math.max(sea,shore);
 }
 function classify(u,v,forest=false){
  if(forest)return 'shroom';
