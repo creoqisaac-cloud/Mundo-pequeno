@@ -15,7 +15,7 @@ const isExp=m=>!!(m&&typeof m.gridX==='number'&&typeof m.gridY==='number');
 const season=()=>X.today();
 function seen(m){
  const k=key(m.forest,m.gridX,m.gridY);
- if(!S.visited[k]){S.visited[k]=season();if(m.forest)S.forestVisits=(S.forestVisits||0)+1;X.G?.save?.()}
+ if(!S.visited[k]){S.visited[k]=season();if(m.forest)S.forestVisits=(S.forestVisits||0)+1;Game.G.save()}
  S.current=k;S.last={forest:!!m.forest,x:m.gridX,y:m.gridY};
 }
 async function sector(x,y,forest){
@@ -40,7 +40,7 @@ async function moveTo(x,y,forest,px=384,py=352){
    X.cam.x=X.player.x;X.cam.y=X.player.y;
    X.petE.x=X.player.x;X.petE.y=X.player.y+8;
    X.setNPCs();X.loading(false);
-   seen(m);X.G?.save?.();
+   seen(m);Game.G.save();
   });
   X.placeTag(m.name+' · '+(m.forest?'sendero '+x+', '+y:'sector '+(x+1)+'-'+(y+1)));
  }catch(e){X.loading(false);X.toast('No se pudo abrir este sector.');console.error('Expansión Walesa',e)}
@@ -55,7 +55,7 @@ async function goHome(){
    X.player.path=null;X.player.pending=null;
    X.cam.x=X.player.x;X.cam.y=X.player.y;
    X.petE.x=X.player.x;X.petE.y=X.player.y+8;
-   X.setNPCs();S.current='home';X.G?.save?.();
+   X.setNPCs();S.current='home';Game.G.save();
   });
   X.placeTag('Isla de Walesa');
  }finally{moving=false;X.st.busy=false}
@@ -127,7 +127,7 @@ H.act.unshift(it=>{
   if(S.discoveries[k]===d){X.toast('🌿 Ya exploraste este claro hoy.');return}
   const gifts=['hongo','flor','fruta','baya'],item=gifts[m.seed%gifts.length];
   S.discoveries[k]=d;X.invAdd(item,1);
-  X.addBells(30+(m.seed%5)*12,true);X.G?.save?.();
+  X.addBells(30+(m.seed%5)*12,true);Game.G.save();
   await X.say('Claro escondido','Entre hojas y senderos encontraste '+(Talk.ITEMS[item]?.[0]||'un regalo')+'. El bosque cambia con cada expedición.');
  })();
  if(it.type==='job'&&it.b?.job==='expMarket')return market(it.b);
@@ -149,19 +149,19 @@ async function market(b){
   const q=await X.ask('Venta local',owned.map(k=>Talk.ITEMS[k][1]+' '+Talk.ITEMS[k][0]+' · '+Math.floor(Talk.ITEMS[k][2]*factor*.48)+' 🔔').concat('Cancelar'));
   if(q<0||q>=owned.length)return;
   const id=owned[q],reward=Math.max(1,Math.floor(Talk.ITEMS[id][2]*factor*.48));
-  X.invAdd(id,-1);X.addBells(reward);X.G?.save?.();X.toast('Venta realizada · +'+reward+' 🔔');return;
+  X.invAdd(id,-1);X.addBells(reward);Game.G.save();X.toast('Venta realizada · +'+reward+' 🔔');return;
  }
  const id=goods[r],price=Math.ceil(Talk.ITEMS[id][2]*factor);
  if(!X.payOr(price))return;
  X.invAdd(id,1);if(save.dex?.i)save.dex.i[id]=1;
- X.G?.save?.();X.toast(Talk.ITEMS[id][1]+' ¡Comprado en '+m.name+'!');
+ Game.G.save();X.toast(Talk.ITEMS[id][1]+' ¡Comprado en '+m.name+'!');
 }
 async function office(b){
  const m=current(),k=key(false,m.gridX,m.gridY),reward=Math.round(105*(m.economy||1));
  const r=await X.ask('📜 '+b.name,['Trabajo comunitario · '+reward+' 🔔','Economía del distrito','Salir']);
  if(r===0){
   if(S.work[k]===season()){X.toast('El turno de hoy ya está completado.');return}
-  S.work[k]=season();X.addBells(reward);X.G?.save?.();X.toast('✓ Trabajo completado · +'+reward+' 🔔');
+  S.work[k]=season();X.addBells(reward);Game.G.save();X.toast('✓ Trabajo completado · +'+reward+' 🔔');
  }else if(r===1)await X.say('Administración',m.name+': el costo de bienes y parcelas es aproximadamente '+Math.round((m.economy||1)*100)+'% del precio base. El comercio, los barrios y el campo tienen economías distintas.');
 }
 async function residence(b){
@@ -171,7 +171,7 @@ async function residence(b){
 }
 async function lodge(b){
  const r=await X.ask('🌲 '+b.name,['Descansar un poco','Orientarme','Salir']);
- if(r===0){if(window.Health32?.status)Health32.status.hunger=Math.min(100,Health32.status.hunger+18);X.G?.save?.();X.toast('☕ Recuperaste fuerzas para seguir el sendero.')}
+ if(r===0){if(window.Health32?.status)Health32.status.hunger=Math.min(100,Health32.status.hunger+18);Game.G.save();X.toast('☕ Recuperaste fuerzas para seguir el sendero.')}
  if(r===1)await X.say('Guardabosques','Cada claro conserva su forma al regresar. Camina hacia cualquier borde para continuar explorando. El portal de regreso está en el primer claro.');
 }
 H.update.push(()=>{
