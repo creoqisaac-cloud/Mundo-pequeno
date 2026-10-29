@@ -2,11 +2,12 @@ name: Validar expansión del continente y bosque
 
 on:
   push:
-    branches: [feat/continente-y-bosque-infinito]
+    branches: [feat/topografia-boceto-procreate]
   pull_request:
     paths:
       - 'index.html'
       - 'world_expansion_v1.js'
+      - 'topografia_walesa_v2.js'
       - 'tests/expansion-smoke.cjs'
       - 'sw.js'
 
@@ -22,6 +23,7 @@ jobs:
       - name: Comprobar scripts del motor y expansión
         run: |
           node --check world_expansion_v1.js
+          node --check topografia_walesa_v2.js
           node --check sw.js
           node --check tests/expansion-smoke.cjs
           node - <<'NODE'
