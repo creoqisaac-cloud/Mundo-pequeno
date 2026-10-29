@@ -53,7 +53,14 @@ const server=http.createServer((req,res)=>{
    Game.X.st.mode='play';
    document.querySelector('#titleCov')?.classList.remove('on');
   });
-  await page.waitForFunction(()=>save.mainlandV3Welcome===1&&Game.X.player.x>3400,{timeout:30000});
+  await page.waitForFunction(()=>save.mainlandV3Welcome===1&&Game.X.player.x>3400,{timeout:30000}).catch(async err=>{
+    console.error('WELCOME DEBUG',await page.evaluate(()=>({
+      mode:Game.X.st.mode,scene:Game.X.st.scene,menu:Game.X.st.menu,busy:Game.X.st.busy,mg:!!Game.X.st.mg,
+      sx:Game.X.player.x,sy:Game.X.player.y,flag:save.mainlandV3Welcome,main:World.map===World.MAIN,
+      hookCount:Game.X.HOOKS.update.length,hookTexts:Game.X.HOOKS.update.slice(-4).map(f=>String(f).slice(0,120))
+    })));
+    throw err;
+  });
   const start=await page.evaluate(()=>({main:World.map===World.MAIN,x:Game.X.player.x,y:Game.X.player.y,scene:Game.X.st.scene}));
   assert.equal(start.main,true);assert.equal(start.scene,'out');
   assert.ok(start.x>3500&&start.y>2100,'La partida aparece en el pueblo nuevo');
