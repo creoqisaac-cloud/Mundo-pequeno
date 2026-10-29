@@ -39,3 +39,6 @@ jobs:
       - name: Ejecutar expansión en Chromium
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/expansion-smoke.cjs
+      - name: Verificar también la interfaz original de Walesa
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" node tests/browser-smoke.cjs
