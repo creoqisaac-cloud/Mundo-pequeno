@@ -1,5 +1,5 @@
 /* Isla de Walesa v51 · Caché compatible con GitHub Pages */
-const CACHE = 'walesa-v54-overworld-continuo';
+const CACHE = 'walesa-v55-calidad-overworld';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './picnic_v31.js', './walesa_v32.js', './native_joystick40.js', './walesa_mainland_v3.js', './topografia_walesa_v2.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
