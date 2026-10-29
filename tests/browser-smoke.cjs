@@ -23,15 +23,41 @@ const server=http.createServer((req,res)=>{
  });
 });
 async function slideZipper(page){
- await page.evaluate(()=>{
-  const close=document.querySelector('#sheet .panel h3 .close');
-  const rect=close.getBoundingClientRect(),x=rect.left+rect.width/2,y=rect.top+rect.height/2;
-  for(const [type,dx] of [['pointerdown',0],['pointermove',-78],['pointerup',-78]]){
-   close.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true,pointerId:87,clientX:x+dx,clientY:y,buttons:type==='pointerup'?0:1}));
-  }
- });
- await page.waitForFunction(()=>!document.getElementById('sheet').classList.contains('on'),null,{timeout:4000});
+ // Evento de puntero REAL de Chromium, sin sintetizar PointerEvents sobre
+ // un ID ficticio cuyo pointercapture puede perderse entre microtareas.
+ const close=page.locator('#sheet .panel h3 .close');
+ await close.waitFor({state:'visible'});
+ // Playwright can scroll the document when selecting a low settings row.
+ // The game's full-screen close handle must be back inside the viewport
+ // before validating a real swipe; otherwise pointer coordinates are negative.
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await close.scrollIntoViewIfNeeded();
+ const rect=await close.boundingBox();
+ assert.ok(rect&&rect.width>0&&rect.height>0,'Tirador visible');
+ const x=rect.x+rect.width/2,y=rect.y+rect.height/2;
+ const before=await page.evaluate(([x,y])=>{
+  const c=document.querySelector('#sheet .panel h3 .close'),top=document.elementFromPoint(x,y);
+  return{menu:Game.X.st.menu,top:top?.tagName+'.'+top?.className,
+   same:top===c,drag:c.classList.contains('wcDragging37'),
+   rect:{x:c.getBoundingClientRect().x,y:c.getBoundingClientRect().y},
+   panelTransform:getComputedStyle(document.querySelector('#sheet .panel')).transform,
+   sheetClass:document.querySelector('#sheet').className,
+   viewport:[innerWidth,innerHeight],
+   parent:c.parentElement?.outerHTML.slice(0,130)};
+ },[x,y]);console.log('ZIP BEFORE',before);
+ await page.mouse.move(x,y);
+ await page.mouse.down();
+ await page.mouse.move(x-95,y,{steps:7});
+ await page.mouse.up();
+ const after=await page.evaluate(()=>{
+  const c=document.querySelector('#sheet .panel h3 .close'),sheet=document.querySelector('#sheet');
+  return {menu:Game.X.st.menu,drag:c.classList.contains('wcDragging37'),
+   xform:c.style.transform,closing:sheet.classList.contains('wcZipClosing37'),
+   visible:sheet.classList.contains('on')};
+ });console.log('ZIP AFTER',after);
+ await page.waitForFunction(()=>!document.getElementById('sheet').classList.contains('on'),null,{timeout:7000});
 }
+
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const port=server.address().port;
@@ -121,17 +147,7 @@ async function slideZipper(page){
   await page.evaluate(()=>Game.X.openMenu('tasks'));
   await page.locator('#tabs button[data-t="opts"]').click();
   await page.locator('#wcBagZipTrack37').waitFor({state:'attached'});
-  await page.evaluate(()=>{
-   const close=document.querySelector('#sheet .panel h3 .close');
-   const r=close.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
-   for(const [type,dx] of [['pointerdown',0],['pointermove',-75],['pointerup',-75]]){
-    close.dispatchEvent(new PointerEvent(type,{
-     bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true,
-     pointerId:87,clientX:x+dx,clientY:y,buttons:type==='pointerup'?0:1
-    }));
-   }
-  });
-  await page.waitForTimeout(400);
+  await slideZipper(page);
   assert.equal(await page.evaluate(()=>Game.X.st.menu),false,'La cremallera debe cerrar con swipe');
   assert.equal(await page.locator('#sheet').evaluate(el=>el.classList.contains('on')),false);
   assert.deepEqual(errors,[],'Cerrar con cremallera no debe producir errores de JavaScript');

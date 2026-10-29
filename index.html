@@ -10165,29 +10165,40 @@ window.Wardrobe=Wardrobe;
    try{bagClose.setPointerCapture(pid)}catch(_){}
    e.stopPropagation();
   });
-  bagClose.addEventListener('pointermove',e=>{
+  function zipMove(e){
    if(e.pointerId!==pid)return;
    const dx=e.clientX-originX,dy=e.clientY-originY;
-   // Un gesto vertical no cierra la mochila.
-   if(Math.abs(dy)>65&&Math.abs(dx)<30){snap();return;}
+   if(Math.abs(dy)>65&&Math.abs(dx)<30){snap();return}
    drag=Math.max(0,Math.min(103,-dx));
-   bagClose.style.transform=`translateX(${-drag}px)`;
+   bagClose.style.transform='translateX('+-drag+'px)';
    e.preventDefault();e.stopPropagation();
-  });
-  bagClose.addEventListener('pointerup',e=>{
+  }
+  function zipRelease(e){
    if(e.pointerId!==pid)return;
-   const dx=e.clientX-originX,dy=e.clientY-originY;
-   const close=dx<=-58&&Math.abs(dy)<65;
+   const dx=e.clientX-originX,dy=e.clientY-originY,close=dx<=-58&&Math.abs(dy)<65;
    snap();
    if(close){
     swipedAt=performance.now();done=true;
     e.preventDefault();e.stopPropagation();
     bagSheet.classList.add('wcZipClosing37');
-    setTimeout(()=>{if(bagSheet.classList.contains('on'))X.closeMenu();bagSheet.classList.remove('wcZipClosing37');},220);
+    setTimeout(()=>{
+     if(bagSheet.classList.contains('on'))X.closeMenu();
+     bagSheet.classList.remove('wcZipClosing37');
+    },220);
    }
-  });
+  }
+  // El dedo puede abandonar el pequeño tirador durante el gesto.
+  // Escuchar también a nivel documento evita perder el cierre si el navegador
+  // cambia la captura, y mantiene el umbral real de 58 píxeles.
+  bagClose.addEventListener('pointermove',zipMove);
+  document.addEventListener('pointermove',zipMove,true);
+  bagClose.addEventListener('pointerup',zipRelease);
+  document.addEventListener('pointerup',zipRelease,true);
   bagClose.addEventListener('pointercancel',snap);
-  bagClose.addEventListener('lostpointercapture',()=>{if(!done)snap()});
+  bagClose.addEventListener('lostpointercapture',()=>{
+   // pointerup del documento todavía puede estar en tránsito.
+   if(pid!==null&&!done)setTimeout(()=>{if(pid!==null&&!done)snap()},140);
+  });
   // No arrastrar el broche al abrir nuevamente la bolsa.
   // El observador solo hace cambios cuando el estado realmente lo requiere.
   // Así el cierre normal y el deslizamiento no crean un bucle de microtareas.
