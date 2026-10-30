@@ -254,14 +254,20 @@ window.WalesaMainland=(()=>{
     const x=x0+i,ix=i>>3,ti=(i&7)/8,p=iy*N+ix;
     const elev=(E[p]*(1-ti)+E[p+1]*ti)*(1-tj)+(E[p+N]*(1-ti)+E[p+N+1]*ti)*tj;
     const sea=(SEA_MASK[p]*(1-ti)+SEA_MASK[p+1]*ti)*(1-tj)+(SEA_MASK[p+N]*(1-ti)+SEA_MASK[p+N+1]*ti)*tj;
-    if(!(i%8)&&!(j%8)&&sea>.945&&sea<1.025){const dx=SEA_MASK[p+1]-SEA_MASK[p],dy=SEA_MASK[p+N]-SEA_MASK[p];cv.shore60.push([i,j,Math.atan2(dy,dx)+Math.PI/2])}
+    if(!(i%4)&&!(j%4)&&sea>.972&&sea<1.015){const dx=SEA_MASK[p+1]-SEA_MASK[p],dy=SEA_MASK[p+N]-SEA_MASK[p];cv.shore60.push([i,j,Math.atan2(dy,dx)+Math.PI/2])}
     const k=(j*W+i)*4,noise=hash(x>>2,y>>2),small=hash(x,y),
       // El bioma se lee a través de una frontera irregular de microparcelas.
       // Mantiene los colores nativos y elimina el corte geométrico por regiones.
       mix=biomeMix(materials,i,j),bk=mix.a,pal=PAL[bk]||PAL.town;
     let col;
     // Lo que se ve como agua tiene EXACTAMENTE el umbral de colisión del motor (.95).
-    if(sea>.95){const c=ocean(x,y),a=clamp((sea-.95)/.11,0,1);col=c.map((v,i)=>v*a+[127,211,217][i]*(1-a))}
+    if(sea>.975){
+     // La misma paleta, umbral y curva suave del mar original.
+     const c=ocean(x,y),t=clamp((sea-.975)/.085,0,1),a=t*t;
+     const shallow=(x*7+y)%9===0?[148,221,224]:[127,211,217];
+     col=c.map((v,i)=>v*a+shallow[i]*(1-a));
+     if(((x+((y/3)|0)*5)%11===0)&&t<.5)col=[148,221,224];
+    }
     else{
      // Transiciones cromáticas suaves, sin ruido de "parches cuadrados".
      // Se interpola la paleta del motor base, con grano mínimo de pixel-art.
@@ -302,17 +308,19 @@ window.WalesaMainland=(()=>{
     }
     // Orilla de arena a pasto, caramelo, ciudad o tamarindo, con anchura
     // distinta según el material y frontera rizada, no una línea de píxeles.
-    if(sea<=.95&&sea>.63){
-     const pair=materialPair('beach',bk),surf=[SAND[0]-small*13,SAND[1]-small*14,SAND[2]-small*11],
+    if(sea<=.975&&sea>.63){
+     const pair=materialPair('beach',bk),nativeSand=V.BIO[bk]?.sand,
+       sand=nativeSand?rgb(nativeSand):SAND,
+       surf=[sand[0]-small*7,sand[1]-small*7,sand[2]-small*7],
       wave=(V.vnoise((x+51)/71,(y-39)/71)-.5)*.07,
-      shore=smooth((sea-.65+wave)/.255),tone=pair.grain==='clay'?[222,190,143]:
+      shore=smooth((sea-.68+wave)/.22),tone=sea>.9?surf:pair.grain==='clay'?[222,190,143]:
         pair.grain==='sugar'?[248,225,191]:pair.grain==='tile'?[226,209,185]:surf;
      col=[col[0]*(1-shore)+tone[0]*shore,
        col[1]*(1-shore)+tone[1]*shore,col[2]*(1-shore)+tone[2]*shore];
     }
     // El suelo de ladrillo es parte del tile y de la colisión existente:
     // no es un objeto superpuesto ni una textura estirada.
-    if(sea<.95){
+    if(sea<.975){
      const plaza=plazaBrick(x,y);
      if(plaza&&plaza.alpha>0){
       const a=plaza.alpha;col=[col[0]*(1-a)+plaza.c[0]*a,
@@ -469,7 +477,17 @@ window.WalesaMainland=(()=>{
       continue;
     }
    }
-   const piece=tile(x,y);ctx.drawImage(piece,x*SZ-ox,y*SZ-oy);ctx.save();ctx.strokeStyle='#ecfcfa';ctx.lineWidth=1.2;for(const [px,py,a]of piece.shore60){const phase=t*1.8+(px+x*SZ)*.025+(py+y*SZ)*.017,off=Math.sin(phase)*2,wx=x*SZ+px-ox-Math.sin(a)*off,wy=y*SZ+py-oy+Math.cos(a)*off;ctx.globalAlpha=.25+.2*(1+Math.sin(phase));ctx.beginPath();ctx.moveTo(wx-Math.cos(a)*4,wy-Math.sin(a)*4);ctx.lineTo(wx+Math.cos(a)*4,wy+Math.sin(a)*4);ctx.stroke()}ctx.restore();
+   const piece=tile(x,y);ctx.drawImage(piece,x*SZ-ox,y*SZ-oy);
+    // Espuma blanca de pixel art en dos fases, igual al motor original.
+    ctx.save();ctx.fillStyle='#ffffff';const frame=Math.floor(t*1.4)%2;
+    for(const [px,py,a]of piece.shore60){
+     const wx=x*SZ+px,wy=y*SZ+py;
+     const shimmer=Math.sin((wx+wy)*.12+frame*Math.PI)+Math.sin(wx*.05-wy*.07);
+     if(shimmer<=.15||hash(wx+frame,wy)<.2)continue;
+     ctx.globalAlpha=frame?.67:.82;
+     ctx.fillRect(wx-ox,wy-oy,2,1);
+     if(shimmer>.9)ctx.fillRect(wx-ox+Math.cos(a)*2,wy-oy+Math.sin(a)*2,1,1);
+    }ctx.restore();
   }
  }
  const houses=[];

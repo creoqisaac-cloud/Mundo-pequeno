@@ -49,6 +49,20 @@ const server=http.createServer((req,res)=>{
   assert.ok(metro.lines.every(r=>r.stops>=5),'all lines have five or more stations');
   assert.ok(metro.lines.slice(1).every(r=>r.km>=5),'expanded lines must be long enough');
   assert.deepEqual(metro.clear,[],'metro platforms must be accessible');
+  const water=await page.evaluate(()=>{
+   const model=World.MAIN,ground=model.mainland,sea=World.sea;
+   const ocean=sea.getContext('2d').getImageData(0,0,64,64).data;
+   const points=[[100,3000],[6500,950],[6500,4400],[100,2100],[3100,4400]];
+   return points.filter(([x,y])=>model.islandD(x,y)>1.08).map(([x,y])=>{
+    const canvas=document.createElement('canvas');canvas.width=3;canvas.height=3;
+    const g=canvas.getContext('2d');ground.draw(g,x,y,3,3,0);
+    const pixel=[...g.getImageData(0,0,1,1).data].slice(0,3);
+    const k=((y%64)*64+x%64)*4,reference=[...ocean.slice(k,k+3)];
+    return {x,y,pixel,reference,match:pixel.every((v,i)=>v===reference[i])};
+   });
+  });
+  assert.ok(water.length>=2,'two open-water test locations');
+  assert.ok(water.every(p=>p.match),'all open seas share native water pixels');
   console.log('✓ Extended metro',metro);
   assert.deepEqual(errors,[],'no page errors');
   console.log('✓ Walesa v60 mobile smoke passed',info);
