@@ -43,18 +43,52 @@ const server=http.createServer((req,res)=>{
   const metro=await page.evaluate(()=>({
    lines:Metro.R.lines.map(r=>({id:r.id,stops:r.ST.length,km:r.L/1000})),
    ui:!!window.WalesaMetro62?.view,
-   underground:WalesaMetro62.underground,
+   elevated:WalesaMetro63?.elevated,
    expressStops:Metro.R.lines.slice(1).map(r=>r.ST.slice().map(s=>[s.name,s.px,s.py])),
    transferRoute:WalesaMetro62.plan('Isla Azahar','Terminal del Faro')?.transfers,
    clear:Metro.R.ST.filter(s=>World.blockedOut(s.px,s.py+8,5)).map(s=>s.name)
   }));
   assert.equal(metro.ui,true,'interactive metro route planner available');
-  assert.equal(metro.underground,true,'express metro is underground and does not overlap player roads');
+  assert.equal(metro.elevated,true,'elevated metro renderer with separate noncolliding viaduct');
   assert.ok(metro.transferRoute>=1,'island-to-faro journey uses direct transfer');
   assert.ok(metro.expressStops.every(line=>line.every((s,i)=>i===0||Math.hypot(s[1]-line[i-1][1],s[2]-line[i-1][2])>=600)),'express stops spaced at least 600 world units');
   assert.ok(metro.lines.every(r=>r.stops>=5),'all lines have five or more stations');
   assert.ok(metro.lines.slice(1).every(r=>r.km>=5),'expanded lines must be long enough');
   assert.deepEqual(metro.clear,[],'metro platforms must be accessible');
+  const fare=await page.evaluate(()=>{
+   const app=document.createElement('div');
+   app.className='w63-spec';document.body.appendChild(app);
+   const api=WalesaMetro63;
+   // Comprobar el precio, las paradas elegibles y la compra sin tocar la partida de otros usuarios.
+   save.bells=200;
+   const before=save.bells;
+   api.render({scr:app,bar:()=>'',hd:()=>'',back:()=>{}});
+   const map=app.querySelector('.w63-app');
+   const mapStations=app.querySelectorAll('[data-pick]').length;
+   const hasTicket=!!app.querySelector('[data-buy]');
+   if(!hasTicket)return {mapStations,hasTicket,after:save.bells};
+   // Seleccionar dos estaciones conectadas para el viaje real.
+   const from=app.querySelector('[data-from]'),to=app.querySelector('[data-to]');
+   from.value='Isla Azahar';from.dispatchEvent(new Event('change'));
+   const currentTo=app.querySelector('[data-to]');currentTo.value='Terminal del Faro';currentTo.dispatchEvent(new Event('change'));
+   app.querySelector('[data-buy]')?.click();
+   const pass=save.metroPass63?{...save.metroPass63}:null;
+   const result={mapStations,hasTicket,pass,charged:before-save.bells,hasTicketCard:!!app.querySelector('.w63-pass'),
+     elevated:WalesaMetro63.elevated,overworldView:!document.querySelector('.wm62-coach'),
+     route:WalesaMetro62.plan('Isla Azahar','Terminal del Faro')};
+   app.remove();return result;
+  });
+  assert.ok(fare.mapStations>=12,'interactive metro network map exposes destinations');
+  assert.equal(fare.hasTicket,true,'ticket purchase is available in the in-game phone');
+  assert.equal(fare.charged,45,'one ticket costs 45 bells');
+  assert.equal(fare.pass?.from,'Isla Azahar','ticket has selected origin');
+  assert.equal(fare.pass?.to,'Terminal del Faro','ticket has selected destination');
+  assert.equal(fare.pass?.used,false,'ticket persists unused until boarding');
+  assert.equal(fare.hasTicketCard,true,'phone displays the purchased pass');
+  assert.equal(fare.elevated,true,'viaduct elevated');
+  assert.equal(fare.overworldView,true,'no fullscreen underground ride overlay');
+  assert.ok(fare.route?.transfers>=1,'transfer remains available with one pass');
+  console.log('✓ V63 elevated metro, in-game ticket, route and transfers',fare.mapStations,fare.pass);
   const water=await page.evaluate(()=>{
    const model=World.MAIN,ground=model.mainland,sea=World.sea;
    const ocean=sea.getContext('2d').getImageData(0,0,64,64).data;
