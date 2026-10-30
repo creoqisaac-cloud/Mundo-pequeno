@@ -48,6 +48,8 @@ jobs:
         run: |
           node --check native_joystick40.js
           node --check sw.js
+          node --check metro61.js
+          grep -q 'metro61.js' index.html
           node tests/joystick-smoke.cjs
       - name: Probar Opciones y juego en Chromium real
         run: |
