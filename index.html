@@ -2785,7 +2785,7 @@ const Game=(()=>{
  let actItem=null;function actBtn(it){const b=$('#act');if(it===actItem&&(it?b.dataset.l===it.label:true))return;actItem=it;if(!it){b.classList.remove('on');return}b.dataset.l=it.label;b.querySelector('span').textContent=it.label;b.classList.add('on')}
  $('#act').addEventListener('click',e=>{e.stopPropagation();if(actItem&&!st.busy&&!st.poseLock)act(actItem)});
  /* el subtítulo sólo cambia al entrar a otra zona o a un interior (no al pasar junto a cada edificio) */
- function zoneName(){if(st.scene==='in')return(V.rooms[st.room]||{}).name||'';const m=M();if(!m)return'';if(m.mainland&&player.x>2700)return({montana:'Cordilleras del Norte',meseta:'Meseta Oriental',administrativo:'Ciudad del Sur',pueblo:'Pueblo de Walesa',valle:'Valle de los Arroyos',forest:'Bosque Profundo',costa:'Litoral de Walesa'})[m.mainland.zone(player.x,player.y)]||'Gran Continente';if(!m.main&&!m.city)return m.name;if(m.city||(m.cityOff&&player.x>1600))return'Ciudad Corazón';const b=V.biomeAt(player.x,player.y),B=V.BIO[b];return b==='city'?'Ciudad Corazón':B&&B.n?B.n:'Tu isla'}
+ function zoneName(){if(st.scene==='in')return(V.rooms[st.room]||{}).name||'';const m=M();if(!m)return'';const south=m.overworld60?.regionAt(player.x,player.y);if(south)return south.name;if(m.mainland&&player.x>2700)return({montana:'Cordilleras del Norte',meseta:'Meseta Oriental',administrativo:'Ciudad del Sur',pueblo:'Pueblo de Walesa',valle:'Valle de los Arroyos',forest:'Bosque Profundo',costa:'Litoral de Walesa'})[m.mainland.zone(player.x,player.y)]||'Gran Continente';if(!m.main&&!m.city)return m.name;if(m.city||(m.cityOff&&player.x>1600))return'Ciudad Corazón';const b=V.biomeAt(player.x,player.y),B=V.BIO[b];return b==='city'?'Ciudad Corazón':B&&B.n?B.n:'Tu isla'}
  function placeName(){if(st.scene==='in')return V.rooms[st.room].name;const m=M(),x=player.x,y=player.y;if(!m.main&&!m.city)return m.name;for(const b of m.build)if(Math.abs(x-b.x)<46&&y>b.y-60&&y<b.y+34)return b.name;if(m.city)return'Ciudad Corazón';
   if(y>m.pier.y-20&&Math.abs(x-m.pier.x-10)<40)return'El muelle';if(V.islandD(x,y)>.88)return'La playa';return V.BIO[V.biomeAt(x,y)].n}
 
@@ -10229,6 +10229,7 @@ window.Wardrobe=Wardrobe;
 <script src="./native_joystick40.js"></script>
 <script src="./topografia_walesa_v2.js"></script>
 <script src="./walesa_mainland_v3.js"></script>
+<script src="./overworld60.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
