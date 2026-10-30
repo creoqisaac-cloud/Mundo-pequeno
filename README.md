@@ -1,6 +1,6 @@
-# Isla de Walesa · v31
+# Mundo Pequeño
 
-Juego HTML5 para celular y computadora. La versión v31 se ejecuta desde `index.html`; sus sprites originales y las máscaras de coloreado ya están integrados en el HTML.
+Juego HTML5 para celular y computadora. El proyecto se llama **Mundo Pequeño**. Los recursos originales y las máscaras de coloreado están integrados en `index.html`. Los apartados siguientes documentan versiones históricas y se conservan como referencia.
 
 ## GitHub Pages
 
@@ -51,3 +51,13 @@ Los sistemas nuevos están en `walesa_v32.js`, referenciado desde `index.html` y
 ## v33 · Hospital de los Corazones
 
 El hospital ahora es un edificio en **Ciudad Corazón**, al sur del Salón de juegos, junto a los terrenos y la avenida central. Ya no ocupa el espacio junto al metro en la isla principal. Incluye interior con puerta, salida, Enfermera Mimi, farmacia, camilla, monitor y atención de mascotas. Mantiene `walesa-ds-v1` y el paseo con un solo acompañante.
+
+
+## Metro elevado v67 (2026-10-30)
+
+- Viaducto visual continuo de concreto con rieles laterales, columnas y estaciones elevadas sobre el overworld.
+- Taquilla en planta baja, escalera eléctrica animada, torniquete con validación del boleto y andén con espera de tren real.
+- Velocidad de los trenes expresos reducida a 120 unidades del mundo por segundo para pasear y contemplar el entorno.
+- Se mantienen vagones originales v66, rutas, personajes y clave de guardado `walesa-ds-v1`.
+- La caché del service worker cambia a `walesa-v67-viaducto-andenes-20261030` para actualizar la PWA en iPhone.
+- QA en Chromium móvil: `tests/metro67-station.cjs`, `tests/metro67-access.cjs` y pruebas de regresión anteriores.
