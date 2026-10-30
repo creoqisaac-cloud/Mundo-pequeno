@@ -8350,11 +8350,11 @@ window.Wardrobe=Wardrobe;
  function extraRoute(def){
   let pts=def.points.map(p=>p.slice());
   for(let n=0;n<2;n++){const out=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];out.push([a[0]*.85+b[0]*.15,a[1]*.85+b[1]*.15],[a[0]*.15+b[0]*.85,a[1]*.15+b[1]*.85])}pts=out}
-  const P=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(L/7));for(let j=0;j<n;j++)P.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n])}
+  const P=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(L/14));for(let j=0;j<n;j++)P.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n])}
   const S=[0];for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length];S.push(S[i]+Math.hypot(b[0]-a[0],b[1]-a[1]))}
   const ST=def.stops.map(([name,x,y])=>{
    const candidates=P.map((p,i)=>({i,d:Math.hypot(p[0]-x,p[1]-y)})).sort((a,b)=>a.d-b.d);
-   for(const c of candidates){if(c.d>320)break;const i=c.i,p=P[i],q=P[(i+1)%P.length],ang=Math.atan2(q[1]-p[1],q[0]-p[0]);
+   for(const c of candidates){if(c.d>600)break;const i=c.i,p=P[i],q=P[(i+1)%P.length],ang=Math.atan2(q[1]-p[1],q[0]-p[0]);
     for(const side of [1,-1]){const nx=-Math.sin(ang)*side,ny=Math.cos(ang)*side,px=p[0]+nx*22,py=p[1]+ny*22;
      if(V.MAIN.islandD(px,py+8)>.9||V.blockedOut(px,py+8,12)||V.MAIN.build.some(b=>Math.abs(b.x-px)<65&&py>b.y-90&&py<b.y+25))continue;
      return{name,i,s:S[i],x:p[0],y:p[1],px,py,nx,ny,ang};
@@ -8743,7 +8743,7 @@ window.Wardrobe=Wardrobe;
    root.textContent='El mapa del continente se está cargando. Vuelve a abrirlo en un momento.';
   }
  }
- function metroV(){const M=window.Metro;scr.innerHTML=bar()+hd('🚇 Metro')+`<div class="lst">${M&&M.R?M.R.ST.map(s=>{const e=M.eta(s);return`<div class="it"><i>🚉</i><div><b>${s.name}</b><small>${e===0?'¡El tren está en el andén!':'Próximo tren en ~'+e+' s'}</small></div></div>`}).join(''):'<div class="it">El metro se está preparando…</div>'}</div>`;back()}
+ function metroV(){window.WalesaMetro61.render({scr,bar,hd,back,model:window.Metro,player:X.player})}
  function todayV(){const e=typeof V5!=='undefined'&&V5.event?V5.event():null,w=X.weather;const wn={sol:'Soleado',nubes:'Nublado',lluvia:'Lluvioso',nieve:'Nevado',petalos:'Lluvia de pétalos'}[w]||w;
   scr.innerHTML=bar()+hd('🌤️ Hoy')+`<div class="lst"><div class="it"><i>🌤️</i><div><b>${wn}</b><small>El clima de hoy en la isla</small></div></div><div class="it"><i>🎉</i><div><b>${e?e.name:'Día tranquilo'}</b><small>${e?(e.active?'¡Está pasando ahora!':'Empieza a las '+e.from):'Sin eventos especiales hoy'}</small></div></div><div class="it"><i>🌙</i><div><b>${gameHour()>=20||gameHour()<6?'De noche':'De día'}</b><small>${gameHour()>=20||gameHour()<6?'La Juguetería necesita quien la cuide…':'Los árboles frutales tienen fruta nueva cada día.'}</small></div></div></div>`;back()}
  function arrivalV(){scr.innerHTML=bar()+hd('🧳 Mi llegada')+`<div class="lst"><div class="it"><i>⛵</i><div><b>El día que llegaste</b><small>Volver a ver cómo llegaste con tus maletas y la llamada de Melody.</small></div></div><button class="it" data-r><i>▶️</i><div><b>Recordar</b></div></button></div>`;back();scr.querySelector('[data-r]').onclick=e=>{e.stopPropagation();close();setTimeout(()=>intro(true),200)}}
@@ -10251,6 +10251,7 @@ window.Wardrobe=Wardrobe;
 <script src="./topografia_walesa_v2.js"></script>
 <script src="./walesa_mainland_v3.js"></script>
 <script src="./overworld60.js"></script>
+<script src="./metro61.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
