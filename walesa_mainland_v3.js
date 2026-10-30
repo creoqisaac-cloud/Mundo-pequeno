@@ -237,10 +237,11 @@ window.WalesaMainland=(()=>{
  }
  const rock=([r,g,b],a)=>[r*.55+119*a,g*.45+87*a,b*.48+66*a];
  let main=null,baseD=null,origBiome=null,oldW=2700,oldH=1320;
- const cache=new Map();
+ const cache=new Map();let seaPixels=null;
+ function ocean(x,y){if(!seaPixels)seaPixels=V.sea.getContext('2d').getImageData(0,0,64,64).data;const k=(((y%64+64)%64)*64+(x%64+64)%64)*4;return[seaPixels[k],seaPixels[k+1],seaPixels[k+2]]}
  function tile(tx,ty){
   const key=tx+','+ty;if(cache.has(key)){const v=cache.get(key);cache.delete(key);cache.set(key,v);return v}
-  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d'),im=ctx.createImageData(W,H),arr=im.data;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d'),im=ctx.createImageData(W,H),arr=im.data;cv.shore60=[];
   const x0=tx*SZ,y0=ty*SZ,materials=organicNodes(tx*SZ,ty*SZ);
   // Calculamos la altitud una vez por celda, para evitar millones de ruidos por fotograma.
   const step=8,N=W/step+2,E=new Float32Array(N*N),SEA_MASK=new Float32Array(N*N),F=new Float32Array(N*N);
@@ -251,13 +252,14 @@ window.WalesaMainland=(()=>{
     const x=x0+i,ix=i>>3,ti=(i&7)/8,p=iy*N+ix;
     const elev=(E[p]*(1-ti)+E[p+1]*ti)*(1-tj)+(E[p+N]*(1-ti)+E[p+N+1]*ti)*tj;
     const sea=(SEA_MASK[p]*(1-ti)+SEA_MASK[p+1]*ti)*(1-tj)+(SEA_MASK[p+N]*(1-ti)+SEA_MASK[p+N+1]*ti)*tj;
+    if(!(i%8)&&!(j%8)&&sea>.945&&sea<1.025){const dx=SEA_MASK[p+1]-SEA_MASK[p],dy=SEA_MASK[p+N]-SEA_MASK[p];cv.shore60.push([i,j,Math.atan2(dy,dx)+Math.PI/2])}
     const k=(j*W+i)*4,noise=hash(x>>2,y>>2),small=hash(x,y),
       // El bioma se lee a través de una frontera irregular de microparcelas.
       // Mantiene los colores nativos y elimina el corte geométrico por regiones.
       mix=biomeMix(materials,i,j),bk=mix.a,pal=PAL[bk]||PAL.town;
     let col;
     // Lo que se ve como agua tiene EXACTAMENTE el umbral de colisión del motor (.95).
-    if(sea>.95)col=[SEA[0]+noise*13,SEA[1]+noise*15,SEA[2]+noise*13];
+    if(sea>.95){const c=ocean(x,y),a=clamp((sea-.95)/.11,0,1);col=c.map((v,i)=>v*a+[127,211,217][i]*(1-a))}
     else{
      // Transiciones cromáticas suaves, sin ruido de "parches cuadrados".
      // Se interpola la paleta del motor base, con grano mínimo de pixel-art.
@@ -465,7 +467,7 @@ window.WalesaMainland=(()=>{
       continue;
     }
    }
-   ctx.drawImage(tile(x,y),x*SZ-ox,y*SZ-oy);
+   const piece=tile(x,y);ctx.drawImage(piece,x*SZ-ox,y*SZ-oy);ctx.save();ctx.strokeStyle='#ecfcfa';ctx.lineWidth=1.2;for(const [px,py,a]of piece.shore60){const phase=t*1.8+(px+x*SZ)*.025+(py+y*SZ)*.017,off=Math.sin(phase)*2,wx=x*SZ+px-ox-Math.sin(a)*off,wy=y*SZ+py-oy+Math.cos(a)*off;ctx.globalAlpha=.25+.2*(1+Math.sin(phase));ctx.beginPath();ctx.moveTo(wx-Math.cos(a)*4,wy-Math.sin(a)*4);ctx.lineTo(wx+Math.cos(a)*4,wy+Math.sin(a)*4);ctx.stroke()}ctx.restore();
   }
  }
  const houses=[];
