@@ -2913,7 +2913,7 @@ const Game=(()=>{
   if(st.shakeObj)st.shakeObj.t-=dt;cam.z+=(cam.tz-cam.z)*Math.min(1,dt*6);
   if(st.mg){st.mg.update(dt,t);st.mg.draw(t)}
   else{
-   if(st.mode==='play'&&!st.menu){for(const h of HOOKS.update)h(dt,t);updPlayer(dt);if(st.scene==='out'){for(const n of NPCS)updNPC(n,dt);bugUpdate(dt);ambient(dt);updWild(dt);updPet(dt)}}
+   if(st.mode==='play'&&!st.menu){for(const h of HOOKS.update)h(dt,t);dedupeNPCs();updPlayer(dt);if(st.scene==='out'){for(const n of NPCS)updNPC(n,dt);bugUpdate(dt);ambient(dt);updWild(dt);updPet(dt)}}
    if(st.mode==='title'){for(const n of NPCS)updNPC(n,dt);const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;cam.x=P.x+Math.sin(t*.12)*220;cam.y=P.y+Math.sin(t*.09)*170}
    else{let fxp=player.x,fyp=player.y;if(st.talkWith){fxp=(player.x+st.talkWith.x)/2;fyp=(player.y+st.talkWith.y)/2}if(st.focus){fxp=st.focus.x;fyp=st.focus.y}const k=Math.min(1,dt*5);cam.x+=(fxp-cam.x)*k;cam.y+=(fyp-cam.y)*k}
    if(st.scene==='out'){if(M())drawScene(t,dt)}else drawRoom(t,dt);drawWeather(t,dt);
@@ -2976,7 +2976,7 @@ const Game=(()=>{
   cancelAnimationFrame(st.raf);st.last=performance.now();st.raf=requestAnimationFrame(loop)}
  function leave(){closeMenu();cancelAnimationFrame(st.raf);st.raf=0;if(st.mg)endMG();$('#game').classList.remove('on');Sound.stop();Desk.show()}
  document.addEventListener('visibilitychange',()=>{if(document.hidden){window.WalesaJoystick37?.release?.();Sound.stop(true);for(const k in keys)keys[k]=false;steer=null}else{st.songT=0;if(!$('#game').classList.contains('on')&&save.music&&$('#env').classList.contains('open'))Sound.play('box')}});
- const X={resetInput,s2w:(x,y)=>screenToWorld(x,y),HOOKS,say,ask,askName,toast,placeTag,flash,iris,wait,night,sunset,dawn,wx,get weather(){return weather},M,kname,spec,today,dayHash,progress,addBells,invAdd,itemInfo,catOf,hasCat,takeCat,gain,hud,burst,bubble,petE,activePet,petMenu,startMG,endMG,openMenu,closeMenu,showTab,sheet,reSheet,payOr,buyRow,goTo,act,talkTo,interactables,nearest,setNPCs,mkNPC,get NPCS(){return NPCS},set NPCS(v){NPCS=v},get wild(){return wild},get bugs(){return bugs},player,cam,st,areaSong,loading,MEMS,TASKS,JOBINFO,SHOPS,ARCADE,EGGS,actBtn,outfitKey,get W(){return W},get H(){return H},get RS(){return RS},get fx(){return fx},setQ(q){quality=q;layout()},get quality(){return quality},frame:(ms)=>loop(ms),w2s,bend,travelHome,travelCity,travelMystery,photo,vehHud,checkFinale};
+ const X={resetInput,s2w:(x,y)=>screenToWorld(x,y),HOOKS,say,ask,askName,toast,placeTag,flash,iris,wait,night,sunset,dawn,wx,get weather(){return weather},M,kname,spec,today,dayHash,progress,addBells,invAdd,itemInfo,catOf,hasCat,takeCat,gain,hud,burst,bubble,petE,activePet,petMenu,startMG,endMG,openMenu,closeMenu,showTab,sheet,reSheet,payOr,buyRow,goTo,act,talkTo,interactables,nearest,setNPCs,mkNPC,get NPCS(){return NPCS},set NPCS(v){NPCS=v;dedupeNPCs()},get wild(){return wild},get bugs(){return bugs},player,cam,st,areaSong,loading,MEMS,TASKS,JOBINFO,SHOPS,ARCADE,EGGS,actBtn,outfitKey,get W(){return W},get H(){return H},get RS(){return RS},get fx(){return fx},setQ(q){quality=q;layout()},get quality(){return quality},frame:(ms)=>loop(ms),w2s,bend,travelHome,travelCity,travelMystery,photo,vehHud,checkFinale};
  return{enter,leave,MG,G,X,startMG,openMenu,openShop,openCreator,get st(){return st},player,cam,get npcs(){return NPCS},travelMystery,travelHome,travelCity,get wild(){return wild},adoptDone}
 })();
 </script>
