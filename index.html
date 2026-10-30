@@ -8324,7 +8324,7 @@ window.Wardrobe=Wardrobe;
    todo el tiempo y se detienen en cada andén. Nada de teletransporte: esperas en el andén, subes cuando llega, ves el
    viaje por la ventana (la cámara sigue al tren) y bajas en la parada que quieras. */
 (()=>{const X=Game.X,G=Game.G,V=World,P=Paint,H=X.HOOKS,TAU=Math.PI*2;
- let R=null;const SPEED=72,STOP=5.5;
+ let R=null,routes=[];const SPEED=72,STOP=5.5;
  /* ── la ruta ── */
  function build(m){const cx=m.cx,cy=m.cy,rx=m.rx,ry=m.ry;
   /* radio del anillo según el ángulo: se aleja del estanque y de los puestos */
@@ -8344,9 +8344,26 @@ window.Wardrobe=Wardrobe;
    if(name==='Ciudad Corazón'){if(ny<0){nx=-nx;ny=-ny}}else{const ox=p[0]-cx,oy=p[1]-cy;if(nx*ox+ny*oy<0){nx=-nx;ny=-ny}}
    return{name,i,s:S[i],x:p[0],y:p[1],px:p[0]+nx*22,py:p[1]+ny*22,nx,ny,ang:Math.atan2(ty,tx)}});
   return{P:P0,S,L,ST}}
- function at(s){const r=R;s=((s%r.L)+r.L)%r.L;let lo=0,hi=r.S.length-1;while(hi-lo>1){const md=(lo+hi)>>1;if(r.S[md]<=s)lo=md;else hi=md}const a=r.P[lo%r.P.length],b=r.P[(lo+1)%r.P.length],u=(s-r.S[lo])/Math.max(.001,r.S[lo+1]-r.S[lo]);return{x:a[0]+(b[0]-a[0])*u,y:a[1]+(b[1]-a[1])*u,ang:Math.atan2(b[1]-a[1],b[0]-a[0])}}
+ function extraRoute(def){
+  let pts=def.points.map(p=>p.slice());
+  for(let n=0;n<2;n++){const out=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];out.push([a[0]*.85+b[0]*.15,a[1]*.85+b[1]*.15],[a[0]*.15+b[0]*.85,a[1]*.15+b[1]*.85])}pts=out}
+  const P=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(L/7));for(let j=0;j<n;j++)P.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n])}
+  const S=[0];for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length];S.push(S[i]+Math.hypot(b[0]-a[0],b[1]-a[1]))}
+  const ST=def.stops.map(([name,x,y])=>{
+   const candidates=P.map((p,i)=>({i,d:Math.hypot(p[0]-x,p[1]-y)})).sort((a,b)=>a.d-b.d);
+   for(const c of candidates){if(c.d>320)break;const i=c.i,p=P[i],q=P[(i+1)%P.length],ang=Math.atan2(q[1]-p[1],q[0]-p[0]);
+    for(const side of [1,-1]){const nx=-Math.sin(ang)*side,ny=Math.cos(ang)*side,px=p[0]+nx*22,py=p[1]+ny*22;
+     if(V.MAIN.islandD(px,py+8)>.9||V.blockedOut(px,py+8,12)||V.MAIN.build.some(b=>Math.abs(b.x-px)<65&&py>b.y-90&&py<b.y+25))continue;
+     return{name,i,s:S[i],x:p[0],y:p[1],px,py,nx,ny,ang};
+    }
+   }
+   throw Error('No safe metro platform for '+name);
+  });return{P,S,L:S[S.length-1],ST,id:def.id,name:def.name,color:def.color,speed:def.speed};
+ }
+ function at(s,r=routes[0]){s=((s%r.L)+r.L)%r.L;let lo=0,hi=r.S.length-1;while(hi-lo>1){const md=(lo+hi)>>1;if(r.S[md]<=s)lo=md;else hi=md}const a=r.P[lo%r.P.length],b=r.P[(lo+1)%r.P.length],u=(s-r.S[lo])/Math.max(.001,r.S[lo+1]-r.S[lo]);return{x:a[0]+(b[0]-a[0])*u,y:a[1]+(b[1]-a[1])*u,ang:Math.atan2(b[1]-a[1],b[0]-a[0])}}
  /* quitar árboles y piedritas que estorban a la vía (las casas no se mueven) */
- function clearCorridor(m){const pts=R.P,near=(x,y,r)=>{for(let i=0;i<pts.length;i+=2)if(Math.abs(pts[i][0]-x)<r&&Math.abs(pts[i][1]-y)<r&&Math.hypot(pts[i][0]-x,pts[i][1]-y)<r)return true;return false};
+ function clearCorridor(m){const buckets=new Map();for(const p of R.P){const k=(p[0]/32|0)+','+(p[1]/32|0);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(p)}
+  const near=(x,y,r)=>{const bx=Math.floor(x/32),by=Math.floor(y/32);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)for(const p of buckets.get((bx+dx)+','+(by+dy))||[])if(Math.hypot(p[0]-x,p[1]-y)<r)return true;return false};
   m.objs=m.objs.filter(o=>o.house||o.stand||o.plot||!near(o.x,o.y,14));m.solids=m.solids.filter(s=>{const x=s.t==='r'?s.x+s.w/2:s.x,y=s.t==='r'?s.y+s.h/2:s.y;return!near(x,y,12)||(m.objs.some(o=>o.house&&Math.hypot(o.x-x,o.y-y)<60))});
   if(m.fruitTrees)m.fruitTrees=m.fruitTrees.filter(o=>m.objs.includes(o));if(m.harvest)m.harvest=m.harvest.filter(o=>m.objs.includes(o));
   for(const st of R.ST){m.objs=m.objs.filter(o=>o.house||Math.hypot(o.x-st.px,o.y-st.py)>30);m.solids=m.solids.filter(s=>{const x=s.t==='r'?s.x+s.w/2:s.x,y=s.t==='r'?s.y+s.h/2:s.y;return Math.hypot(x-st.px,y-st.py)>28})}
@@ -8354,18 +8371,19 @@ window.Wardrobe=Wardrobe;
  /* ── los trenes ── */
  let trains=[],ride=null,waitAt=null,ready=false;
  H.update.push(dt=>{const m=V.MAIN;if(!m||!m.objs||!m.cityOff)return;
-  if(!ready){ready=true;R=build(m);clearCorridor(m);trains=[{s:R.ST[0].s-1,stop:0,id:0},{s:R.ST[0].s+R.L/2,stop:0,id:1}]}
-  dt=Math.min(dt,.05);for(const tr of trains){if(tr.stop>0){tr.stop-=dt;continue}const s0=tr.s;tr.s+=SPEED*dt;
-   for(const st of R.ST){const a=((s0-st.s)%R.L+R.L)%R.L,b=((tr.s-st.s)%R.L+R.L)%R.L;if(a>R.L-60&&b<60||b<SPEED*dt&&a>b){tr.s=st.s+.01;tr.stop=STOP;tr.at=st;if(X.M()===m&&Math.hypot(X.player.x-st.px,X.player.y-st.py)<220)G.sfx.bell&&G.sfx.bell();break}}
-   if(tr.stop<=0)tr.at=null;tr.s%=R.L}
-  /* viajando: la cámara sigue al tren; bajas en tu parada */
-  if(ride){const tr=ride.tr,p=at(tr.s);X.st.focus={x:p.x,y:p.y};X.player.x=p.x;X.player.y=p.y;if(tr.stop>0&&tr.at===ride.dest&&tr.stop<STOP-1.2)getOff();else rideUI()}
-  /* esperando en el andén: cuando llega, se sube */
-  if(waitAt&&X.M()===m){const tr=trains.find(t=>t.stop>0&&t.at===waitAt.st);if(tr){const w=waitAt;waitAt=null;board(tr,w.st,w.dest)}}});
+  if(!ready){ready=true;const original=build(m);Object.assign(original,{id:'pueblo',name:'Línea del Pueblo',color:'#e8708f',speed:SPEED});routes=[original,...(m.metro47||[]).map(extraRoute)];for(const r of routes)for(const st of r.ST)st.route=r;
+   R={...original,lines:routes,P:routes.flatMap(r=>r.P),ST:routes.flatMap(r=>r.ST)};clearCorridor(m);trains=routes.flatMap(r=>{const count=r===original?2:Math.max(3,Math.ceil(r.L/(r.speed*30)));return Array.from({length:count},(_,i)=>({s:(r.ST[0].s+i*r.L/count-1+r.L)%r.L,stop:0,id:r.id+':'+i,route:r}))})}
+  dt=Math.min(dt,.05);for(const tr of trains){const r=tr.route,speed=r.speed;if(tr.stop>0){tr.stop=Math.max(0,tr.stop-dt);continue}const s0=tr.s;tr.s+=speed*dt;
+   for(const st of r.ST){const a=((s0-st.s)%r.L+r.L)%r.L,b=((tr.s-st.s)%r.L+r.L)%r.L;if(a>r.L-60&&b<60||b<speed*dt&&a>b){tr.s=st.s+.01;tr.stop=STOP;tr.at=st;if(X.M()===m&&Math.hypot(X.player.x-st.px,X.player.y-st.py)<220)G.sfx.bell&&G.sfx.bell();break}}
+   if(tr.stop<=0)tr.at=null;tr.s%=r.L}
+  if(ride&&(X.M()!==m||X.st.scene!=='out')){ride=null;X.st.busy=false;X.st.focus=null;if(uiEl){uiEl.remove();uiEl=null}}
+  if(ride){X.st.busy=true;X.player.path=null;const tr=ride.tr,p=at(tr.s,tr.route);X.st.focus={x:p.x,y:p.y};X.player.x=p.x;X.player.y=p.y;if(tr.stop>0&&tr.at===ride.dest&&tr.stop<STOP-1.2)getOff();else rideUI()}
+  if(waitAt&&X.M()===m&&X.st.scene==='out'&&!X.st.busy&&!X.st.menu&&Math.hypot(X.player.x-waitAt.st.px,X.player.y-waitAt.st.py-6)<=26){const tr=trains.find(t=>t.route===waitAt.st.route&&t.stop>0&&t.at===waitAt.st);if(tr){const w=waitAt;waitAt=null;board(tr,w.st,w.dest)}}});
  /* ── dibujo: vías, andenes y trenes ── */
  const RAIL='#8a8fa3',SLEEP='#8a6448';
  H.ground.push((g,ox,oy,t)=>{const m=X.M();if(!R||m!==V.MAIN)return;const x0=ox-60,y0=oy-60,x1=ox+X.W*2.2+60,y1=oy+X.H*2.2+60;
-  g.save();g.lineCap='round';
+  g.save();g.lineCap='round';for(const route of routes){const R=route;
+  if(route.id!=='pueblo'){g.lineWidth=13;g.strokeStyle='#9c795c';g.beginPath();for(let i=0;i<R.P.length;i++){const a=R.P[i],b=R.P[(i+1)%R.P.length];if(a[0]<x0||a[0]>x1||a[1]<y0||a[1]>y1||m.islandD(a[0],a[1])<.94)continue;g.moveTo(a[0]-ox,a[1]-oy);g.lineTo(b[0]-ox,b[1]-oy)}g.stroke()}
   /* durmientes */
   for(let i=0;i<R.P.length;i++){const a=R.P[i],b=R.P[(i+1)%R.P.length];if(a[0]<x0||a[0]>x1||a[1]<y0||a[1]>y1)continue;const ang=Math.atan2(b[1]-a[1],b[0]-a[0]),nx=-Math.sin(ang),ny=Math.cos(ang);g.strokeStyle=SLEEP;g.lineWidth=2;g.beginPath();g.moveTo(a[0]-ox+nx*5,a[1]-oy+ny*5);g.lineTo(a[0]-ox-nx*5,a[1]-oy-ny*5);g.stroke()}
   /* rieles */
@@ -8373,34 +8391,34 @@ window.Wardrobe=Wardrobe;
   /* andenes */
   for(const st of R.ST){if(st.px<x0||st.px>x1||st.py<y0||st.py>y1)continue;g.save();g.translate(st.px-ox,st.py-oy);g.rotate(st.ang);g.fillStyle='#d9cfc0';g.fillRect(-34,-8,68,16);g.fillStyle='#f6d26b';const e=(st.nx*Math.cos(st.ang+Math.PI/2)+st.ny*Math.sin(st.ang+Math.PI/2))>0?-8:6.5;g.fillRect(-34,e,68,1.5);g.fillStyle='rgba(60,40,50,.12)';for(let k=-30;k<34;k+=8)g.fillRect(k,-8,1,16);g.restore()}
   /* trenes (tres vagones que siguen la vía) */
-  for(const tr of trains){for(let c=0;c<3;c++){const p=at(tr.s-c*27);if(p.x<x0||p.x>x1||p.y<y0||p.y>y1)continue;g.save();g.translate(p.x-ox,p.y-oy);g.rotate(p.ang);
+  for(const tr of trains.filter(t=>t.route===route)){for(let c=0;c<3;c++){const p=at(tr.s-c*27,tr.route);if(p.x<x0||p.x>x1||p.y<y0||p.y>y1)continue;g.save();g.translate(p.x-ox,p.y-oy);g.rotate(p.ang);
     g.fillStyle='rgba(40,30,50,.22)';g.beginPath();g.ellipse(1,3,14,7,0,0,TAU);g.fill();
-    const body=c===0?'#f490b4':'#fde3ea',trim=c===0?'#e8456f':'#f490b4';g.fillStyle=trim;g.beginPath();g.roundRect?g.roundRect(-13,-6.5,26,13,c===0?[3,6,6,3]:3):g.rect(-13,-6.5,26,13);g.fill();
+    const body=c===0?route.color:'#fde3ea',trim=route.color;g.fillStyle=trim;g.beginPath();g.roundRect?g.roundRect(-13,-6.5,26,13,c===0?[3,6,6,3]:3):g.rect(-13,-6.5,26,13);g.fill();
     g.fillStyle=body;g.beginPath();g.roundRect?g.roundRect(-12,-8.5,24,12,c===0?[3,6,6,3]:3):g.rect(-12,-8.5,24,12);g.fill();g.strokeStyle='#3a2630';g.lineWidth=.6;g.stroke();
     g.fillStyle=ride&&ride.tr===tr&&c===1?'#fff3a0':'#bfe6fa';for(let w=-9;w<9;w+=6)g.fillRect(w,-7,4,3.4);
     if(c===0){g.fillStyle='#fff3a0';g.beginPath();g.arc(11,-2.5,1.6,0,TAU);g.fill();if(X.night()){g.fillStyle='rgba(255,243,160,.25)';g.beginPath();g.moveTo(12,-2.5);g.lineTo(40,-12);g.lineTo(40,8);g.fill()}}
     if(tr.stop>0){g.fillStyle='#3a2630';g.fillRect(-2,3,4,2)}g.restore()}}
-  g.restore()});
+  }g.restore()});
  /* el techito de cada estación, con su nombre */
  const shelter={};const shelterS=name=>shelter[name]||(shelter[name]=P.paint(56,40,28,39,g=>{P.wc(g,P.RR(2,4,52,8,2.5),'#e8708f',{lw:.5,gloss:.2});for(const x of[8,48])P.wc(g,P.RR(x-1.4,11,2.8,26,1),'#8a8fa3',{lw:.35});P.wc(g,P.RR(16,26,24,5,1.6),'#c9a27e',{lw:.4});P.wc(g,P.RR(14,14,28,8,1.6),'#fffaf3',{lw:.4});g.fillStyle='#3a2630';g.font='800 4.6px Nunito,sans-serif';g.textAlign='center';g.fillText('🚇 '+name.replace('Bosque de ','B. ').replace('Valle de ',''),28,19.6)},{clean:1}));
  H.bill.push((bb,t)=>{const m=X.M();if(!R||m!==V.MAIN||X.st.scene!=='out')return;for(const st of R.ST){bb.push({x:st.px,y:st.py-6,draw:g=>{const s=shelterS(st.name);g.drawImage(s.c,-s.ax,-s.ay)}})}
   if(ride){const e=bb.find(x=>x.pl);if(e){e.pl=false;e.draw=()=>{}}}});
  /* ── interactuar en el andén ── */
- const eta=st=>{let best=1e9;for(const tr of trains){if(tr.stop>0&&tr.at===st)return 0;let d=((st.s-tr.s)%R.L+R.L)%R.L;const stops=R.ST.filter(q=>{const dq=((q.s-tr.s)%R.L+R.L)%R.L;return dq>1&&dq<d}).length;best=Math.min(best,d/SPEED+stops*STOP+(tr.stop>0?tr.stop:0))}return Math.round(best)};
+ const eta=st=>{const R=st.route;if(!R)return 0;let best=1e9;for(const tr of trains){if(tr.route!==R)continue;if(tr.stop>0&&tr.at===st)return 0;let d=((st.s-tr.s)%R.L+R.L)%R.L;const stops=R.ST.filter(q=>{const dq=((q.s-tr.s)%R.L+R.L)%R.L;return dq>1&&dq<d}).length;best=Math.min(best,d/R.speed+stops*STOP+(tr.stop>0?tr.stop:0))}return Math.round(best)};
  H.inter.push(l=>{const m=X.M();if(!R||m!==V.MAIN||X.st.scene!=='out'||ride)return;for(const st of R.ST){const e=eta(st);l.push({type:'metro',st,x:st.px,y:st.py+4,r:30,hy:42,label:e===0?'🚇 Subir al metro':'🚇 Esperar el metro (~'+e+' s)'})}});
- async function chooseDest(st){const others=R.ST.filter(q=>q!==st);const i=await X.ask('🚇 Metro · ¿A dónde vas?',others.map(q=>q.name).concat(['Mejor no']));return others[i]||null}
- H.act.unshift(it=>{if(it.type==='metro')return(async()=>{const st=it.st,dest=await chooseDest(st);if(!dest)return;const tr=trains.find(t=>t.stop>0&&t.at===st);
+ async function chooseDest(st){const others=st.route.ST.filter(q=>q!==st);const i=await X.ask('🚇 '+st.route.name+' · ¿A dónde vas?',others.map(q=>q.name).concat(['Mejor no']));return others[i]||null}
+ H.act.unshift(it=>{if(it.type==='metro')return(async()=>{const st=it.st,dest=await chooseDest(st);if(!dest)return;const tr=trains.find(t=>t.route===st.route&&t.stop>0&&t.at===st);
    if(tr){board(tr,st,dest);return}X.player.x=st.px;X.player.y=st.py+6;X.player.dir=0;waitAt={st,dest};X.toast('🚇 Esperando el metro en '+st.name+'… llega en ~'+eta(st)+' s')})();
   /* las estaciones de tren de antes ahora llevan al metro */
   if(it.type==='job'&&it.b&&it.b.job==='train'&&R){const st=R.ST.reduce((a,q)=>Math.hypot(q.px-it.b.x,q.py-it.b.y)<Math.hypot(a.px-it.b.x,a.py-it.b.y)?q:a,R.ST[0]);return(async()=>{await X.say('','Ahora la isla tiene metro. La estación '+st.name+' está a unos pasos: espera en el andén y sube cuando llegue.');})()}
   return null});
  /* si te mueves, dejas de esperar */
- H.update.push(()=>{if(waitAt&&Math.hypot(X.player.x-waitAt.st.px,X.player.y-waitAt.st.py-6)>26){waitAt=null;X.toast('Dejaste de esperar el metro')}});
- function board(tr,st,dest){ride={tr,dest,from:st};X.st.busy=true;X.player.path=null;G.sfx.door&&G.sfx.door();X.toast('🚇 Próxima parada: '+nextStop(tr).name);X.cam.tz=Math.max(X.cam.uz*.9,.85)}
- function nextStop(tr){let best=null,bd=1e9;for(const q of R.ST){const d=((q.s-tr.s)%R.L+R.L)%R.L;if(d>2&&d<bd){bd=d;best=q}}return best||R.ST[0]}
+ H.update.push(()=>{if(waitAt&&(X.M()!==V.MAIN||X.st.scene!=='out'||Math.hypot(X.player.x-waitAt.st.px,X.player.y-waitAt.st.py-6)>26)){waitAt=null;X.toast('Dejaste de esperar el metro')}});
+ function board(tr,st,dest){if(tr.route!==st.route||dest.route!==st.route||X.M()!==V.MAIN||X.st.scene!=='out')return;X.resetInput();ride={tr,dest,from:st};X.st.busy=true;X.player.path=null;G.sfx.door&&G.sfx.door();X.toast('🚇 Próxima parada: '+nextStop(tr).name);X.cam.tz=Math.max(X.cam.uz*.9,.85)}
+ function nextStop(tr){const R=tr.route;let best=null,bd=1e9;for(const q of R.ST){const d=((q.s-tr.s)%R.L+R.L)%R.L;if(d>2&&d<bd){bd=d;best=q}}return best||R.ST[0]}
  let uiEl=null;function rideUI(){if(!uiEl){uiEl=document.createElement('div');uiEl.style.cssText='position:absolute;z-index:30;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);background:rgba(58,38,52,.78);color:#fffaf3;font:800 12px Nunito,sans-serif;border-radius:16px;padding:8px 12px;display:flex;gap:8px;align-items:center;white-space:nowrap';document.getElementById('game').appendChild(uiEl)}
   const tr=ride.tr,nx=tr.stop>0&&tr.at?tr.at:nextStop(tr),txt=(tr.stop>0&&tr.at?'🚇 En '+tr.at.name:'🚇 Próxima: '+nx.name)+' · vas a '+ride.dest.name;if(uiEl._t!==txt){uiEl._t=txt;uiEl.innerHTML=txt+(ride.dest!==nx?'<button style="border:0;border-radius:10px;padding:4px 8px;font:800 11px Nunito,sans-serif;background:#f490b4;color:#fff">Bajar aquí</button>':'');const b=uiEl.querySelector('button');if(b)b.onclick=e=>{e.stopPropagation();ride.dest=tr.stop>0&&tr.at?tr.at:nx;if(tr.stop>0&&tr.at)getOff()}}}
- function getOff(){const st=ride.dest;ride=null;if(uiEl){uiEl.remove();uiEl=null}X.st.focus=null;X.cam.tz=X.cam.uz;X.player.x=st.px;X.player.y=st.py+8;X.player.dir=0;X.cam.x=X.player.x;X.cam.y=X.player.y;X.petE.x=X.player.x+16;X.petE.y=X.player.y+4;X.st.busy=false;G.sfx.door&&G.sfx.door();X.placeTag&&X.placeTag(st.name);G.save();try{(window.Metro.arr||[]).forEach(f=>f(st))}catch(e){}}
+ function getOff(){if(!ride)return;const st=ride.dest;ride=null;if(uiEl){uiEl.remove();uiEl=null}X.st.focus=null;X.cam.tz=X.cam.uz;X.player.x=st.px;X.player.y=st.py+8;X.player.dir=0;X.player.path=null;X.player.frame=0;X.resetInput();X.cam.x=X.player.x;X.cam.y=X.player.y;X.petE.x=X.player.x+16;X.petE.y=X.player.y+4;X.st.busy=false;G.sfx.door&&G.sfx.door();X.placeTag&&X.placeTag(st.name);G.save();try{(window.Metro.arr||[]).forEach(f=>f(st))}catch(e){}}
  window.Metro={get R(){return R},get trains(){return trains},eta,at};
 })();
 </script>
