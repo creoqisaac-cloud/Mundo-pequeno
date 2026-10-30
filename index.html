@@ -1598,13 +1598,13 @@ const World=(()=>{
   const MW=m.MW,MH=m.MH,cv=mk(MW,MH),g=cv.getContext('2d'),id=g.createImageData(MW,MH),d=id.data,R=rng(m.seed);
   const pm=new Uint8Array(MW*MH),bio=new Uint8Array(MW*MH),keys=Object.keys(BIO);m.path=pm;m.bio=bio;
   for(const s of m.paths||[]){const[ax,ay,bx,by]=s,L=Math.hypot(bx-ax,by-ay);for(let t=0;t<=L;t+=2){const x=ax+(bx-ax)*t/L,y=ay+(by-ay)*t/L,w=(vnoise(x/14,y/14)-.5)*3;for(let j=-9;j<=9;j++)for(let i=-9;i<=9;i++){const r=Math.hypot(i,j);if(r>8.6+w)continue;const xx=(x+i)|0,yy=(y+j)|0;if(xx<0||yy<0||xx>=MW||yy>=MH)continue;const k=yy*MW+xx,v=r<6.5+w?2:1;if(pm[k]<v)pm[k]=v}}}
-  const iD=m.islandD,ST=['#ebe2d0','#ddd1ba','#c6b89e'].map(C),SH=['#7fd3d9','#94dde0','#6cc4d0'].map(C);const foamL=[];
+  const iD=m.islandD,ST=['#ebe2d0','#ddd1ba','#c6b89e'].map(C),SH=['#7fd3d9','#94dde0','#6cc4d0'].map(C);const foamL=[],seaRuns=[];
   let rm=null;if(m.roads){rm=new Uint8Array(MW*MH);for(const [ax,ay,bx,by] of m.roads){const hz=ay===by,L=Math.hypot(bx-ax,by-ay);for(let t=0;t<=L;t++){const x=ax+(bx-ax)*t/L,y=ay+(by-ay)*t/L;for(let o=-15;o<=15;o++){const xx=Math.round(hz?x:x+o),yy=Math.round(hz?y+o:y);if(xx<0||yy<0||xx>=MW||yy>=MH)continue;const k=yy*MW+xx,ao=Math.abs(o);let v=ao<=9?3:2;if(ao<1&&(t%14)<7)v=4;if(v===2&&rm[k]>=3)continue;if(v===4&&rm[k]===3)continue;rm[k]=v}}}}m.road=rm;
   const ASP=['#6f6b7a','#67636f','#77737f'].map(C),SWK=['#e4dccf','#d6ccbd'].map(C),LANE=C('#f6e7a0');
   const pal={};for(const k of keys){const b=BIO[k];pal[k]={g:b.g.map(C),sand:C(b.sand||'#f3e1b4'),sand2:sh(C(b.sand||'#f3e1b4'),-14),path:(b.path||['#e6d3ad','#d7c194','#f1e4c4','#c5ae82']).map(C)}}
   const pl=m.spots&&m.spots.plaza;
   const ROCKS=['#b38d59','#b37543','#966b44','#7b503e','#553d35'].map(C);
-  for(let y=0;y<MH;y++){for(let x=0;x<MW;x++){const i=y*MW+x,h=hash(x,y);let c;const dd=iD(x,y),bk=m.biome(x,y,m),P=pal[bk];bio[i]=keys.indexOf(bk);
+  for(let y=0;y<MH;y++){let seaStart=-1;for(let x=0;x<MW;x++){const i=y*MW+x,h=hash(x,y);let c;const dd=iD(x,y),bk=m.biome(x,y,m),P=pal[bk];bio[i]=keys.indexOf(bk);
    if(dd>1.06)c=seaPx(x,y);
    else if(dd>.975){const t=clamp((dd-.975)/.085,0,1);c=mix(SH[(x*7+y)%9===0?1:0],seaPx(x,y),t*t);if(((x+((y/3)|0)*5)%11===0)&&t<.5)c=SH[1];if(dd<.99)foamL.push(i)}
    else if(dd>.9){c=h<.12?P.sand2:P.sand;if(hash(x>>1,y>>1)<.003)c=C('#f7b4c4')}
@@ -1634,7 +1634,9 @@ const World=(()=>{
      c=sh(c,light);
     }
    }
+   if(dd>1.06){if(seaStart<0)seaStart=x}else if(seaStart>=0){seaRuns.push([seaStart,y,x-seaStart]);seaStart=-1}
    const k=i*4;d[k]=c[0];d[k+1]=c[1];d[k+2]=c[2];d[k+3]=255}
+   if(seaStart>=0)seaRuns.push([seaStart,y,MW-seaStart]);
    if((y&15)===0)yield y/MH*.75}
   const put=(x,y,c)=>{x|=0;y|=0;if(x<0||y<0||x>=MW||y>=MH)return;const k=(y*MW+x)*4;d[k]=c[0];d[k+1]=c[1];d[k+2]=c[2]};
   const isG=(x,y)=>{x|=0;y|=0;if(x<0||y<0||x>=MW||y>=MH)return false;return iD(x,y)<.88&&!pm[y*MW+x]&&!(rm&&rm[y*MW+x])&&(!pl||Math.hypot(x-pl.x,y-pl.y)>52)};
@@ -1645,7 +1647,7 @@ const World=(()=>{
   if(m.spots&&m.spots.picnic){const bx=m.spots.picnic.x-22,by=m.spots.picnic.y-12;for(let y=0;y<26;y++)for(let x=0;x<44;x++){const edge=x===0||y===0||x===43||y===25;put(bx+x,by+y,edge?C('#c95f84'):((x>>2)+(y>>2))%2?C('#f4a3bf'):C('#fff4f6'))}}
   if(m.pond){const p=m.pond;for(let y=-p.ry-3;y<=p.ry+3;y++)for(let x=-p.rx-3;x<=p.rx+3;x++){const e=(x/p.rx)**2+(y/p.ry)**2;if(e>1.25)continue;put(p.x+x,p.y+y,e>1?C(p.edge):e>.6?C(p.c1):C(p.c2))}}
   if(m.pier){const P2=m.pier;for(let y=P2.y-8;y<P2.y+P2.h;y++)for(let x=P2.x;x<P2.x+P2.w;x++){const c=(y%6===0)?C('#8a6040'):(x===P2.x||x===P2.x+P2.w-1)?C('#9a6e48'):C(((y/6)|0)%2?'#c79a6a':'#bb8d5e');put(x,y,c)}for(let py=P2.y+20;py<P2.y+P2.h;py+=24)for(const px of [P2.x-1,P2.x+P2.w])for(let k=0;k<4;k++)put(px,py+k,C('#6e4630'))}
-  g.putImageData(id,0,0);if(HOOK.groundFx)try{HOOK.groundFx(m,cv)}catch(e){console.error(e)}m.ground=cv;yield .88;
+  g.putImageData(id,0,0);if(HOOK.groundFx)try{HOOK.groundFx(m,cv)}catch(e){console.error(e)}if(m.kind!=='nube'){g.save();g.fillStyle=g.createPattern(seaTile(),'repeat');for(const [x,y,w]of seaRuns)g.fillRect(x,y,w,1);g.restore()}m.ground=cv;yield .88;
   m.foam=[];const FW=MW>>1,FH=MH>>1;for(let f=0;f<2;f++){const fc=mk(FW,FH),fg=fc.getContext('2d'),fd=fg.createImageData(FW,FH);for(const i of foamL){const x=i%MW,y=(i/MW)|0;if((x|y)&1)continue;const w=Math.sin((x+y)*.12+f*Math.PI)+Math.sin(x*.05-y*.07);if(w>.15||hash(x+f,y)<.2){const k=((y>>1)*FW+(x>>1))*4;fd.data[k]=fd.data[k+1]=fd.data[k+2]=255;fd.data[k+3]=f?170:210}}fg.putImageData(fd,0,0);m.foam.push(fc);yield .92+f*.03}
   m.shine=[];for(let f=0;f<3;f++){const pts=[];for(let i=0;i<Math.round(MW*MH/900);i++){const x=R()*MW,y=R()*MH;if(iD(x,y)>1.0)pts.push([x|0,y|0])}m.shine.push(pts)}
   yield 1}
