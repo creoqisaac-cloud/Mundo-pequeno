@@ -2972,7 +2972,7 @@ const Game=(()=>{
  async function enter(){Desk.hide();$('#game').classList.add('on');layout();Sound.init();petTick();
   if(!V.map||!V.rooms){loading(true,'Preparando tu isla…',0);const iv=setInterval(()=>{$('#loadBar').style.width=Math.round(V.progress*100)+'%'},100);await V.prepare();clearInterval(iv);loading(false)}
   if(!NPCS.length)setNPCs();newDay();hud();st.songT=0;
-  if(st.mode==='off'){st.mode='title';const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;player.x=P.x;player.y=P.y+60;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
+  if(st.mode==='off'){st.mode='title';const P=V.MAIN.mainland?window.WalesaMainland.landmarks.village:V.MAIN.spots.plaza;const last=save.lastPosition64;const savedOK=last&&last.map==='main'&&Number.isFinite(last.x)&&Number.isFinite(last.y)&&last.x>40&&last.y>40&&last.x<V.MAIN.MW-40&&last.y<V.MAIN.MH-40&&V.MAIN.islandD(last.x,last.y)<.88&&!V.blockedOut(last.x,last.y,8);player.x=savedOK?last.x:P.x;player.y=savedOK?last.y:P.y+60;if(savedOK)player.dir=last.dir|0;$('#titleCov').classList.add('on');$('#titleSub').textContent=save.mem.length?'Llevas '+save.mem.length+' de 13 recuerdos':'Una isla hecha para ti'}
   cancelAnimationFrame(st.raf);st.last=performance.now();st.raf=requestAnimationFrame(loop)}
  function leave(){closeMenu();cancelAnimationFrame(st.raf);st.raf=0;if(st.mg)endMG();$('#game').classList.remove('on');Sound.stop();Desk.show()}
  document.addEventListener('visibilitychange',()=>{if(document.hidden){window.WalesaJoystick37?.release?.();Sound.stop(true);for(const k in keys)keys[k]=false;steer=null}else{st.songT=0;if(!$('#game').classList.contains('on')&&save.music&&$('#env').classList.contains('open'))Sound.play('box')}});
@@ -10254,6 +10254,7 @@ window.Wardrobe=Wardrobe;
 <script src="./metro61.js"></script>
 <script src="./metro62.js"></script>
 <script src="./metro63.js"></script>
+<script src="./walesa_residents64.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->

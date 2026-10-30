@@ -89,6 +89,39 @@ const server=http.createServer((req,res)=>{
   assert.equal(fare.overworldView,true,'no fullscreen underground ride overlay');
   assert.ok(fare.route?.transfers>=1,'transfer remains available with one pass');
   console.log('✓ V63 elevated metro, in-game ticket, route and transfers',fare.mapStations,fare.pass);
+  const residentAudit=await page.evaluate(()=>{
+   const ids=Object.keys(WalesaResidents64.profiles);
+   const newDefs=ids.map(id=>World.NPCDEF[id]);
+   const names=ids.map(id=>Talk.P[id].name);
+   const original=World.NPCDEF.melody;
+   const samples=ids.map(id=>World.charSprite(World.NPCDEF[id],0,0).c.toDataURL('image/png'));
+   const before=Game.X.player;
+   // Usar un punto transitable y distante del punto de inicio de v59.
+   const model=World.MAIN;
+   let good=null;
+   for(let y=2150;y<2500&&!good;y+=22)for(let x=3500;x<3950;x+=22)if(model.islandD(x,y)<.8&&!World.blockedOut(x,y,8)){good={x,y};break}
+   if(good){Game.X.player.x=good.x;Game.X.player.y=good.y;WalesaResidents64.savePos();}
+   return{num:ids.length,uniqueNames:new Set(names).size,uniqueLooks:new Set(samples).size,
+    originalUnchanged:original.type==='melody'&&!original.walesa64,
+    originalName:Talk.P.melody.name,
+    outfits:new Set(newDefs.map(x=>x.outfit)).size,
+    faces:newDefs.every(x=>!!x.walesa64?.eye&&!!x.walesa64?.hair),
+    saved:save.lastPosition64?{...save.lastPosition64}:null,
+    current:{x:Game.X.player.x,y:Game.X.player.y},
+    foundFreeSpot:!!good
+   };
+  });
+  assert.equal(residentAudit.num,11,'eleven new Walesa residents are customized');
+  assert.equal(residentAudit.uniqueNames,11,'each new resident has a unique original name');
+  assert.equal(residentAudit.uniqueLooks,11,'residents have visually different rendered sprites');
+  assert.equal(residentAudit.originalUnchanged,true,'original Sanrio-style residents are untouched');
+  assert.ok(residentAudit.outfits>=9,'wide diversity of wardrobe');
+  assert.equal(residentAudit.faces,true,'new residents have independent hair and iris colors');
+  assert.equal(residentAudit.foundFreeSpot,true,'found a free location to save');
+  assert.equal(residentAudit.saved?.x,residentAudit.current.x,'saved player X');
+  assert.equal(residentAudit.saved?.y,residentAudit.current.y,'saved player Y');
+  assert.equal(residentAudit.saved?.map,'main','saved persistent mainland coordinate');
+  console.log('✓ V64 unique neighbors and world position',residentAudit.uniqueNames,residentAudit.uniqueLooks,residentAudit.saved);
   const water=await page.evaluate(()=>{
    const model=World.MAIN,ground=model.mainland,sea=World.sea;
    const ocean=sea.getContext('2d').getImageData(0,0,64,64).data;
