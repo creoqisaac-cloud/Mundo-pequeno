@@ -132,39 +132,10 @@ css.textContent=[
 '.w66-side{position:absolute;top:-30%;height:160%;width:60%;background:#f0e3d9;border:9px solid #c3c8d0;box-sizing:border-box}.w66-left{left:-48%;transform:rotateY(73deg) translateZ(100px)}.w66-right{right:-48%;transform:rotateY(-73deg) translateZ(100px)}.w66-window{height:37%;width:86%;margin:32% auto 0;border:7px solid #e9c7b7;border-radius:14px;background:#86bccc7e}.w66-seat{position:absolute;bottom:12%;height:16%;width:90%;left:5%;background:#cb98b4;border-radius:20px 20px 7px 7px;box-shadow:0 10px 0 #957b96}.w66-pole{position:absolute;top:0;bottom:0;left:48%;border-left:4px solid #dcc4a9;transform:translateZ(55px)}',
 '.w66-look,.w66-actions{display:flex;gap:7px;padding:9px}.w66-look button,.w66-actions button{flex:1;font-size:11px}.w66-look button:active{background:#f2c9d8}.w66-note{text-align:center;padding:8px 4px calc(env(safe-area-inset-bottom) + 13px);color:#84969e;font-size:10px}',
 '#game.fon-on .w66-cabin,#game.fon-on .w66-panel{display:none!important}#game.fon-on .fon{z-index:150!important}',
-'#game .fon #wcWallpaperButton51{position:absolute!important;z-index:2147483000!important;pointer-events:auto!important}',
+'#game.fon-on > #wcWallpaperButton51{z-index:151!important;pointer-events:auto!important}',
 '.w66-transfer{position:absolute;z-index:48;bottom:calc(env(safe-area-inset-bottom) + 72px);left:5%;width:90%;background:#fffbf3;border:3px solid #efbfd0;border-radius:17px;padding:13px;box-sizing:border-box;box-shadow:0 8px 28px #334a5677;color:#52657a;font:700 12px system-ui}.w66-transfer b{color:#b6799f}.w66-transfer p{font-size:11px}.w66-transfer nav{display:flex;gap:7px;margin-top:11px}.w66-transfer button{flex:1;padding:11px 5px;border:0;border-radius:10px;background:#f0cadb;color:#68445a;font-size:11px;font-weight:900}.w66-transfer [data-exit]{background:#e6e9ea;color:#657787}'
 ].join('');
 document.head.appendChild(css);
-// El selector de galería debe ser un control tocable y no quedar debajo del reloj
-// de la pantalla. Mantener el mismo nodo conserva su listener y su input original.
-function liftWallpaperPicker(){
- const phone=document.querySelector('#game .fon'),button=document.getElementById('wcWallpaperButton51');
- if(!phone?.classList.contains('on')||!button||!phone.contains(button)||button.dataset.w66Lifted)return;
- const b=button.getBoundingClientRect(),p=phone.getBoundingClientRect();
- if(!b.width||!b.height||!p.width||!p.height)return;
- const x=(b.left-p.left)*phone.offsetWidth/p.width;
- const y=(b.top-p.top)*phone.offsetHeight/p.height;
- const left=Math.max(6,Math.min(26,Math.round(x)));
- button.style.setProperty('position','absolute','important');
- button.style.setProperty('left',left+'px','important');
- button.style.setProperty('top',Math.max(0,Math.round(y))+'px','important');
- button.style.setProperty('right','auto','important');
- button.style.setProperty('z-index','2147483000','important');
- button.style.setProperty('pointer-events','auto','important');
- phone.appendChild(button);
- button.dataset.w66Lifted='1';
-}
-const phoneEl=document.querySelector('#game .fon');
-if(phoneEl){
- const phoneObserver=new MutationObserver(()=>{
-  if(phoneEl.classList.contains('on')&&!document.getElementById('wcWallpaperButton51')?.dataset.w66Lifted)
-   requestAnimationFrame(liftWallpaperPicker);
- });
- phoneObserver.observe(phoneEl,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
-}
-document.getElementById('fonBtn')?.addEventListener('click',()=>requestAnimationFrame(liftWallpaperPicker));
-
 old.rideDisplay=rideDisplay;old.removeCoach=()=>{clearCabin();clearPanel()};
 function onExit(){clearCabin();clearPanel()}
 window.WalesaMetro66={ELEV,rideDisplay,setView,transfer,closeTransfer,clearCabin,onExit,elevated:true,get mode(){return mode},get inside(){return !!cabin},get transferOpen(){return !!transferBox},renderElevated:elevated};
