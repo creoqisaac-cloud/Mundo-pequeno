@@ -16,14 +16,14 @@ const server=http.createServer((req,res)=>{
   const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const errors=[];page.on('pageerror',err=>errors.push(String(err)));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded',timeout:50000});
-  await page.waitForFunction(()=>window.__ready===true&&window.World?.MAIN?.mainland&&window.World?.MAIN?.overworld60,null,{timeout:25000});
+  await page.waitForFunction(()=>window.__ready===true&&World.MAIN.mainland&&World.MAIN.overworld60,null,{timeout:25000});
   await page.evaluate(async()=>{
    save.created=true;save.helped=true;save.v4=1;save.mainlandV3Welcome=1;
    save.fon=save.fon||{};save.fon.intro=1;
    await Game.enter();Game.X.st.mode='play';
   });
   await page.locator('#titleCov').dispatchEvent('pointerdown',{pointerType:'touch'});
-  await page.waitForFunction(()=>window.WalesaOverworld60?.ready&&window.Metro?.R?.lines?.length>=6,null,{timeout:120000});
+  await page.waitForFunction(()=>WalesaOverworld60.ready&&Metro.R?.lines?.length===6,null,{timeout:120000});
   await page.evaluate(()=>{
    const r=Metro.R.lines[1],st=r.ST[0],dest=r.ST[1],tr=Metro.trains.find(t=>t.route===r);
    Game.X.player.x=st.px;Game.X.player.y=st.py;Game.X.cam.x=st.px;Game.X.cam.y=st.py;
