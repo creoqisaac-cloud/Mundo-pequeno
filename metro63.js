@@ -3,8 +3,9 @@
 'use strict';
 const old=window.WalesaMetro62,oldPhone=window.WalesaMetro61,X=Game.X,G=Game.G,V=World;
 if(!old||!oldPhone||!X||!G||!V)return;
-const COST=45,ELEV=66,MAX_NEAR=118;
+const COST=45,ELEV=92,MAX_NEAR=118;
 let page='red',from='',to='',atStation=null,popup=null,hud=null,lastTicketState='';
+let stationLevel='street',escalatorMoving=false,escalatorTimeout=null,stationTicker=null;
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const all=()=>window.Metro?.R?.ST||[];
 const hubs=()=>[...new Set(all().map(s=>s.name))];
@@ -23,34 +24,40 @@ const persist=()=>{try{G.save()}catch(e){console.warn('Metro ticket save',e)}};
 function buy(){
  const j=route();if(!j||!j.legs.length){X.toast('Elige un destino con conexión');return false}
  if(ticket()){X.toast('🎟 Ya tienes un boleto sin usar');return false}
+ if(!group(from).some(s=>closeBy(s))){locate(from);X.toast('🎟 Compra el boleto en la taquilla, al pie de la estación');return false}
  if((save.bells||0)<COST){X.toast('Faltan campanas para tu boleto: '+COST+' 🔔');return false}
  G.addBells(-COST,true);
  save.metroPass63={from,to,cost:COST,used:false,created:Date.now()};
  persist();X.toast('🎟 ¡Boleto listo! Ve a la estación '+from);return true;
 }
 function closeStation(){
+ if(escalatorTimeout){clearTimeout(escalatorTimeout);escalatorTimeout=null}
+ if(stationTicker){clearInterval(stationTicker);stationTicker=null}
  if(popup){popup.remove();popup=null}
+ stationLevel='street';escalatorMoving=false;
  if(!document.querySelector('.fon.on'))X.st.menu=false;
 }
 function board(){
+ if(stationLevel!=='platform'){X.toast('🚉 Entra al andén pasando por el torniquete');return false}
  const pass=ticket();if(!pass){X.toast('🎟 Primero necesitas comprar un boleto');return false}
  const origin=group(pass.from).find(s=>closeBy(s))||group(pass.from)[0];
  if(!closeBy(origin)){locate(pass.from);return false}
  const j=old.plan(pass.from,pass.to);if(!j)return false;
  // La ruta conserva sus transbordos; el motor espera al tren real del andén.
  closeStation();const ok=old.begin(j);
- if(ok){save.metroPass63.used=true;persist();X.toast('🎟 Boleto validado · espera el tren en el andén')}
+ if(ok){save.metroPass63.used=true;persist();X.toast('🚝 ¡Ya estás a bordo! Buen viaje')}
+ else{openStation(origin);stationLevel='platform';renderAccess()}
  return ok;
 }
 function openStation(st){
  if(!st)return false;
- atStation=st.name;from=st.name;if(!to||to===from)to=hubs().find(x=>x!==from)||from;
+ atStation=st.name;from=st.name;stationLevel='street';if(!to||to===from)to=hubs().find(x=>x!==from)||from;
  if(popup)closeStation();
  popup=document.createElement('div');popup.className='w63-overlay';
  popup.innerHTML='<section class="w63-station"><button type="button" data-close class="w63-x" aria-label="Cerrar estación">×</button><div class="w63-station-body"></div></section>';
  document.getElementById('game').appendChild(popup);X.resetInput();X.st.menu=true;
  popup.querySelector('[data-close]').onclick=closeStation;
- render({scr:popup.querySelector('.w63-station-body'),bar:()=>'',hd:()=>'',back:()=>{}},true);
+ renderStationStreet();
  return true;
 }
 function render(o,inStation=false){
@@ -91,7 +98,7 @@ function render(o,inStation=false){
  const header=inStation?'<div class="w63-kiosk"><span>🚉 ESTACIÓN ELEVADA</span><strong>'+safe(atStation||from)+'</strong><small>Taquilla y acceso al andén</small></div>':
  '<div class="w63-kiosk"><span>✿ TRANSPORTE DE WALESA</span><strong>Metro de las Nubecitas</strong><small>Estaciones elevadas, viajes por el mundo real ♡</small></div>';
  const current=pass?'<div class="w63-help">Tu boleto es de <b>'+safe(pass.from)+'</b> a <b>'+safe(pass.to)+'</b>. Puedes usarlo al llegar a su estación de origen.</div>':'';
- const action=pass?(atOrigin&&inStation?'<button data-board class="w63-primary">🚉 Pasar torniquete y esperar tren</button>':
+ const action=pass?(atOrigin&&inStation?'<button data-escalator class="w63-primary">🛗 Subir por la escalera eléctrica</button>':
  '<button data-guide class="w63-primary">🧭 Guiarme a la estación de salida</button>'):
  '<button data-buy class="w63-primary">🎟 Comprar boleto · '+COST+' 🔔</button>';
  scr.innerHTML=bar()+hd(inStation?'Estación':'🚇 Metro de Walesa')+
@@ -117,9 +124,77 @@ function render(o,inStation=false){
  scr.querySelectorAll('[data-pick]').forEach(n=>{let click=()=>{to=n.dataset.pick;page='boleto';render(o,inStation)};n.onclick=click;n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();click()}}});
  const purchase=scr.querySelector('[data-buy]');if(purchase)purchase.onclick=()=>{if(buy()){page='boleto';render(o,inStation)}};
  const guide=scr.querySelector('[data-guide]');if(guide)guide.onclick=()=>{locate(pass.from);if(inStation)closeStation()};
+ const escalator=scr.querySelector('[data-escalator]');if(escalator)escalator.onclick=()=>{stationLevel='escalator';renderAccess()};
  const boarding=scr.querySelector('[data-board]');if(boarding)boarding.onclick=board;
  back();
 }
+
+/* La estación es un lugar que se recorre: calle → escalera → torniquete → andén. */
+function renderStationStreet(){
+ if(!popup)return;
+ stationLevel='street';
+ render({scr:popup.querySelector('.w63-station-body'),bar:()=>'',hd:()=>'',back:()=>{}},true);
+}
+function arrivingTrain(){
+ const pass=ticket();if(!pass||pass.from!==atStation)return null;
+ return group(atStation).find(st=>(window.Metro?.trains||[]).some(tr=>
+  tr.route===st.route&&tr.stop>0&&tr.at&&(tr.at===st||tr.at.name===st.name)))||null;
+}
+function etaNow(){
+ const pass=ticket();if(!pass)return null;
+ const e=window.Metro?.eta?.(group(pass.from)[0]);
+ return Number.isFinite(e)?Math.max(0,Math.ceil(e)):null;
+}
+function renderAccess(){
+ if(!popup)return;
+ const root=popup.querySelector('.w63-station-body'),pass=ticket(),valid=pass&&pass.from===atStation;
+ const top=stationLevel==='escalator',gate=stationLevel==='gate',platform=stationLevel==='platform';
+ const approaching=platform&&!!arrivingTrain();
+ const eta=etaNow();
+ const etaText=approaching?'🚝 ¡El tren está en el andén!':eta===null?'Consultando llegadas…':'Próximo tren: '+eta+' s';
+ const narrative=top?'Sube por las escaleras eléctricas hasta el vestíbulo.':
+ gate?'Acerca tu boleto al lector para abrir el torniquete.':
+ 'Espera detrás de la franja de seguridad. Cuando llegue el tren, podrás subir.';
+ const art='<div class="w67-station-scene '+(top?'is-escalator '+(escalatorMoving?'ascending':''):gate?'is-gate':'is-platform')+'">'+
+  '<div class="w67-scene-sky"><span>✿</span><b>'+safe(atStation)+'</b><span>☁</span></div>'+
+  '<div class="w67-scene-roof"></div><div class="w67-scene-glass"></div>'+
+  '<div class="w67-scene-floor"></div>'+
+  (top?'<div class="w67-moving-stairs"><i></i><span class="w67-hero">TÚ ♡</span></div>':
+   gate?'<div class="w67-turnstile"><span>🎟</span><div class="w67-reader">●</div><div class="w67-bar"></div></div>':
+   '<div class="w67-platform-edge"></div><div class="w67-train-wait '+(approaching?'arrived':'')+'"><span>🚝</span><i></i><i></i></div>')+
+  '<div class="w67-scene-caption">'+(top?'NIVEL 1 · ESCALERAS ELÉCTRICAS':gate?'NIVEL 2 · TORNIQUETES':'NIVEL 3 · ANDÉN ELEVADO')+'</div></div>';
+ root.innerHTML='<div class="w67-access"><div class="w67-stage-progress"><span class="done">🎟 Boleto</span><span class="'+(gate||platform?'done':'current')+'">↗ Subir</span><span class="'+(platform?'done':gate?'current':'')+'">✓ Acceso</span><span class="'+(platform?'current':'')+'">🚝 Tren</span></div>'+
+ '<h2>'+safe(atStation)+'</h2>'+art+
+ '<p class="w67-narrative">'+narrative+'</p>'+
+ (platform?'<div class="w67-eta" role="status" aria-live="polite" data-eta>'+etaText+'</div>':
+  '<div class="w67-eta">'+(valid?'🎟 Boleto: '+safe(pass.from)+' → '+safe(pass.to):'Necesitas un boleto para entrar')+'</div>')+
+ '<div class="w67-controls">'+(top?
+ '<button class="w67-primary" data-climb '+(escalatorMoving?'disabled':'')+'>'+(escalatorMoving?'Subiendo…':'↗ Subir a la escalera eléctrica')+'</button>':
+ gate?'<button class="w67-primary" data-scan '+(!valid?'disabled':'')+'>🎟 Escanear boleto y pasar</button>':
+ '<button class="w67-primary" data-board '+(!approaching?'disabled':'')+'>'+(approaching?'🚝 Subir al tren':'🚝 Esperando tren…')+'</button>')+
+ '<button class="w67-secondary" data-step-back>← '+(top?'Volver a taquilla':gate?'Volver a escaleras':'Volver al vestíbulo')+'</button></div>'+
+ '</div>';
+ const back=root.querySelector('[data-step-back]');
+ back.onclick=()=>{if(escalatorTimeout){clearTimeout(escalatorTimeout);escalatorTimeout=null}escalatorMoving=false;
+  stationLevel=top?'street':gate?'escalator':'gate';if(stationLevel==='street')renderStationStreet();else renderAccess()};
+ const climb=root.querySelector('[data-climb]');
+ if(climb)climb.onclick=()=>{if(escalatorMoving)return;escalatorMoving=true;renderAccess();
+  escalatorTimeout=setTimeout(()=>{escalatorTimeout=null;if(!popup||stationLevel!=='escalator')return;
+   escalatorMoving=false;stationLevel='gate';renderAccess()},2600)};
+ const scan=root.querySelector('[data-scan]');
+ if(scan)scan.onclick=()=>{const p=ticket();
+  if(!p||p.from!==atStation){X.toast('🎟 Este boleto no corresponde a esta estación');return}
+  stationLevel='platform';renderAccess()};
+ const boardButton=root.querySelector('[data-board]');if(boardButton)boardButton.onclick=board;
+ if(stationTicker){clearInterval(stationTicker);stationTicker=null}
+ if(platform)stationTicker=setInterval(()=>{if(!popup||stationLevel!=='platform'){clearInterval(stationTicker);stationTicker=null;return}
+  const ready=!!arrivingTrain(),e=etaNow(),status=popup.querySelector('[data-eta]'),btn=popup.querySelector('[data-board]');
+  if(status)status.textContent=ready?'🚝 ¡El tren está en el andén!':e===null?'Consultando llegadas…':'Próximo tren: '+e+' s';
+  if(btn){btn.disabled=!ready;btn.textContent=ready?'🚝 Subir al tren':'🚝 Esperando tren…'}
+  const tr=popup.querySelector('.w67-train-wait');if(tr)tr.classList.toggle('arrived',ready);
+ },700);
+}
+
 function rideDisplay({ride}){
  if(!ride)return;
  if(!hud){hud=document.createElement('div');hud.className='w63-ride-hud';document.getElementById('game').appendChild(hud)}
@@ -293,6 +368,44 @@ cozyStyle.textContent=`
 `;
 document.head.appendChild(cozyStyle);
 
-window.WalesaMetro63={render,openStation,buy,board,closeStation,rideDisplay,removeHud,arrived,COST,get ticket(){return ticket()},elevated:true};
+
+/* El trayecto vertical es jugable, sin cambiar la posición persistente del jugador. */
+const accessStyle=document.createElement('style');
+accessStyle.textContent=`
+.w67-access{padding:16px 13px 19px;color:#61737b;background:linear-gradient(#fff9f4,#f1f7f5);font:750 12px/1.45 system-ui}
+.w67-access h2{color:#805f75;text-align:center;font-size:19px;margin:9px 0 13px}
+.w67-stage-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:9px;text-align:center}
+.w67-stage-progress span{background:#ecebe7;padding:8px 0;border-radius:10px;color:#9b9c9d}
+.w67-stage-progress .done{color:#4e8d7b;background:#ddf3e9}.w67-stage-progress .current{color:#a86d89;background:#ffe5ef}
+.w67-station-scene{height:235px;border:7px solid #fff8ed;border-radius:21px;position:relative;overflow:hidden;background:linear-gradient(#b6dcd9 0 48%,#d0e7e3 48% 65%,#e8ded8 65%);box-shadow:0 5px 0 #d9c9c6,0 9px 22px #8888}
+.w67-scene-sky{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:11px 13px;color:#7e8f97}
+.w67-scene-sky b{font-size:12px;color:#6b778a;background:#fffaf0df;border-radius:9px;padding:5px 10px;max-width:72%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.w67-scene-roof{position:absolute;left:-5%;right:-5%;top:44px;height:17px;background:linear-gradient(#fff8ee,#ddb8c8);box-shadow:0 5px 0 #b6a8b3}
+.w67-scene-glass{position:absolute;left:5%;right:5%;top:65px;height:92px;border:7px solid #fef8f3;background:repeating-linear-gradient(90deg,#b3d8d0 0 43px,#dfefe8 44px 47px);box-shadow:0 4px 0 #b7aaa6}
+.w67-scene-floor{position:absolute;left:-8%;right:-8%;bottom:0;height:76px;transform:skewX(-9deg);background:repeating-linear-gradient(0deg,#f0e6da 0 19px,#e2d5d1 20px 22px)}
+.w67-scene-caption{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);padding:5px 11px;background:#fffcf2ef;border-radius:10px;font-size:9px;color:#8f7590;white-space:nowrap}
+.w67-moving-stairs{position:absolute;bottom:36px;left:19%;width:63%;height:108px;border-left:9px solid #cfa3b2;border-right:9px solid #cfa3b2;transform:skewY(-14deg);border-radius:14px 14px 3px 3px;background:repeating-linear-gradient(0deg,#6f8792 0px,#9fb2b4 5px,#e5ded8 8px,#e5ded8 13px);box-shadow:0 0 0 4px #fff1e4}
+.w67-moving-stairs i{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 12px,#fff8f1aa 12px 13px);animation:w67stairs 1s linear infinite}
+.w67-hero{position:absolute;z-index:2;bottom:2px;left:40%;background:#ffe1ed;border:2px solid #fff9ef;border-radius:19px;padding:8px;color:#8e6b87;transform:skewY(14deg);font-size:11px}
+.ascending .w67-hero{animation:w67climb 2.6s ease-in-out forwards}
+.w67-turnstile{position:absolute;top:97px;left:32%;width:36%;height:90px;border:5px solid #fffaf3;border-radius:15px;background:#c3dcd5;box-shadow:0 6px 0 #8ea7aa;text-align:center;font-size:22px;padding-top:8px}
+.w67-reader{position:absolute;top:35px;left:4px;width:25px;height:25px;border-radius:7px;background:#638d84;color:#d6f4e7;font-size:12px;display:grid;place-items:center}
+.w67-bar{position:absolute;top:48px;right:-19px;height:7px;width:95px;background:#b78aa5;border-radius:5px;transform:rotate(-10deg)}
+.w67-platform-edge{position:absolute;bottom:70px;left:0;right:0;height:9px;background:repeating-linear-gradient(90deg,#f7dd79 0 15px,#fff8e1 15px 25px)}
+.w67-train-wait{position:absolute;top:78px;right:-100%;height:78px;width:88%;border:6px solid #e3d5d8;border-radius:24px 12px 11px 11px;background:linear-gradient(#fffaf2 0 65%,#c8a7bd 65%);display:flex;justify-content:space-evenly;align-items:center;transition:right 1.3s cubic-bezier(.2,.8,.2,1);font-size:28px}
+.w67-train-wait.arrived{right:7%}.w67-train-wait i{display:block;width:24%;height:34px;background:#afd8d9;border:4px solid #d6e4e1;border-radius:7px}
+.w67-narrative{margin:13px 0 10px;text-align:center;font-size:12px;color:#667a81}
+.w67-eta{text-align:center;border-radius:11px;background:#eaf3ee;padding:10px;margin-bottom:12px;color:#578477;font-size:11px}
+.w67-controls{display:grid;gap:9px}.w67-controls button{width:100%;min-height:48px;border-radius:14px;padding:10px;font:900 12px system-ui}
+.w67-primary{background:#e5afc5;color:#65485e;border:2px solid #fff0f6;box-shadow:0 3px 0 #bf8da5}
+.w67-primary:disabled{background:#e4e6e5;color:#8a9a9b;box-shadow:none}
+.w67-secondary{background:#fffaf2;color:#7d8790;border:1px solid #e4d8d5}
+@keyframes w67stairs{to{background-position:0 -26px}}@keyframes w67climb{from{bottom:2px}to{bottom:66px}}
+@media(max-height:670px){.w67-station-scene{height:172px}.w67-scene-glass{height:60px}.w67-moving-stairs{height:83px}}
+@media(prefers-reduced-motion:reduce){.w67-moving-stairs i,.ascending .w67-hero{animation:none}.w67-train-wait{transition:none}}
+`;
+document.head.appendChild(accessStyle);
+
+window.WalesaMetro63={render,openStation,buy,board,closeStation,rideDisplay,removeHud,arrived,COST,get ticket(){return ticket()},get stationLevel(){return stationLevel},elevated:true};
 draw();
 })();
