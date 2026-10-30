@@ -183,6 +183,12 @@ async function slideZipper(page){
    const input=document.querySelector('#wcWallpaperInput51');
    input.click=()=>{input.dataset.activated='yes'};
   });
+  console.log('WALLPAPER DIAGNOSTICS',await page.locator('#wcWallpaperButton51').evaluate(el=>{
+    const rect=n=>{const r=n?.getBoundingClientRect();return r&&{x:r.x,y:r.y,w:r.width,h:r.height}};
+    const b=rect(el),phone=el.closest('.fon'),top=b&&document.elementFromPoint(b.x+b.w/2,b.y+b.h/2);
+    const ancestors=[];for(let n=el;n&&ancestors.length<8;n=n.parentElement){const s=getComputedStyle(n);ancestors.push({tag:n.tagName,cl:n.className,id:n.id,position:s.position,z:s.zIndex,transform:s.transform,pointer:s.pointerEvents});}
+    return {metro66:!!window.WalesaMetro66,phoneOn:!!phone?.classList.contains('on'),lifted:el.dataset.w66Lifted||false,button:b,phone:rect(phone),top:top?.outerHTML.slice(0,280),ancestors};
+  }));
   await page.locator('#wcWallpaperButton51').click();
   assert.equal(await page.locator('#wcWallpaperInput51').getAttribute('data-activated'),'yes','El boton del borde abre el selector de galeria');
   await page.locator('#wcWallpaperInput51').setInputFiles({
