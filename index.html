@@ -2439,12 +2439,13 @@ const Game=(()=>{
  const ALL=Object.keys(Talk.P);
  const mkNPC=(id,x,y)=>({id,x,y,hx:x,hy:y,tx:x,ty:y,wait:rnd(0,2),dir:0,frame:0,anim:0,talk:false,emote:null,bub:null,spec:V.NPCDEF[id],static:!!Talk.P[id].static});
  let NPCS=[];
+ function dedupeNPCs(){const keep=new Map(),score=n=>(n.comp?8:0)+(n.talk?4:0)+(n._picnic31?2:0);for(const n of NPCS){if(!n||!n.id)continue;const old=keep.get(n.id);if(!old||score(n)>score(old))keep.set(n.id,n)}if(keep.size!==NPCS.length)NPCS.splice(0,NPCS.length,...keep.values())}
  function homeFor(id){if(HOOKS.home){const hh=HOOKS.home(id);if(hh)return hh}const p=Talk.P[id],h=gameHour(),town=['mimmy','cinna','melody','kuromi','pom'].includes(id),pl=V.MAIN.spots.plaza;
   if(town&&h>=13&&h<18){const a=ALL.indexOf(id)*1.3;return[pl.x+Math.cos(a)*70,pl.y+Math.sin(a)*58]}return p.home}
  function setNPCs(keepWild=false){const m=M();if(!m)return;if(m.main)NPCS=ALL.filter(id=>Talk.P[id].map!=='city'||m.cityOff).map(id=>{const h=homeFor(id);return mkNPC(id,h[0],h[1])});
   else if(m.city)NPCS=ALL.filter(id=>Talk.P[id].map==='city').map(id=>mkNPC(id,Talk.P[id].home[0],Talk.P[id].home[1]));
   else{const R=V.rng(m.seed+5),pool=ALL.filter(id=>!Talk.P[id].static&&Talk.P[id].map!=='city'),id=pool[Math.floor(R()*pool.length)];NPCS=R()<.75?[mkNPC(id,m.cx+30,m.cy+40)]:[]}
-  for(const h of HOOKS.npcs)h(NPCS,m);if(!keepWild)spawnCreatures()}
+  for(const h of HOOKS.npcs)h(NPCS,m);dedupeNPCs();if(!keepWild)spawnCreatures()}
 
  /* ── Recuerdos ── */
  const MEMS=[['mimmy','🎀','Mimmy'],['cinna','☁️','Cinnamoroll'],['melody','🌷','My Melody'],['kuromi','💜','Kuromi'],['pom','🍮','Pompompurin'],['pier','🌊','El muelle'],['picnic','🧺','El picnic'],['tree','🌸','El árbol'],['mail','💌','El buzón'],['gift0','🤍','Tu casita'],['gift1','🫙','Cinnamoroll'],['gift2','🎀','My Melody'],['gift3','⭐','Kuromi']];
