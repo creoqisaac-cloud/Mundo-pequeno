@@ -122,6 +122,19 @@ const server=http.createServer((req,res)=>{
   assert.equal(residentAudit.saved?.y,residentAudit.current.y,'saved player Y');
   assert.equal(residentAudit.saved?.map,'main','saved persistent mainland coordinate');
   console.log('✓ V64 unique neighbors and world position',residentAudit.uniqueNames,residentAudit.uniqueLooks,residentAudit.saved);
+  // Asegurar que al reiniciar NO aparezca en la plaza y se recupere la posicion exacta.
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.__ready&&World.MAIN.mainland&&World.MAIN.overworld60,null,{timeout:25000});
+  await page.evaluate(async()=>{await Game.enter()});
+  const restored=await page.evaluate(()=>({
+   playerX:Game.X.player.x,playerY:Game.X.player.y,
+   savedX:save.lastPosition64?.x,savedY:save.lastPosition64?.y,
+   blocked:World.blockedOut(Game.X.player.x,Game.X.player.y,8)
+  }));
+  assert.equal(restored.playerX,residentAudit.saved.x,'restores previous X after reload');
+  assert.equal(restored.playerY,residentAudit.saved.y,'restores previous Y after reload');
+  assert.equal(restored.blocked,false,'restored position remains walkable');
+  console.log('✓ V64 reload restores last saved coordinate',restored);
   const water=await page.evaluate(()=>{
    const model=World.MAIN,ground=model.mainland,sea=World.sea;
    const ocean=sea.getContext('2d').getImageData(0,0,64,64).data;

@@ -1,0 +1,33 @@
+name: Validar Walesa v64 y continuidad de partida
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: walesa-v64-qa
+  cancel-in-progress: true
+jobs:
+  mobile-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar el juego
+        uses: actions/checkout@v4
+      - name: Verificar sintaxis y recursos
+        run: |
+          node --check metro61.js
+          node --check metro62.js
+          node --check metro63.js
+          node --check walesa_residents64.js
+          grep -q 'walesa_residents64.js' index.html
+          grep -q 'walesa-ds-v1' index.html
+      - name: Instalar navegador de pruebas
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+      - name: Probar jugabilidad y guardado en móvil
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$CHROME_PATH"
+          CHROME_PATH="$CHROME_PATH" node tests/v60-smoke.cjs
