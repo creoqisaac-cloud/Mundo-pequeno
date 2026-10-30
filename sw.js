@@ -1,5 +1,5 @@
-/* Isla de Walesa v51 · Caché compatible con GitHub Pages */
-const CACHE = 'walesa-v66-metro-cabina-chunks';
+/* Isla de Walesa v66 · Actualización visual del metro; mantiene guardados */
+const CACHE = 'walesa-v66-cozy-metro-20261030';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './picnic_v31.js', './walesa_v32.js', './native_joystick40.js', './walesa_mainland_v3.js', './topografia_walesa_v2.js', './overworld60.js', './metro61.js', './metro62.js', './metro63.js', './walesa_position65.js', './metro66.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
