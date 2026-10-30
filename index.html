@@ -5898,6 +5898,7 @@ const Life=(()=>{const V=World,X=Game.X,H=X.HOOKS,G=Game.G,pick=a=>a[Math.floor(
    for(const it of this.items){if(it.got)continue;const s=it.k==='bee'?F.S&&SB.bee():it.k==='lady'?SB.lady():SB.berry(it.k==='gold');const bob=it.k==='bee'&&it.awake?Math.sin(t*30)*1:Math.sin(t*2+it.t)*.6;dr(g,s,it.x,it.y+bob,{k:it.k==='bee'?1.1:1.15});if(it.k==='gold'&&Math.sin(t*5+it.t)>.5)P.star(g,it.x+6,it.y-6,1.6,'#fffbe0')}
    const sw=this.gust>0?Math.sin(t*14)*.18:0;for(const l of this.leaves){const wob=Math.sin(t*1.6+l.ph)*.05+sw;dr(g,SB.leaf(l.k),l.x,l.y,{r:l.r+wob,k:l.s*(this.drag&&this.drag.l===l?1.08:1)})}
    const bk=this.basket;dr(g,MGFX.S.basket(),bk.x,bk.y,{k:1.3});for(const f of this.fly){const x=lerp(f.x,bk.x,eo(f.t)),y=lerp(f.y,bk.y-6,eo(f.t))-Math.sin(f.t*Math.PI)*30;dr(g,SB.berry(f.it.k==='gold'),x,y,{k:1.1-f.t*.3})}}};
+ V.berryBush=SB.bush;
  MGFX.wrap('bayas');
  /* arbustos de bayas en la isla */
  const BUSH=[[700,452],[822,438],[588,716],[930,742]];let bpos=null;
