@@ -55,6 +55,7 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || true)"
           test -n "$CHROME_PATH"
           CHROME_PATH="$CHROME_PATH" node tests/browser-smoke.cjs
+          CHROME_PATH="$CHROME_PATH" node tests/v60-smoke.cjs
       - name: Configurar Pages
         uses: actions/configure-pages@v5
         with:
