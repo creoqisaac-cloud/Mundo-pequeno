@@ -107,7 +107,7 @@ window.WalesaMainland=(()=>{
  const nearbyRoad=(x,y,r=20)=>{if(plazaDistance(x,y)<PLAZA.r+r)return true;for(const [a,b] of seg)if(distSegment(x,y,a,b)<r)return true;return false};
  const pos=(x,y)=>[(x-ORX)/RW,(y-ORY)/RH];
  const zone=(x,y)=>{const [u,v]=pos(x,y);return T.district(u,v)};
- function coast(x,y){
+ function nativeCoast(x,y){
   if(x<2680&&y<1380)return 1.15; // Fuera de la isla heredada, nunca deja pasillos invisibles.
   // Puente natural de acceso a la costa occidental y al pueblo, sin pantallas.
   if(nearbyRoad(x,y,35)&&x>2550&&x<3900&&y<2400)return .08;
@@ -115,6 +115,7 @@ window.WalesaMainland=(()=>{
   // Silueta geográfica fiel a los bordes de color azul del boceto.
   return T.coast(u,v);
  }
+ function coast(x,y){return Math.min(nativeCoast(x,y),window.WalesaOverworld60?.distance(x,y)??9)}
  function height(x,y){
   if(x<2700&&y<1320)return 0;
   const [u,v]=pos(x,y);
@@ -122,6 +123,7 @@ window.WalesaMainland=(()=>{
   return T.height(u,v);
  }
  function biome(x,y){
+  const southern=window.WalesaOverworld60?.regionAt(x,y);if(southern)return WalesaOverworld60.biome(x,y,southern);
   const [u,v]=pos(x,y);
   if(u<0||u>1||v<0||v>1)return 'town';
   // Distorsión continua en coordenadas mundiales. Ni una sola celda usa
@@ -1359,6 +1361,7 @@ window.WalesaMainland=(()=>{
   m.elevation=height;
   m.mainland={draw,coast,height,biome,zone,roadAt,nearbyRoad,sampleMap,original:{width:oldW,height:oldH},extent:{width:MW,height:MH},landmarks:P};
   structures();decorateDistricts();nativePlaces();furnishRooms();
+  if(window.WalesaOverworld60){seg.push(...WalesaOverworld60.paths);WalesaOverworld60.install(m)}
   return m;
  }
 
