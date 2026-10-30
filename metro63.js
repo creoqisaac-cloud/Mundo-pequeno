@@ -114,7 +114,7 @@ function rideDisplay({ride}){
 }
 function removeHud(){if(hud){hud.remove();hud=null}}
 const previousArrival=old.onArrival;
-function arrived(st){removeHud();previousArrival(st);const pass=save.metroPass63;
+function arrived(st){removeHud();window.WalesaMetro66?.onExit?.();previousArrival(st);const pass=save.metroPass63;
  if(pass?.used&&(!old.active||old.active.index>=old.active.legs.length)){save.metroPass63=null;persist()}
 }
 function draw(){

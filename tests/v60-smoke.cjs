@@ -111,7 +111,7 @@ const server=http.createServer((req,res)=>{
     unit.setView('exterior');
     train.at=b;train.s=b.s;train.stop=1;
     eng.tick(.04);
-    const exitClean=!eng.ride&&!document.querySelector('.w66-cabin');
+    const exitClean=!eng.ride&&!document.querySelector('.w66-cabin')&&!document.querySelector('.w66-panel');
     return{ok,active,inside,scene,perspective,viewTurn,canOpenPhone,phoneOpened,menuWhenPhone,
        motion:before!=null&&after!=null&&after!==before,exitClean,view:unit.mode};
   });

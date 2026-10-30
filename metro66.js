@@ -136,5 +136,6 @@ css.textContent=[
 ].join('');
 document.head.appendChild(css);
 old.rideDisplay=rideDisplay;old.removeCoach=()=>{clearCabin();clearPanel()};
-window.WalesaMetro66={ELEV,rideDisplay,setView,transfer,closeTransfer,clearCabin,elevated:true,get mode(){return mode},get inside(){return !!cabin},get transferOpen(){return !!transferBox},renderElevated:elevated};
+function onExit(){clearCabin();clearPanel()}
+window.WalesaMetro66={ELEV,rideDisplay,setView,transfer,closeTransfer,clearCabin,onExit,elevated:true,get mode(){return mode},get inside(){return !!cabin},get transferOpen(){return !!transferBox},renderElevated:elevated};
 })();
