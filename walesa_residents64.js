@@ -1,7 +1,7 @@
 /* Walesa v64: nuevos vecinos originales y continuidad de posicion, sin alterar los personajes clasicos. */
 (function(){
 'use strict';
-const X=window.Game?.X,G=window.Game?.G,V=window.World;
+const X=Game.X,G=Game.G,V=World;
 if(!X||!G||!V)return;
 const profiles={
  walesa_iris:{name:'Petalí',kind:'bunny',fur:'#ffe5db',ear:'#fa91aa',hair:'#bb7087',eye:'#507f88',dress:'vestido',cloth:'#b58cc8',accessory:'flower',accent:'#ffd16f',hairStyle:1},
@@ -77,7 +77,7 @@ function render(sp,dir=0,frame=0){
 if(typeof native==='function')V.HOOK.char=render;
 function install(){
  for(const [id,p] of Object.entries(profiles)){
-  if(!V.NPCDEF[id]||!window.Talk?.P?.[id])continue;
+  if(!V.NPCDEF[id]||!Talk.P?.[id])continue;
   const sp=V.NPCDEF[id];
   Object.assign(sp,{walesa64:p,walesaId64:id,fur:p.fur,outfit:p.dress,oColor:p.cloth,acc:p.accessory==='star'?'halo':p.accessory,aColor:p.accent,eyes:0});
   Talk.P[id].name=p.name;

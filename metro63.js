@@ -1,7 +1,7 @@
 /* Isla de Walesa · Metro v63: tren elevado, taquilla y abordaje real. */
 (function(){
 'use strict';
-const old=window.WalesaMetro62,oldPhone=window.WalesaMetro61,X=window.Game?.X,G=window.Game?.G,V=window.World;
+const old=window.WalesaMetro62,oldPhone=window.WalesaMetro61,X=Game.X,G=Game.G,V=World;
 if(!old||!oldPhone||!X||!G||!V)return;
 const COST=45,ELEV=66,MAX_NEAR=118;
 let page='red',from='',to='',atStation=null,popup=null,hud=null,lastTicketState='';
