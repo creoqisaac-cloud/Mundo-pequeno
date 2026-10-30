@@ -1118,7 +1118,7 @@ window.WalesaMainland=(()=>{
    'border:1px solid #b3c9b5;border-radius:8px;background:#fffaf1;color:#365344;font:700 11px system-ui"></select>'+
    '<button data-nav="route">🧭 Ir</button></div>'+
    '<p data-nav="status" role="status" style="margin:7px 0 2px;min-height:32px;color:#4f6557">Elige un lugar o toca el mapa para marcarlo.</p>';
-  box.replaceChildren(wrap);
+  box.replaceChildren(wrap);wrap.querySelector('[data-nav="tour"]')?.remove();
   for(const b of wrap.querySelectorAll('button:not([data-result])')){
    b.style.cssText='padding:9px 10px;border:1px solid #b7d0b8;border-radius:9px;'+
     'background:#e5f0dd;color:#3b604b;font:800 12px system-ui;cursor:pointer;touch-action:manipulation';
@@ -1255,7 +1255,7 @@ window.WalesaMainland=(()=>{
   controls('minus').onclick=()=>zoomAt(1/1.5);
   controls('me').onclick=()=>{center={x:X.player.x,y:X.player.y};zoom=4;repaint()};
   controls('all').onclick=()=>{center={x:m.MW/2,y:m.MH/2};zoom=1;repaint()};
-  controls('tour').onclick=()=>{
+  if(controls('tour'))controls('tour').onclick=()=>{
    if(phone&&closePhone)closePhone();else X.closeMenu();
    requestAnimationFrame(()=>replayArrival());
   };
@@ -1423,22 +1423,8 @@ window.WalesaMainland=(()=>{
   }
   return true;
  }
- function moveToPreview(){
-  if(!main||!Game?.X||!save||arrivalRunning)return false;
-  const X=Game.X;
-  if(X.st.mode!=='play'||X.st.scene!=='out'||X.M()!==main||X.st.busy||X.st.mg)return false;
-  const first=!save.mainlandV3Welcome;
-  const nearVillage=Math.hypot(X.player.x-PLAZA.x,X.player.y-PLAZA.y)<325;
-  if(!first&&(save.walesaArrivalV59||!nearVillage))return false;
-  if(!first&&save.walesaArrivalV59)return false;
-  // La animación vuelve para partidas antiguas que ya llegaron a la plaza,
-  // pero no interrumpe a quienes exploran muy lejos de ella.
-  arrivalTour(false);
-  return true;
- }
- function replayArrival(){
-  return arrivalTour(true);
- }
+ function moveToPreview(){if(!save.mainlandV3Welcome||!save.walesaArrivalV59){save.mainlandV3Welcome=1;save.walesaArrivalV59=1;Game.G.save()}return false}
+ function replayArrival(){return false}
  // Residentes propios de la expansión, construidos con sprites y la
  // conversación, amistad, encargos y movimiento del MOTOR ORIGINAL.
  // No se mueven ni se borran los NPC originales de Ciudad Corazón.
