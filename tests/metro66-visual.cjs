@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{
   const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const errors=[];page.on('pageerror',err=>errors.push(String(err)));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded',timeout:50000});
-  await page.waitForFunction(()=>window.__ready&&window.WalesaMetro66&&window.World?.MAIN?.mainland,null,{timeout:25000});
+  await page.waitForFunction(()=>window.__ready===true&&window.World?.MAIN?.mainland&&window.World?.MAIN?.overworld60,null,{timeout:25000});
   await page.evaluate(async()=>{
    save.created=true;save.helped=true;save.v4=1;save.mainlandV3Welcome=1;
    save.fon=save.fon||{};save.fon.intro=1;
