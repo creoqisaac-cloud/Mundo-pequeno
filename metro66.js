@@ -14,23 +14,37 @@ function setView(next){
  if(next==='exterior'){clearCabin();return true}
  if(!riding()){X.toast('🚝 Primero sube a un tren');return false}
  mode='interior';if(cabin)return true;
- cabin=document.createElement('div');cabin.className='w66-cabin';
- cabin.innerHTML='<header>✿ VAGÓN DE WALESA <button data-view>🌳 Exterior</button></header>'+
- '<div class="w66-viewport"><canvas width="320" height="180" class="w66-outside"></canvas>'+
+ angle=0;
+ cabin=document.createElement('div');cabin.className='w66-cabin';cabin.setAttribute('role','region');
+ cabin.setAttribute('aria-label','Interior del tren de Walesa');
+ cabin.innerHTML='<div class="w66-shell">'+
+ '<header class="w66-topbar"><div class="w66-topbrand"><span class="w66-flower">✿</span><div><small>METRO DE WALESA</small><strong>Un viaje entre nubes</strong></div></div>'+
+ '<button type="button" data-view aria-label="Volver al recorrido exterior">✕ <span>Exterior</span></button></header>'+
+ '<div class="w66-car-status"><span class="w66-pulse"></span><div><small>VIAJANDO EN TREN</small><strong data-next-stop>Próxima estación</strong></div><span class="w66-car-tag">EN RUTA</span></div>'+
+ '<div class="w66-viewport" aria-label="Ventana con el mundo del juego en movimiento">'+
+ '<canvas width="320" height="180" class="w66-outside"></canvas>'+
  '<div class="w66-world3d"><div class="w66-car3d">'+
- '<div class="w66-ceiling"></div><div class="w66-floor"></div>'+
- '<div class="w66-back"><div class="w66-exit">✦ SIGUIENTE PARADA ✦</div></div>'+
+ '<div class="w66-ceiling"><span>✿ <i></i> ✿</span></div>'+
+ '<div class="w66-floor"></div>'+
+ '<div class="w66-back"><div class="w66-exit"><span>✿</span><small>PRÓXIMA ESTACIÓN</small></div></div>'+
  '<div class="w66-side w66-left"><div class="w66-window"></div><div class="w66-seat"></div></div>'+
  '<div class="w66-side w66-right"><div class="w66-window"></div><div class="w66-seat"></div></div>'+
- '<div class="w66-pole"></div></div></div></div>'+
- '<nav class="w66-look"><button data-turn="-55">◀ Ventana</button><button data-turn="0">Frente</button><button data-turn="55">Pasillo ▶</button></nav>'+
- '<nav class="w66-actions"><button data-phone>📱 Usar celular</button><button data-view>🚝 Ver recorrido</button></nav>'+
- '<small class="w66-note">El mundo continúa moviéndose mientras estás dentro ♡</small>';
+ '<div class="w66-pole"></div></div></div><div class="w66-window-label">El paisaje continúa mientras viajas ♡</div></div>'+
+ '<div class="w66-scenetitle">¿Hacia dónde quieres mirar?</div>'+
+ '<nav class="w66-look" aria-label="Dirección de mirada"><button type="button" data-turn="-55">↶ Ventana</button><button type="button" data-turn="0" aria-pressed="true">Al frente</button><button type="button" data-turn="55">Pasillo ↷</button></nav>'+
+ '<nav class="w66-actions"><button type="button" data-view>🌿 Ver el recorrido</button><button type="button" data-phone>📱 Usar celular</button></nav>'+
+ '<p class="w66-note">Puedes volver afuera sin bajarte del tren. El viaje sigue en tiempo real.</p></div>';
  document.getElementById('game').appendChild(cabin);
  cabin.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView('exterior'));
- cabin.querySelectorAll('[data-turn]').forEach(b=>b.onclick=()=>{angle=+b.dataset.turn;cabin.style.setProperty('--look',angle+'deg')});
- cabin.querySelector('[data-phone]').onclick=()=>{window.Fon?.open();if(!document.querySelector('.fon.on'))X.toast('Teléfono no disponible')};
- cabin.style.setProperty('--look',angle+'deg');return true;
+ cabin.querySelectorAll('[data-turn]').forEach(b=>b.onclick=()=>{
+  angle=+b.dataset.turn;cabin.style.setProperty('--look',angle+'deg');
+  cabin.querySelectorAll('[data-turn]').forEach(t=>t.setAttribute('aria-pressed',String(t===b)));
+ });
+ cabin.querySelector('[data-phone]').onclick=()=>{
+  window.Fon?.open();if(!document.querySelector('.fon.on'))X.toast('Teléfono no disponible');
+ };
+ cabin.style.setProperty('--look',angle+'deg');
+ return true;
 }
 function rideDisplay({ride}){
  if(!ride){clearCabin();clearPanel();return}
@@ -39,14 +53,20 @@ function rideDisplay({ride}){
  const nx=r.ST.map(s=>({s,d:((s.s-tr.s)%r.L+r.L)%r.L})).filter(v=>v.d>2).sort((a,b)=>a.d-b.d)[0]?.s||r.ST[0];
  const id=r.id+nx.name+ride.dest.name;
  if(panel.dataset.id!==id){
-  panel.dataset.id=id;panel.innerHTML='<i style="background:'+r.color+'"></i><div><b>'+esc(r.name)+'</b><small>Próxima: '+esc(nx.name)+' · Destino: '+esc(ride.dest.name)+'</small></div><button data-interior>🚝 Vista 3D</button>';
+  panel.dataset.id=id;
+  panel.innerHTML='<span class="w66-line-dot" style="background:'+r.color+'"></span><div><small>PRÓXIMA ESTACIÓN</small><b>'+esc(nx.name)+'</b><small>'+esc(r.name)+' · Hasta '+esc(ride.dest.name)+'</small></div><button type="button" data-interior>🚝 Interior</button>';
   panel.querySelector('button').onclick=()=>setView(mode==='interior'?'exterior':'interior');
  }
- if(mode==='interior'){
-  setView('interior');
+ if(mode==='interior'&&cabin){
+  const nextName=cabin.querySelector('[data-next-stop]');
+  if(nextName&&nextName.textContent!==nx.name)nextName.textContent=nx.name;
+  cabin.style.setProperty('--line-color',r.color);
   copyFrames++;
-  if(copyFrames%8===0){
-   try{const c=cabin.querySelector('.w66-outside'),g=c.getContext('2d');g.drawImage(document.getElementById('cv'),0,0,320,180)}catch(e){}
+  if(copyFrames%4===0){
+   try{
+    const c=cabin.querySelector('.w66-outside'),g=c.getContext('2d');
+    g.drawImage(document.getElementById('cv'),0,0,320,180);
+   }catch(e){/* El paisaje se recupera en el siguiente fotograma. */}
   }
  }
 }
@@ -54,12 +74,30 @@ function closeTransfer(){if(transferBox){transferBox.remove();transferBox=null}}
 function transfer(next,station){
  clearCabin();clearPanel();closeTransfer();
  transferBox=document.createElement('div');transferBox.className='w66-transfer';
- transferBox.innerHTML='<b>🔁 Transbordo en '+esc(station.name)+'</b><p>Tu boleto incluye el cambio de línea. Camina al siguiente andén y espera otro tren.</p>'+
- '<strong style="color:'+next.route.color+'">● '+esc(next.route.name)+'</strong>'+
- '<nav><button data-next>🚇 Esperar siguiente tren</button><button data-exit>🚪 Salir</button></nav>';
+ transferBox.setAttribute('role','dialog');transferBox.setAttribute('aria-label','Transbordo de línea');
+ transferBox.innerHTML='<div class="w66-transfer-flowers">✿　✧　✿</div>'+
+ '<div class="w66-transfer-eyebrow">CAMBIO DE LÍNEA</div><h3>'+esc(station.name)+'</h3>'+
+ '<p>Has llegado al transbordo. Conservas tu boleto: no necesitas pagar otra vez.</p>'+
+ '<div class="w66-transfer-line"><i style="background:'+next.route.color+'"></i><span><small>SIGUIENTE TREN</small><b>'+esc(next.route.name)+'</b></span></div>'+
+ '<p class="w66-transfer-instruction">Ve al siguiente andén para continuar hacia <b>'+esc(next.to.name)+'</b>.</p>'+
+ '<div class="w66-transfer-status" aria-live="polite">Cuando estés listo, espera el siguiente tren.</div>'+
+ '<nav><button type="button" data-next>🚝 Esperar y continuar</button><button type="button" data-exit>Salir del metro</button></nav>';
  document.getElementById('game').appendChild(transferBox);
- transferBox.querySelector('[data-next]').onclick=()=>{closeTransfer();if(Metro.depart(next.from,next.to))X.toast('🚇 Esperando el tren de '+next.route.name);else X.toast('El andén no está disponible')};
- transferBox.querySelector('[data-exit]').onclick=()=>{closeTransfer();old.cancelJourney?.();X.toast('Saliste de la estación')};
+ transferBox.querySelector('[data-next]').onclick=()=>{
+  const button=transferBox?.querySelector('[data-next]');
+  if(!button)return;
+  if(Metro.depart(next.from,next.to)){
+   closeTransfer();X.toast('🚝 Esperando el tren de '+next.route.name);
+  }else{
+   transferBox.querySelector('.w66-transfer-status').textContent='El tren aún no está listo. Puedes volver a intentarlo.';
+   X.toast('El andén aún no está disponible');
+  }
+ };
+ transferBox.querySelector('[data-exit]').onclick=()=>{
+  closeTransfer();old.cancelJourney?.();
+  if(save.metroPass63?.used){save.metroPass63=null;try{Game.G.save()}catch(e){}}
+  X.toast('Saliste de la estación');
+ };
  return true;
 }
 const segment=(g,a,b,width,color)=>{g.strokeStyle=color;g.lineWidth=width;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke()};
