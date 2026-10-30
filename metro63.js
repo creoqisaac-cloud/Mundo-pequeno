@@ -24,7 +24,6 @@ const persist=()=>{try{G.save()}catch(e){console.warn('Metro ticket save',e)}};
 function buy(){
  const j=route();if(!j||!j.legs.length){X.toast('Elige un destino con conexión');return false}
  if(ticket()){X.toast('🎟 Ya tienes un boleto sin usar');return false}
- if(!group(from).some(s=>closeBy(s))){locate(from);X.toast('🎟 Compra el boleto en la taquilla, al pie de la estación');return false}
  if((save.bells||0)<COST){X.toast('Faltan campanas para tu boleto: '+COST+' 🔔');return false}
  G.addBells(-COST,true);
  save.metroPass63={from,to,cost:COST,used:false,created:Date.now()};
@@ -53,6 +52,7 @@ function openStation(st){
  if(!st)return false;
  atStation=st.name;from=st.name;stationLevel='street';if(!to||to===from)to=hubs().find(x=>x!==from)||from;
  if(popup)closeStation();
+ stationLevel='street';
  popup=document.createElement('div');popup.className='w63-overlay';
  popup.innerHTML='<section class="w63-station"><button type="button" data-close class="w63-x" aria-label="Cerrar estación">×</button><div class="w63-station-body"></div></section>';
  document.getElementById('game').appendChild(popup);X.resetInput();X.st.menu=true;
