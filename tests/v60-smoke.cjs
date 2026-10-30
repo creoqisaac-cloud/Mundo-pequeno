@@ -91,7 +91,7 @@ const server=http.createServer((req,res)=>{
   console.log('✓ V63 elevated metro, in-game ticket, route and transfers',fare.mapStations,fare.pass);
   const residentAudit=await page.evaluate(()=>{
    const removed=["walesa_iris","walesa_nico","walesa_luma","walesa_fede","walesa_mara","walesa_timo","walesa_cira","walesa_oli","walesa_bimba","walesa_tara","walesa_roco"];
-   const original=['mimmy','cinna','melody','kuromi','pom','pochacco','keroppi','badtz','chococat','tuxedo','hangyo','gude'];
+   const original=['mimmy','cinna','melody','kuromi','pom','pochacco','keroppi','badtz','chococat','tuxedo','hangyo'];
    const candidates=Object.keys(Talk.P).filter(k=>k.startsWith('walesa_'));
    const forbidden=removed.filter(id=>Talk.P[id]||World.NPCDEF[id]||Game.X.NPCS.some(n=>n.id===id));
    const m=World.MAIN;
