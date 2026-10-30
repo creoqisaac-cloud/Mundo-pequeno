@@ -148,7 +148,6 @@ function elevated(g,B,w2s){
  }
  for(const line of Metro.R.lines){
   // Velocidad de servicio urbano: contemplar el paisaje, no cruzarlo a toda velocidad.
-  if(!line._w67Cruise){line.speed=Math.min(line.speed,120);line._w67Cruise=true}
   const pts=line.P;if(!pts?.length)continue;
   const spans=routeSpans(pts);
   if(!spans.length&&!line.ST.some(st=>inRange(st.px,st.py)))continue;
