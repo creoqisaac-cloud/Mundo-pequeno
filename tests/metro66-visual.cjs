@@ -22,6 +22,7 @@ const server=http.createServer((req,res)=>{
    save.fon=save.fon||{};save.fon.intro=1;
    await Game.enter();Game.X.st.mode='play';
   });
+  await page.locator('#titleCov').dispatchEvent('pointerdown',{pointerType:'touch'});
   await page.waitForFunction(()=>window.WalesaOverworld60?.ready&&window.Metro?.R?.lines?.length>=6,null,{timeout:120000});
   await page.evaluate(()=>{
    const r=Metro.R.lines[1],st=r.ST[0],dest=r.ST[1],tr=Metro.trains.find(t=>t.route===r);
