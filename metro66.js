@@ -101,73 +101,133 @@ function transfer(next,station){
  return true;
 }
 const segment=(g,a,b,width,color)=>{g.strokeStyle=color;g.lineWidth=width;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke()};
+
+/* Viaducto de concreto y acero. Cada par de muestras conserva su unión:
+   no se pierden tramos cuando una muestra cae fuera del radio de dibujo. */
 function elevated(g,B,w2s){
  if(!window.Metro?.R||X.M()!==V.MAIN||X.st.scene!=='out')return;
- const px=X.player.x,py=X.player.y;
+ const px=X.player.x,py=X.player.y,range=1040;
  g.save();g.lineCap='round';g.lineJoin='round';
- const drawnStations=new Set();
+ const stationSeen=new Set();
+ const inRange=(x,y)=>Math.abs(x-px)<range&&Math.abs(y-py)<range;
+ function drawPolyline(points,off,height,width,color){
+  g.strokeStyle=color;g.lineWidth=width;g.beginPath();
+  let started=false,prior=null;
+  for(let i=0;i<points.length;i++){
+   const p=points[i],prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)];
+   const dx=next[0]-prev[0],dy=next[1]-prev[1],len=Math.hypot(dx,dy)||1;
+   const v=w2s(B,p[0]-dy/len*off,p[1]+dx/len*off-ELEV+height);
+   if(!v){started=false;continue}
+   if(!started||!prior){g.moveTo(v.x,v.y);started=true}else g.lineTo(v.x,v.y);
+   prior=v;
+  }
+  g.stroke();
+ }
+ function routeSpans(pts){
+  const stride=Math.max(1,Math.ceil(pts.length/2400)),spans=[],n=pts.length;
+  let piece=[],last=-1;
+  const add=(i)=>{if(last!==i){piece.push(pts[i]);last=i}};
+  for(let i=stride;i<n;i+=stride){
+   const a=Math.max(0,i-stride),b=i;
+   const p=pts[a],q=pts[b];
+   if(Math.min(p[0],q[0])<=px+range&&Math.max(p[0],q[0])>=px-range&&
+      Math.min(p[1],q[1])<=py+range&&Math.max(p[1],q[1])>=py-range){
+    if(!piece.length)add(a);add(b);
+   }else if(piece.length){spans.push(piece);piece=[];last=-1}
+  }
+  const lastI=Math.ceil((n-1)/stride)*stride;
+  if(lastI!==n-1&&n>1){
+   const a=Math.max(0,Math.floor((n-1)/stride)*stride),p=pts[a],q=pts[n-1];
+   if(Math.min(p[0],q[0])<=px+range&&Math.max(p[0],q[0])>=px-range&&
+      Math.min(p[1],q[1])<=py+range&&Math.max(p[1],q[1])>=py-range){
+    if(!piece.length)add(a);add(n-1);
+   }
+  }
+  if(piece.length)spans.push(piece);
+  return spans;
+ }
  for(const line of Metro.R.lines){
+  // Velocidad de servicio urbano: contemplar el paisaje, no cruzarlo a toda velocidad.
   const pts=line.P;if(!pts?.length)continue;
-  const stride=Math.max(1,Math.ceil(pts.length/1100));
-  const close=[];
-  for(let i=0;i<pts.length;i+=stride){const p=pts[i];if(Math.abs(p[0]-px)<530&&Math.abs(p[1]-py)<530)close.push({i,p})}
-  if(!close.length)continue;
-  // Viaducto: sombra en el pavimento, columnas, cara inferior, tablero y barandales.
-  const pillarStep=Math.max(24,Math.floor(pts.length/42));
+  const spans=routeSpans(pts);
+  if(!spans.length&&!line.ST.some(st=>inRange(st.px,st.py)))continue;
+  // Pilas de concreto cada distancia regular, con zapata, alma y ménsula real.
+  const pillarStep=Math.max(16,Math.round(190*pts.length/Math.max(1,line.L)));
   for(let i=0;i<pts.length;i+=pillarStep){
-   const p=pts[i];if(Math.abs(p[0]-px)>500||Math.abs(p[1]-py)>500)continue;
-   const base=w2s(B,p[0],p[1]),top=w2s(B,p[0],p[1]-92);if(!base||!top)continue;
-   g.fillStyle='rgba(50,66,80,.16)';g.beginPath();g.ellipse(base.x+4,base.y+4,13*base.s,5*base.s,0,0,Math.PI*2);g.fill();
-   segment(g,base,top,7*base.s,'#919ca4');segment(g,{x:base.x-2,y:base.y},{x:top.x-2,y:top.y},4*base.s,'#eee5dc');
-   g.fillStyle='#b4a2a6';g.fillRect(top.x-8*top.s,top.y-3*top.s,16*top.s,5*top.s);
+   const p=pts[i];if(!inRange(p[0],p[1]))continue;
+   const foot=w2s(B,p[0],p[1]),head=w2s(B,p[0],p[1]-ELEV+8);
+   if(!foot||!head)continue;
+   const q=Math.max(.6,Math.min(2.5,head.s));
+   g.fillStyle='rgba(49,61,66,.17)';g.beginPath();
+   g.ellipse(foot.x+7*q,foot.y+3*q,14*q,5*q,0,0,2*Math.PI);g.fill();
+   g.fillStyle='#b9b1aa';g.beginPath();
+   g.moveTo(foot.x-5*q,foot.y);g.lineTo(foot.x+6*q,foot.y);
+   g.lineTo(head.x+4*q,head.y);g.lineTo(head.x-4*q,head.y);g.closePath();g.fill();
+   g.fillStyle='#e7e0d5';g.beginPath();
+   g.moveTo(foot.x-5*q,foot.y);g.lineTo(foot.x-1*q,foot.y);
+   g.lineTo(head.x,head.y);g.lineTo(head.x-4*q,head.y);g.closePath();g.fill();
+   g.fillStyle='#7b898f';g.fillRect(head.x-15*q,head.y-2*q,30*q,5*q);
+   g.fillStyle='#d4c9bd';g.fillRect(head.x-14*q,head.y-5*q,28*q,4*q);
+   g.fillStyle='#fff7e8';g.fillRect(foot.x-7*q,foot.y-3*q,14*q,3*q);
   }
-  for(const [w,col,yoff] of [[15,'#8e9da6',6],[12,'#e7dfd2',2],[7,'#cbd4d7',0],[2.5,line.color,-3]]){
-   let prev=null,prior=-100;
-   for(const z of close){
-    const p=w2s(B,z.p[0],z.p[1]-92+yoff);
-    if(prev&&p&&z.i-prior<stride*3)segment(g,prev,p,w*Math.max(.65,p.s),col);
-    prev=p;prior=z.i;
-   }
+  // Cada tramo incluye ambos extremos visibles: sin huecos por el culling de distancia.
+  for(const span of spans){
+   if(span.length<2)continue;
+   const avg=w2s(B,span[Math.floor(span.length/2)][0],span[Math.floor(span.length/2)][1]-ELEV);
+   const q=Math.max(.68,Math.min(2.2,avg?.s||1));
+   drawPolyline(span,0,9,32*q,'#67757a');       // viga inferior de hormigón
+   drawPolyline(span,0,4,29*q,'#b2b0a7');      // canto del tablero
+   drawPolyline(span,0,0,25*q,'#e7dfd2');      // losa de rodamiento
+   drawPolyline(span,-8,-3,2.6*q,'#576772');   // riel metálico izquierdo
+   drawPolyline(span,8,-3,2.6*q,'#576772');    // riel metálico derecho
+   drawPolyline(span,-12,-4,1.9*q,'#c9d3d3');  // pretil
+   drawPolyline(span,12,-4,1.9*q,'#c9d3d3');
   }
-  // Una sola estación por lugar, aunque varias líneas compartan el andén.
+  // Una marquesina por estación, aunque dos líneas compartan el mismo lugar.
   for(const st of line.ST){
-   if(drawnStations.has(st.name))continue;
-   if(Math.abs(st.px-px)>510||Math.abs(st.py-py)>510)continue;
-   drawnStations.add(st.name);
-   const ground=w2s(B,st.px,st.py),top=w2s(B,st.px,st.py-ELEV);
-   if(!ground||!top)continue;
-   const q=Math.max(.7,Math.min(2.2,top.s)),width=64*q;
-   // Escalera física desde el sendero hasta el andén, con pasamanos.
-   segment(g,{x:ground.x-7*q,y:ground.y},{x:top.x-17*q,y:top.y+11*q},4*q,'#e8d4c5');
-   segment(g,{x:ground.x+7*q,y:ground.y},{x:top.x-2*q,y:top.y+11*q},4*q,'#e8d4c5');
-   segment(g,{x:ground.x-11*q,y:ground.y-3*q},{x:top.x-21*q,y:top.y+10*q},1.7*q,'#bb8da1');
-   segment(g,{x:ground.x+11*q,y:ground.y-3*q},{x:top.x+1*q,y:top.y+10*q},1.7*q,'#bb8da1');
-   for(let j=1;j<=8;j++){
-    const t=j/9,x1=ground.x-7*q+(top.x-17*q-ground.x+7*q)*t,
-    x2=ground.x+7*q+(top.x-2*q-ground.x-7*q)*t,
-    y=ground.y+(top.y+11*q-ground.y)*t;
-    segment(g,{x:x1,y},{x:x2,y},1.3*q,'#fff9f1');
+   if(stationSeen.has(st.name)||!inRange(st.px,st.py))continue;
+   stationSeen.add(st.name);
+   const foot=w2s(B,st.px,st.py),top=w2s(B,st.px,st.py-ELEV);
+   if(!foot||!top)continue;
+   const q=Math.max(.7,Math.min(2,top.s)),w=94*q;
+   // Planta baja: taquilla a pie de calle, identificable desde el overworld.
+   g.fillStyle='#a0a6aa';g.fillRect(foot.x-21*q,foot.y-10*q,42*q,12*q);
+   g.fillStyle='#fff5e9';g.fillRect(foot.x-19*q,foot.y-30*q,38*q,21*q);
+   g.fillStyle='#b4d5d0';g.fillRect(foot.x-15*q,foot.y-26*q,17*q,14*q);
+   g.fillStyle='#d4a2b9';g.fillRect(foot.x+4*q,foot.y-26*q,11*q,14*q);
+   g.fillStyle='#879398';g.font='800 '+Math.max(8,8*q)+'px system-ui';g.textAlign='center';
+   g.fillText('BOLETOS',foot.x,foot.y-33*q);
+   // Escaleras eléctricas inclinadas, entre calle y mezzanine con pasamanos.
+   const left={x:foot.x+17*q,y:foot.y-5*q},upper={x:top.x+29*q,y:top.y+15*q};
+   segment(g,left,upper,13*q,'#b9b6ae');
+   segment(g,{x:left.x-5*q,y:left.y},{x:upper.x-5*q,y:upper.y},3*q,'#f5e5d4');
+   segment(g,{x:left.x+6*q,y:left.y},{x:upper.x+6*q,y:upper.y},3*q,'#cb9eb2');
+   for(let j=1;j<11;j++){
+    const u=j/11;
+    const sx=left.x+(upper.x-left.x)*u,sy=left.y+(upper.y-left.y)*u;
+    segment(g,{x:sx-4*q,y:sy},{x:sx+5*q,y:sy},1.5*q,'#f8f3e7');
    }
-   // Plataforma, ventanales, marquesina pastel y nombre legible.
-   g.fillStyle='#a99da3';g.fillRect(top.x-width/2-3*q,top.y+10*q,width+6*q,6*q);
-   g.fillStyle='#fff1de';g.fillRect(top.x-width/2,top.y+5*q,width,7*q);
-   g.fillStyle='#fdf9f2';g.fillRect(top.x-width/2+5*q,top.y-24*q,width-10*q,30*q);
-   g.fillStyle='#a6d8de';g.fillRect(top.x-width/2+9*q,top.y-21*q,width-18*q,23*q);
-   g.fillStyle='rgba(255,255,255,.4)';g.fillRect(top.x-width/2+12*q,top.y-21*q,4*q,23*q);
-   g.fillStyle='#fff5e7';g.fillRect(top.x-width/2-6*q,top.y-30*q,width+12*q,9*q);
-   g.fillStyle=line.color;g.fillRect(top.x-width/2-6*q,top.y-30*q,width+12*q,3*q);
-   g.fillStyle='#fefaf4';g.beginPath();g.ellipse(top.x,top.y-33*q,4*q,3*q,0,0,Math.PI*2);g.fill();
-   const label=st.name.length>19?st.name.slice(0,18)+'…':st.name;
-   g.font='800 '+Math.max(8,8*q)+'px system-ui';g.textAlign='center';
-   const textY=top.y-39*q;
-   g.lineWidth=3.5*q;g.strokeStyle='#51616d';g.strokeText(label,top.x,textY);
-   g.fillStyle='#fffaf6';g.fillText(label,top.x,textY);
+   // Andén ancho, fachada acristalada, cubierta y letrero completo.
+   g.fillStyle='#818c94';g.fillRect(top.x-w/2-4*q,top.y+14*q,w+8*q,8*q);
+   g.fillStyle='#e6dcd0';g.fillRect(top.x-w/2,top.y+7*q,w,9*q);
+   g.fillStyle='#a6c4bf';g.fillRect(top.x-w/2+8*q,top.y-18*q,w-16*q,25*q);
+   for(let j=-2;j<=2;j++){
+    g.fillStyle='#f8f4eb';g.fillRect(top.x+j*13*q-2*q,top.y-19*q,3*q,26*q);
+   }
+   g.fillStyle='#f7f0e6';g.fillRect(top.x-w/2-8*q,top.y-29*q,w+16*q,12*q);
+   g.fillStyle=line.color;g.fillRect(top.x-w/2-8*q,top.y-30*q,w+16*q,3.5*q);
+   g.fillStyle='#c19eb1';g.fillRect(top.x-w/2+5*q,top.y+7*q,w-10*q,2*q);
+   g.font='800 '+Math.max(9,9*q)+'px system-ui';g.textAlign='center';
+   const label=st.name.length>22?st.name.slice(0,21)+'…':st.name;
+   g.strokeStyle='#526570';g.lineWidth=3.5*q;g.strokeText(label,top.x,top.y-37*q);
+   g.fillStyle='#fffaf1';g.fillText(label,top.x,top.y-37*q);
   }
-  // Vagones exteriores con 3 cuerpos y ventanas.
-  for(const tr of Metro.trains){
+  // Los vagones exteriores conservan exactamente su diseño v66 por ahora.
+  for(const tr of Metro.trains||[]){
    if(tr.route!==line)continue;
-   for(let c=2;c>=0;c--){const p=Metro.at(tr.s-c*27,line);
-    if(Math.abs(p.x-px)>500||Math.abs(p.y-py)>500)continue;
+   for(let c=2;c>=0;c--){
+    const p=Metro.at(tr.s-c*27,line);
+    if(!inRange(p.x,p.y))continue;
     const v=w2s(B,p.x,p.y-98);if(!v)continue;
     const q=Math.max(.7,v.s);g.save();g.translate(v.x,v.y);g.rotate(p.ang);
     g.fillStyle='#5e6c78';g.fillRect(-13*q,-5*q,26*q,12*q);

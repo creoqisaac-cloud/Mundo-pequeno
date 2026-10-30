@@ -9,11 +9,11 @@ const places={
  U:[750,2300,'Isla Azahar'],T:[1880,3800,'Isla Luciérnaga'],P:[3690,3100,'Puerta Sur']
 };
 const defs=[
- ['costera62','Costera Azul','#3385c7','ABCOML',380],
- ['sierra62','Sierra Verde','#399b75','CFILSQ',380],
- ['sur62','Expreso del Sur','#ec9145','OQRLM',370],
- ['islas62','Archipiélago','#9864c4','AUTQOB',385],
- ['circular62','Diagonal Dorada','#d5a53a','BFJL RPO'.replace(/ /g,''),375]
+ ['costera62','Costera Azul','#3385c7','ABCOML',120],
+ ['sierra62','Sierra Verde','#399b75','CFILSQ',120],
+ ['sur62','Expreso del Sur','#ec9145','OQRLM',120],
+ ['islas62','Archipiélago','#9864c4','AUTQOB',120],
+ ['circular62','Diagonal Dorada','#d5a53a','BFJL RPO'.replace(/ /g,''),120]
 ];
 const routes=defs.map(([id,name,color,keys,speed])=>({id,name,color,speed,
  points:[...keys].map(k=>places[k].slice(0,2)),stops:[...keys].map(k=>[places[k][2],places[k][0],places[k][1]])}));

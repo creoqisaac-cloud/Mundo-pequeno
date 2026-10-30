@@ -1,0 +1,25 @@
+name: Validar acceso al metro v67 antes de publicar
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-metro:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: |
+          node --check metro63.js
+          node --check metro66.js
+          node --check tests/metro67-access.cjs
+      - name: Chromium checks
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$CHROME_PATH"
+          CHROME_PATH="$CHROME_PATH" node tests/v60-smoke.cjs
+          CHROME_PATH="$CHROME_PATH" node tests/metro66-visual.cjs
+          CHROME_PATH="$CHROME_PATH" node tests/metro67-access.cjs
