@@ -1,4 +1,4 @@
-name: Validar Walesa v64 y continuidad de partida
+name: Validar Walesa v65 sin NPC añadidos
 on:
   push:
     branches: [main]
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: walesa-v64-qa
+  group: walesa-v65-qa
   cancel-in-progress: true
 jobs:
   mobile-tests:
@@ -20,8 +20,8 @@ jobs:
           node --check metro61.js
           node --check metro62.js
           node --check metro63.js
-          node --check walesa_residents64.js
-          grep -q 'walesa_residents64.js' index.html
+          node --check walesa_position65.js
+          grep -q 'walesa_position65.js' index.html
           grep -q 'walesa-ds-v1' index.html
       - name: Instalar navegador de pruebas
         run: |

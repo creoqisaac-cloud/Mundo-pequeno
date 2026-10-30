@@ -1451,94 +1451,10 @@ window.WalesaMainland=(()=>{
  // Residentes propios de la expansión, construidos con sprites y la
  // conversación, amistad, encargos y movimiento del MOTOR ORIGINAL.
  // No se mueven ni se borran los NPC originales de Ciudad Corazón.
- const residents=[
-  {id:'walesa_iris',name:'Iris',base:'melody',x:3685,y:2205,fur:'#fff9ed',wear:'#bb8eb8',voice:526,
-   first:'¡Bienvenida al pueblo! El kiosco vuelve a tener música, y puedes venir a bailar cuando quieras.',
-   lines:['Pintamos las macetas para que cada calle tenga personalidad.','La fuente está rodeada de mosaicos hechos por los vecinos.'],
-   gossip:'siempre deja una flor junto al camino'},
-  {id:'walesa_nico',name:'Nico',base:'pochacco',x:3870,y:2240,fur:'#f8f5e8',wear:'#729fc8',voice:445,
-   first:'Estoy cuidando los caminos. En Walesa las carreteras tienen su sitio y las casas el suyo.',
-   lines:['Si te pierdes, el mapa del celular tiene un buscador de lugares.','Me gusta caminar junto al parque cuando cae la tarde.'],
-   gossip:'conoce cada vuelta de la carretera'},
-  {id:'walesa_luma',name:'Luma',base:'cinna',x:3825,y:2410,fur:'#f0f5fa',wear:'#acbddd',voice:552,
-   first:'¡Aquí nos juntamos para el picnic! Puedes invitar a los vecinos y compartir un bocadillo.',
-   lines:['Hay jardines que florecen todo el año.','El kiosco está precioso cuando empiezan a encenderse las farolas.'],
-   gossip:'sabe hacer tartas de colores'},
-  {id:'walesa_fede',name:'Fede',base:'keroppi',x:3560,y:3655,fur:'#83cc8c',wear:'#c8926f',voice:390,
-   first:'¡Bienvenido a la Ciudad del Sur! Tenemos tiendas, talleres y jardines para pasear.',
-   lines:['La Alameda del Sur es un buen sitio para descansar.','Trabajo cerca de las oficinas y siempre me escapo a ver los escaparates.'],
-   gossip:'organiza paseos por la alameda'},
-  {id:'walesa_mara',name:'Mara',base:'melody',x:3870,y:3875,fur:'#fff2e9',wear:'#d8a2c0',voice:485,
-   first:'Las calles del sur están llenas de negocios. También hay zonas de vivienda, no sólo edificios.',
-   lines:['En el mercado hay algo distinto cada día.','Las calles se ven de otro color después de la lluvia.'],
-   gossip:'siempre lleva un cuaderno de dibujos'},
-  {id:'walesa_timo',name:'Timo',base:'badtz',x:3990,y:4020,fur:'#514b5d',wear:'#d1a2a5',voice:367,
-   first:'¿Ya viste el salón recreativo? Pásate a jugar cuando termines tu paseo.',
-   lines:['Dicen que me sé todos los atajos. Tal vez.','A veces me siento en la plaza a escuchar la música.'],
-   gossip:'no deja de hablar de sus videojuegos'},
-  {id:'walesa_cira',name:'Cira',base:'tuxedo',x:5530,y:2150,fur:'#6178a4',wear:'#e6c78f',voice:410,
-   first:'La Meseta Oriental tiene comercios, casas, miradores y un montón de caminos.',
-   lines:['Las nubes pasan bajito por el mirador.','En el mapa puedes activar el relieve para orientarte.'],
-   gossip:'le encanta coleccionar postales'},
-  {id:'walesa_oli',name:'Oli',base:'pom',x:5970,y:2410,fur:'#e4d4a1',wear:'#aad39d',voice:510,
-   first:'Trabajo en los jardines del altiplano. ¿Has visto nuestras flores?',
-   lines:['El viento de la meseta huele a tierra húmeda.','Quisiera plantar un árbol en cada esquina.'],
-   gossip:'le pone nombre a todas las plantas'},
-  {id:'walesa_bimba',name:'Bimba',base:'chococat',x:5730,y:3500,fur:'#45424d',wear:'#8baa74',voice:398,
-   first:'Yo cuido los senderos del bosque. Busca las luciérnagas cuando anochezca.',
-   lines:['El bosque se vuelve azulito cuando cae la tarde.','La naturaleza siempre encuentra un huequito para crecer.'],
-   gossip:'conoce el nombre de cada hongo'},
-  {id:'walesa_tara',name:'Tara',base:'kuromi',x:5960,y:3820,fur:'#665977',wear:'#d9a2b9',voice:445,
-   first:'Hay nuevos senderos por el Bosque Profundo. Mira bien entre los helechos.',
-   lines:['Me encantan las sombras violetas de los árboles.','Nunca salgas del sendero sin mirar el mapa.'],
-   gossip:'colecciona piedras con formas raras'},
-  {id:'walesa_roco',name:'Roco',base:'hangyo',x:3490,y:1120,fur:'#79b6bb',wear:'#b9937b',voice:355,
-   first:'La cordillera tiene cuestas de verdad. Camina por la ruta marcada.',
-   lines:['Arriba sopla viento, pero el paisaje merece la subida.','Los barrancos tienen sombras distintas cada mañana.'],
-   gossip:'siempre vuelve de las montañas con una historia'}
- ];
- function enableResidents(){
-  for(const r of residents){
-   if(!Talk.P[r.id]){
-    Talk.P[r.id]={
-     name:r.name,voice:r.voice,home:[r.x,r.y],map:'main',static:false,
-     where:'paseando por Walesa',likes:['flor','fruta','galleta','dulce'],
-     first:r.first,hi:['¡Qué alegría verte!','¡Buenas!','¡Qué bonito día!'],
-     lines:r.lines,ask:['¿Dónde paseamos hoy?',
-       ['Al kiosco','Al parque','Por los caminos'],
-       ['¡Vamos a oír música!','Me encantan los jardines.','Hay mucho que descubrir.']],
-     gossip:r.gossip,chat:['¡Buenas!','♡','¿Vamos a pasear?']
-    };
-    const base=V.NPCDEF[r.base];
-    V.NPCDEF[r.id]={...base,fur:r.fur,oColor:r.wear,aColor:r.wear};
-   }
-  }
- }
- function neighborSpot(x,y){
-  for(const r of [0,14,28,42,56,75,95]){
-   for(let k=0;k<16;k++){
-    const theta=k*Math.PI/8,tx=Math.round(x+Math.cos(theta)*r),
-      ty=Math.round(y+Math.sin(theta)*r);
-    if(coast(tx,ty)<.85&&!V.blockedOut(tx,ty,9)&&
-     !houses.some(b=>Math.hypot(b.x-tx,b.y-ty)<38))return[tx,ty];
-   }
-  }
-  return [x,y];
- }
-
+ // Los personajes no autorizados de la expansion fueron retirados.
  function register(){
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
-  enableResidents();
-  H.npcs.push((list,m)=>{
-   if(m!==main)return;
-   for(const r of residents){
-    if(list.some(n=>n.id===r.id))continue;
-    const at=neighborSpot(r.x,r.y),n=X.mkNPC(r.id,at[0],at[1]);
-    Talk.P[r.id].home=[at[0],at[1]];n.hx=at[0];n.hy=at[1];
-    list.push(n);
-   }
-  });
   H.tab.push(navigationTab);
   H.ground.push((g,ox,oy,t)=>{
    if(!main||X.M()!==main||X.st.scene!=='out')return;
@@ -1623,7 +1539,7 @@ window.WalesaMainland=(()=>{
  if(document.readyState!=='loading')register();
  return{install,draw,coast,height,biome,zone,roadAt,nearbyRoad,roadRoute,
    destinations,startGuide,mountPhone,replayArrival,roadClearance,
-   get streetSegments(){return seg},get roadGraph(){return graph()},get townResidents(){return residents.map(r=>r.id)},
+   get streetSegments(){return seg},get roadGraph(){return graph()},get townResidents(){return []},
    get arrivalRunning(){return arrivalRunning},
    kioskAt,picnicAt,mailAt,plaza:PLAZA,landmarks:P,get original(){return main}};
 })();

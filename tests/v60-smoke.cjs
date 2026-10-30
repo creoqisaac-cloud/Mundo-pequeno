@@ -90,39 +90,28 @@ const server=http.createServer((req,res)=>{
   assert.ok(fare.route?.transfers>=1,'transfer remains available with one pass');
   console.log('✓ V63 elevated metro, in-game ticket, route and transfers',fare.mapStations,fare.pass);
   const residentAudit=await page.evaluate(()=>{
-   const ids=Object.keys(WalesaResidents64.profiles);
-   const newDefs=ids.map(id=>World.NPCDEF[id]);
-   const names=ids.map(id=>Talk.P[id].name);
-   const original=World.NPCDEF.melody;
-   const samples=ids.map(id=>World.charSprite(World.NPCDEF[id],0,0).c.toDataURL('image/png'));
-   const before=Game.X.player;
-   // Usar un punto transitable y distante del punto de inicio de v59.
-   const model=World.MAIN;
+   const removed=["walesa_iris","walesa_nico","walesa_luma","walesa_fede","walesa_mara","walesa_timo","walesa_cira","walesa_oli","walesa_bimba","walesa_tara","walesa_roco"];
+   const original=['mimmy','cinna','melody','kuromi','pom','pochacco','keroppi','badtz','chococat','tuxedo','hangyo','gude'];
+   const candidates=Object.keys(Talk.P).filter(k=>k.startsWith('walesa_'));
+   const forbidden=removed.filter(id=>Talk.P[id]||World.NPCDEF[id]||Game.X.NPCS.some(n=>n.id===id));
+   const m=World.MAIN;
    let good=null;
-   for(let y=2150;y<2500&&!good;y+=22)for(let x=3500;x<3950;x+=22)if(model.islandD(x,y)<.8&&!World.blockedOut(x,y,8)){good={x,y};break}
-   if(good){Game.X.player.x=good.x;Game.X.player.y=good.y;WalesaResidents64.savePos();}
-   return{num:ids.length,uniqueNames:new Set(names).size,uniqueLooks:new Set(samples).size,
-    originalUnchanged:original.type==='melody'&&!original.walesa64,
-    originalName:Talk.P.melody.name,
-    outfits:new Set(newDefs.map(x=>x.outfit)).size,
-    faces:newDefs.every(x=>!!x.walesa64?.eye&&!!x.walesa64?.hair),
+   for(let y=2150;y<2500&&!good;y+=22)for(let x=3500;x<3950;x+=22)if(m.islandD(x,y)<.8&&!World.blockedOut(x,y,8)){good={x,y};break}
+   if(good){Game.X.player.x=good.x;Game.X.player.y=good.y;WalesaPosition65.savePos()}
+   return{forbidden,candidates,originals:original.filter(id=>!Talk.P[id]||!World.NPCDEF[id]),
+    customResidents:WalesaMainland.townResidents,
     saved:save.lastPosition64?{...save.lastPosition64}:null,
-    current:{x:Game.X.player.x,y:Game.X.player.y},
-    foundFreeSpot:!!good
-   };
+    current:{x:Game.X.player.x,y:Game.X.player.y},foundFreeSpot:!!good};
   });
-  assert.equal(residentAudit.num,11,'eleven new Walesa residents are customized');
-  assert.equal(residentAudit.uniqueNames,11,'each new resident has a unique original name');
-  assert.equal(residentAudit.uniqueLooks,11,'residents have visually different rendered sprites');
-  assert.equal(residentAudit.originalUnchanged,true,'original Sanrio-style residents are untouched');
-  assert.ok(residentAudit.outfits>=9,'wide diversity of wardrobe');
-  assert.equal(residentAudit.faces,true,'new residents have independent hair and iris colors');
-  assert.equal(residentAudit.foundFreeSpot,true,'found a free location to save');
+  assert.deepEqual(residentAudit.forbidden,[],'removed added NPCs from world and registry');
+  assert.deepEqual(residentAudit.candidates,[],'no generated Walesa NPCs remain');
+  assert.deepEqual(residentAudit.originals,[],'original character registry untouched');
+  assert.deepEqual(residentAudit.customResidents,[],'expansion no longer injects new NPCs');
+  assert.equal(residentAudit.foundFreeSpot,true,'found a walkable position');
   assert.equal(residentAudit.saved?.x,residentAudit.current.x,'saved player X');
   assert.equal(residentAudit.saved?.y,residentAudit.current.y,'saved player Y');
-  assert.equal(residentAudit.saved?.map,'main','saved persistent mainland coordinate');
-  console.log('✓ V64 unique neighbors and world position',residentAudit.uniqueNames,residentAudit.uniqueLooks,residentAudit.saved);
-  // Asegurar que al reiniciar NO aparezca en la plaza y se recupere la posicion exacta.
+  assert.equal(residentAudit.saved?.map,'main','saved main-map coordinate');
+  console.log('✓ V65 removed added NPCs without touching originals',residentAudit);
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.__ready&&World.MAIN.mainland&&World.MAIN.overworld60,null,{timeout:25000});
   await page.evaluate(async()=>{await Game.enter()});
@@ -133,8 +122,8 @@ const server=http.createServer((req,res)=>{
   }));
   assert.equal(restored.playerX,residentAudit.saved.x,'restores previous X after reload');
   assert.equal(restored.playerY,residentAudit.saved.y,'restores previous Y after reload');
-  assert.equal(restored.blocked,false,'restored position remains walkable');
-  console.log('✓ V64 reload restores last saved coordinate',restored);
+  assert.equal(restored.blocked,false,'restored position walkable');
+  console.log('✓ V65 continues from saved location',restored);
   const water=await page.evaluate(()=>{
    const model=World.MAIN,ground=model.mainland,sea=World.sea;
    const ocean=sea.getContext('2d').getImageData(0,0,64,64).data;
