@@ -71,7 +71,12 @@ const server=http.createServer((req,res)=>{
    const from=app.querySelector('[data-from]'),to=app.querySelector('[data-to]');
    from.value='Isla Azahar';from.dispatchEvent(new Event('change'));
    const currentTo=app.querySelector('[data-to]');currentTo.value='Terminal del Faro';currentTo.dispatchEvent(new Event('change'));
+   // El boleto ahora se compra presencialmente, al pie de la estación de salida.
+   const lastPosition={x:Game.X.player.x,y:Game.X.player.y};
+   const kiosk=Metro.R.ST.find(s=>s.name==='Isla Azahar');
+   Game.X.player.x=kiosk.px;Game.X.player.y=kiosk.py;
    app.querySelector('[data-buy]')?.click();
+   Game.X.player.x=lastPosition.x;Game.X.player.y=lastPosition.y;
    const pass=save.metroPass63?{...save.metroPass63}:null;
    const result={mapStations,hasTicket,pass,charged:before-save.bells,hasTicketCard:!!app.querySelector('.w63-pass'),
      elevated:WalesaMetro63.elevated,overworldView:!document.querySelector('.wm62-coach'),
