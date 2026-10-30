@@ -89,6 +89,43 @@ const server=http.createServer((req,res)=>{
   assert.equal(fare.overworldView,true,'no fullscreen underground ride overlay');
   assert.ok(fare.route?.transfers>=1,'transfer remains available with one pass');
   console.log('✓ V63 elevated metro, in-game ticket, route and transfers',fare.mapStations,fare.pass);
+  const metro66=await page.evaluate(()=>{
+    const eng=Metro,unit=WalesaMetro66,r=eng.R.lines[1],a=r.ST[0],b=r.ST[1];
+    const train=eng.trains.find(t=>t.route===r);
+    train.s=a.s+.01;train.stop=5.5;train.at=a;
+    const ok=eng.depart(a,b),active=!!eng.ride;
+    const inside=unit.setView('interior');
+    const scene=!!document.querySelector('.w66-cabin');
+    const perspective=!!document.querySelector('.w66-world3d .w66-car3d');
+    const turn=document.querySelector('.w66-cabin [data-turn="55"]');
+    turn?.click();
+    const viewTurn=document.querySelector('.w66-cabin')?.style.getPropertyValue('--look');
+    const canOpenPhone=typeof Fon?.open==='function';
+    Fon?.open();
+    const phoneOpened=!!document.querySelector('.fon.on'),menuWhenPhone=Game.X.st.menu;
+    const lead=eng.trains.find(t=>t.route!==r&&t.stop<=0);
+    const before=lead?.s;
+    eng.tick(.04);
+    const after=lead?.s;
+    Fon?.close();
+    unit.setView('exterior');
+    train.at=b;train.s=b.s;train.stop=1;
+    eng.tick(.04);
+    const exitClean=!eng.ride&&!document.querySelector('.w66-cabin');
+    return{ok,active,inside,scene,perspective,viewTurn,canOpenPhone,phoneOpened,menuWhenPhone,
+       motion:before!=null&&after!=null&&after!==before,exitClean,view:unit.mode};
+  });
+  assert.equal(metro66.ok,true,'boarding a real train works');
+  assert.equal(metro66.active,true,'player enters a real carriage');
+  assert.equal(metro66.inside,true,'inside view accessible');
+  assert.equal(metro66.scene,true,'car interior scene renders');
+  assert.equal(metro66.perspective,true,'interior has 3D perspective structure');
+  assert.equal(metro66.viewTurn,'55deg','player can rotate interior view');
+  assert.equal(metro66.phoneOpened,true,'native phone opens inside carriage');
+  assert.equal(metro66.menuWhenPhone,true,'phone is available during travel');
+  assert.equal(metro66.motion,true,'trains keep moving while phone is open');
+  assert.equal(metro66.exitClean,true,'interior closes after disembarking');
+  console.log('✓ v66 metro onboard, 3D interior and phone while riding',metro66);
   const residentAudit=await page.evaluate(()=>{
    const removed=["walesa_iris","walesa_nico","walesa_luma","walesa_fede","walesa_mara","walesa_timo","walesa_cira","walesa_oli","walesa_bimba","walesa_tara","walesa_roco"];
    const original=['mimmy','cinna','melody','kuromi','pom','pochacco','keroppi','badtz','chococat','tuxedo','hangyo'];

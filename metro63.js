@@ -155,7 +155,7 @@ function draw(){
   }
  });
  H.screen.push((g,B,w2s,t)=>{
-  if(!window.Metro?.R||X.M()!==V.MAIN||X.st.scene!=='out')return;
+  if(window.WalesaMetro66?.elevated||!window.Metro?.R||X.M()!==V.MAIN||X.st.scene!=='out')return;
   const xp=X.player.x,yp=X.player.y,lines=Metro.R.lines;
   g.save();g.lineCap='round';g.lineJoin='round';
   for(const l of lines){

@@ -450,7 +450,34 @@ window.WalesaMainland=(()=>{
      }
     }
   }
-  cache.set(key,cv);while(cache.size>32)cache.delete(cache.keys().next().value);return cv;
+  cache.set(key,cv);while(cache.size>44)cache.delete(cache.keys().next().value);return cv;
+ }
+
+ // Preparación de los siguientes chunks fuera del render sin cambiar las texturas.
+ const pendingWarm=[],queuedWarm=new Set();let warmScheduled=false;
+ function warmAround(xa,xb,ya,yb){
+  if(pendingWarm.length>4)return;
+  const edge=[[xb+1,ya],[xb+1,yb],[xa-1,ya],[xa-1,yb],[xa,ya-1],[xb,ya-1],[xa,yb+1],[xb,yb+1]];
+  for(const [x,y]of edge){
+   if(pendingWarm.length>=4)break;
+   if(x<0||y<0||x>=Math.ceil(MW/SZ)||y>=Math.ceil(MH/SZ)||x*SZ<oldW&&y*SZ<oldH)continue;
+   const key=x+','+y;if(cache.has(key)||queuedWarm.has(key))continue;
+   pendingWarm.push([x,y]);queuedWarm.add(key);
+  }
+  if(!warmScheduled&&pendingWarm.length)scheduleWarm();
+ }
+ function scheduleWarm(){
+  warmScheduled=true;
+  const go=(deadline)=>{
+   if(deadline&&deadline.timeRemaining&&deadline.timeRemaining()<9&&!deadline.didTimeout){requestIdleCallback(go,{timeout:240});return}
+   const job=pendingWarm.shift();if(job){
+    const key=job[0]+','+job[1];queuedWarm.delete(key);
+    if(!cache.has(key))tile(job[0],job[1]);
+   }
+   warmScheduled=false;if(pendingWarm.length)scheduleWarm();
+  };
+  if(typeof requestIdleCallback==='function')requestIdleCallback(go,{timeout:240});
+  else setTimeout(()=>go(null),65);
  }
  function draw(ctx,ox,oy,sw,sh,t){
   // 1. Suelo heredado (sin ampliarlo ni modificar la partida original).
@@ -489,6 +516,7 @@ window.WalesaMainland=(()=>{
      if(shimmer>.9)ctx.fillRect(wx-ox+Math.cos(a)*2,wy-oy+Math.sin(a)*2,1,1);
     }ctx.restore();
   }
+  warmAround(xa,xb,ya,yb);
  }
  const houses=[];
  // Conserva el sprite original y añade detalles arquitectónicos deterministas

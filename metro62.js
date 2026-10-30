@@ -82,6 +82,7 @@ function onArrival(st){
  const next=active.legs[active.index];
  if(hub(st)!==hub(next.from)){active=null;Game.X.toast('Transbordo no disponible');return}
  Game.X.toast('🔁 Transbordo directo: '+next.route.name);
+ if(window.WalesaMetro66?.transfer){window.WalesaMetro66.transfer(next,st);return}
  if(!window.Metro?.depart?.(next.from,next.to))active=null;
 }
 function rideDisplay(o){
@@ -167,5 +168,5 @@ const css=document.createElement('style');css.textContent=
  '.wm62-coach{position:absolute;z-index:78;inset:0;background:linear-gradient(145deg,#112b44,#285066);display:grid;place-items:center;padding:20px;color:white}.wm62-car{max-width:420px;width:100%;border:3px solid #f6d8a1;border-radius:20px;overflow:hidden;background:#fff8eb;color:#17394e;text-align:center;padding-bottom:14px;box-shadow:0 14px 36px #0009}.wm62-car-top{background:#22546a;color:white;padding:12px;font:900 13px system-ui;display:flex;justify-content:space-between}.wm62-car-top span{opacity:.7;font-size:10px}.wm62-car-window{height:114px;background:linear-gradient(100deg,#174057,#5b8995,#20495a);position:relative;overflow:hidden}.wm62-motion{white-space:nowrap;font:34px system-ui;letter-spacing:19px;position:absolute;top:21px;color:#e2f4ee99;animation:wm62rail 6s linear infinite}.wm62-train{position:absolute;bottom:4px;left:0;right:0;color:#fff6dd;font:32px system-ui;letter-spacing:8px}@keyframes wm62rail{from{transform:translateX(15%)}to{transform:translateX(-70%)}}.wm62-car>small{display:block;margin:15px 0 5px;font-weight:900}.wm62-car h3{margin:4px 8px;font:900 20px system-ui}.wm62-car p{font:650 12px system-ui;margin:10px}.wm62-train-stops{display:flex;overflow-x:auto;gap:5px;padding:8px}.wm62-train-stops span{border-bottom:4px solid;white-space:nowrap;padding:8px 5px;font-size:9px}.wm62-car-foot{opacity:.6}';
 document.head.appendChild(css);
 if(window.WalesaMetro61)window.WalesaMetro61.render=view;
-window.WalesaMetro62={routes,plan,begin,view,openStation,onArrival,rideDisplay,removeCoach,unifyStations,surfaceStop,underground:true,get active(){return active}};
+window.WalesaMetro62={routes,plan,begin,view,openStation,onArrival,rideDisplay,removeCoach,unifyStations,surfaceStop,underground:true,cancelJourney(){active=null},get active(){return active}};
 })();

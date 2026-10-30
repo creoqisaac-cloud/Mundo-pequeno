@@ -2909,6 +2909,8 @@ const Game=(()=>{
  function loop(now){st.raf=requestAnimationFrame(loop);const dt=clamp((now-st.last)/1000||0,0,.05);st.last=now;st.t+=dt;const t=st.t;
   if(dt<.045&&!document.hidden)st.fps.push(dt);if(st.fps.length>150){const avg=st.fps.reduce((a,b)=>a+b,0)/st.fps.length;st.fps.length=0;if(avg>1/38&&quality>.5){quality=Math.max(.5,quality-.25);layout()}else if(avg<1/57&&quality<1&&(st.fastN=(st.fastN||0)+1)>=3){st.fastN=0;quality=Math.min(1,quality+.25);layout()}}
   dlgTick(dt);music(dt);crLoop();
+  // El metro sigue circulando mientras el teléfono original está abierto.
+  if(st.mode==='play'&&st.menu)window.Metro?.tick?.(dt);
   if(st.trans){st.trans.t+=dt;const p=st.trans.t/st.trans.dur;if(p>=.5&&!st.trans.done){st.trans.done=true;st.trans.mid&&st.trans.mid()}if(p>=1){const r=st.trans.res;st.trans=null;r()}}
   if(st.shakeObj)st.shakeObj.t-=dt;cam.z+=(cam.tz-cam.z)*Math.min(1,dt*6);
   if(st.mg){st.mg.update(dt,t);st.mg.draw(t)}
@@ -8373,7 +8375,7 @@ window.Wardrobe=Wardrobe;
   try{typeof Isaac!=='undefined'&&Isaac.rebuildSG&&Isaac.rebuildSG(m)}catch(e){}}
  /* ── los trenes ── */
  let trains=[],ride=null,waitAt=null,ready=false;
- H.update.push(dt=>{const m=V.MAIN;if(!m||!m.objs||!m.cityOff)return;
+ function tickMetro(dt){const m=V.MAIN;if(!m||!m.objs||!m.cityOff)return;
   if(!ready){ready=true;const original=build(m);Object.assign(original,{id:'pueblo',name:'Línea del Pueblo',color:'#e8708f',speed:SPEED});routes=[original,...(m.metro47||[]).map(extraRoute)];for(const r of routes)for(const st of r.ST)st.route=r;if(window.WalesaMetro62?.unifyStations)window.WalesaMetro62.unifyStations(routes,m);
    R={...original,lines:routes,P:routes.flatMap(r=>r.P),ST:routes.flatMap(r=>r.ST)};clearCorridor(m);trains=routes.flatMap(r=>{const count=r===original?2:Math.max(3,Math.ceil(r.L/(r.speed*30)));return Array.from({length:count},(_,i)=>({s:(r.ST[0].s+i*r.L/count-1+r.L)%r.L,stop:0,id:r.id+':'+i,route:r}))})}
   dt=Math.min(dt,.05);for(const tr of trains){const r=tr.route,speed=r.speed;if(tr.stop>0){tr.stop=Math.max(0,tr.stop-dt);continue}const s0=tr.s;tr.s+=speed*dt;
@@ -8381,7 +8383,8 @@ window.Wardrobe=Wardrobe;
    if(tr.stop<=0)tr.at=null;tr.s%=r.L}
   if(ride&&(X.M()!==m||X.st.scene!=='out')){ride=null;X.st.busy=false;X.st.focus=null;if(uiEl){uiEl.remove();uiEl=null}}
   if(ride){X.st.busy=true;X.player.path=null;const tr=ride.tr,p=at(tr.s,tr.route);X.st.focus={x:p.x,y:p.y};X.player.x=p.x;X.player.y=p.y;if(tr.stop>0&&tr.at===ride.dest&&tr.stop<STOP-1.2)getOff();else rideUI()}
-  if(waitAt&&X.M()===m&&X.st.scene==='out'&&!X.st.busy&&!X.st.menu&&Math.hypot(X.player.x-waitAt.st.px,X.player.y-waitAt.st.py-6)<=26){const tr=trains.find(t=>t.route===waitAt.st.route&&t.stop>0&&t.at===waitAt.st);if(tr){const w=waitAt;waitAt=null;board(tr,w.st,w.dest)}}});
+  if(waitAt&&X.M()===m&&X.st.scene==='out'&&!X.st.busy&&Math.hypot(X.player.x-waitAt.st.px,X.player.y-waitAt.st.py-6)<=26){const tr=trains.find(t=>t.route===waitAt.st.route&&t.stop>0&&t.at===waitAt.st);if(tr){const w=waitAt;waitAt=null;board(tr,w.st,w.dest)}}}
+ H.update.push(tickMetro);
  /* ── dibujo: vías, andenes y trenes ── */
  const RAIL='#8a8fa3',SLEEP='#8a6448';
  H.ground.push((g,ox,oy,t)=>{const m=X.M();if(!R||m!==V.MAIN||window.WalesaMetro62?.underground)return;const x0=ox-60,y0=oy-60,x1=ox+X.W*2.2+60,y1=oy+X.H*2.2+60;
@@ -8422,7 +8425,7 @@ window.Wardrobe=Wardrobe;
  let uiEl=null;function rideUI(){if(window.WalesaMetro62?.rideDisplay){window.WalesaMetro62.rideDisplay({ride,trains,at});return}if(!uiEl){uiEl=document.createElement('div');uiEl.style.cssText='position:absolute;z-index:30;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);background:rgba(58,38,52,.78);color:#fffaf3;font:800 12px Nunito,sans-serif;border-radius:16px;padding:8px 12px;display:flex;gap:8px;align-items:center;white-space:nowrap';document.getElementById('game').appendChild(uiEl)}
   const tr=ride.tr,nx=tr.stop>0&&tr.at?tr.at:nextStop(tr),txt=(tr.stop>0&&tr.at?'🚇 En '+tr.at.name:'🚇 Próxima: '+nx.name)+' · vas a '+ride.dest.name;if(uiEl._t!==txt){uiEl._t=txt;uiEl.innerHTML=txt+(ride.dest!==nx?'<button style="border:0;border-radius:10px;padding:4px 8px;font:800 11px Nunito,sans-serif;background:#f490b4;color:#fff">Bajar aquí</button>':'');const b=uiEl.querySelector('button');if(b)b.onclick=e=>{e.stopPropagation();ride.dest=tr.stop>0&&tr.at?tr.at:nx;if(tr.stop>0&&tr.at)getOff()}}}
  function getOff(){if(!ride)return;const st=ride.dest;ride=null;if(uiEl){uiEl.remove();uiEl=null}X.st.focus=null;X.cam.tz=X.cam.uz;X.player.x=st.px;X.player.y=st.py+8;X.player.dir=0;X.player.path=null;X.player.frame=0;X.resetInput();X.cam.x=X.player.x;X.cam.y=X.player.y;X.petE.x=X.player.x+16;X.petE.y=X.player.y+4;X.st.busy=false;G.sfx.door&&G.sfx.door();X.placeTag&&X.placeTag(st.name);G.save();try{(window.Metro.arr||[]).forEach(f=>f(st))}catch(e){}if(window.WalesaMetro62?.onArrival)window.WalesaMetro62.onArrival(st)}
- function depart(st,dest){if(!R||!st||!dest||st.route!==dest.route||X.M()!==V.MAIN||X.st.scene!=='out'||ride)return false;X.player.x=st.px;X.player.y=st.py+8;X.player.path=null;X.resetInput();const tr=trains.find(t=>t.route===st.route&&t.stop>0&&t.at===st);if(tr){board(tr,st,dest)}else{waitAt={st,dest};X.toast('🚇 Próximo tren: '+eta(st)+' s')}return true}window.Metro={get R(){return R},get trains(){return trains},eta,at,depart};
+ function depart(st,dest){if(!R||!st||!dest||st.route!==dest.route||X.M()!==V.MAIN||X.st.scene!=='out'||ride)return false;X.player.x=st.px;X.player.y=st.py+8;X.player.path=null;X.resetInput();const tr=trains.find(t=>t.route===st.route&&t.stop>0&&t.at===st);if(tr){board(tr,st,dest)}else{waitAt={st,dest};X.toast('🚇 Próximo tren: '+eta(st)+' s')}return true}window.Metro={get R(){return R},get trains(){return trains},get ride(){return ride},get waitAt(){return waitAt},eta,at,depart,tick:tickMetro};
 })();
 </script>
 <script>
@@ -8719,7 +8722,7 @@ window.Wardrobe=Wardrobe;
  gm.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'&&endSwipe(e.clientX,e.clientY,e.pointerId)){e.preventDefault();e.stopPropagation()}},true);
  window.addEventListener('keydown',e=>{if(openFlag&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close()}},true);
  function bar(){const d=new Date();return`<div class="bar"><span>${String(gameHour()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</span><span>📶 ♡ 🔋</span></div>`}
- function open(view){if(X.st.mg||X.st.busy&&!ringing)return;openFlag=true;X.st.menu=true;fon.classList.add('on');gm.classList.add('fon-on');(view||homeV)();G.sfx.sel&&G.sfx.sel()}
+ function open(view){if(X.st.mg||X.st.busy&&!ringing&&!window.Metro?.ride)return;openFlag=true;X.st.menu=true;fon.classList.add('on');gm.classList.add('fon-on');(view||homeV)();G.sfx.sel&&G.sfx.sel()}
  function close(){if(!openFlag&&!fon.classList.contains('on'))return;phoneSwipe=null;openFlag=false;fon.classList.remove('on');gm.classList.remove('fon-on');X.st.menu=false;G.sfx.back&&G.sfx.back()}
  btn.addEventListener('click',e=>{e.stopPropagation();if(ringing){answer();return}openFlag?close():open()});
  const APPS=[['calls','📞','Llamadas','#bfe6fa'],['missions','📋','Encargos','#fff1a8'],['games','🕹️','Juegos','#e6d9ff'],['metro','🚇','Metro','#c8f0c0'],['weather','🌤️','Hoy','#fde3c8'],['map','🗺️','Mapa','#e3ecdb']];
@@ -10255,6 +10258,7 @@ window.Wardrobe=Wardrobe;
 <script src="./metro62.js"></script>
 <script src="./metro63.js"></script>
 <script src="./walesa_position65.js"></script>
+<script src="./metro66.js"></script>
 <script>window.__ready=true</script>
 
 <!-- ═════════════ GUARDAR COMO APP EN EL TELÉFONO ═════════════ -->
