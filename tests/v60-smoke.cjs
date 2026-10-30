@@ -16,7 +16,13 @@ const server=http.createServer((req,res)=>{
   const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>window.__ready&&World.MAIN.mainland&&World.MAIN.overworld60,null,{timeout:120000});
+  try{await page.waitForFunction(()=>window.__ready&&World.MAIN.mainland&&World.MAIN.overworld60,null,{timeout:25000})}
+  catch(e){console.error('v60 boot diagnostics',await page.evaluate(()=>({
+   ready:window.__ready,world:typeof World,game:typeof Game,
+   mainland:!!window.World?.MAIN?.mainland,overworld:!!window.World?.MAIN?.overworld60,
+   module:!!window.WalesaOverworld60,loading:window.Game?.st?.mode,
+   errors:document.documentElement.className
+  })),errors);throw e}
   await page.evaluate(async()=>{save.created=true;save.helped=true;save.v4=1;save.fon=save.fon||{};save.fon.intro=1;Game.G.save();await Game.enter()});
   await page.locator('#titleCov').dispatchEvent('pointerdown',{pointerType:'touch'});
   await page.waitForFunction(()=>WalesaOverworld60.ready&&Metro.R?.lines.length===4,null,{timeout:120000});
