@@ -129,19 +129,8 @@ H.bill.push(b=>{
    drawSprite(g,images[side?'perfil':'frente'],-13,-30,26,27);
   }});
  }
- // El dibujo rosa de Procreate son orejas de My Melody, NO botas.
- // Es un accesorio de cabeza independiente del calzado de lluvia.
- if(save.myMelodyEars===true){
-  b.push({x:p.x,y:p.y+4,draw:g=>drawSprite(g,images.botas,-14,-44,28,21)});
- }
-});
-H.tab.push((tab,box)=>{
- if(tab!=='tasks')return;
- const d=document.createElement('div');
- const btn=document.createElement('button');btn.className='orow';
- btn.textContent=(save.myMelodyEars?'🐰 Quitar':'🐰 Poner')+' orejas de My Melody';
- btn.onclick=()=>{save.myMelodyEars=!save.myMelodyEars;persist();X.toast(save.myMelodyEars?'🐰 Orejas equipadas':'🐰 Orejas guardadas');btn.textContent=(save.myMelodyEars?'🐰 Quitar':'🐰 Poner')+' orejas de My Melody';};
- d.appendChild(btn);box.appendChild(d);
-});
-window.WalesaRopaDibujada={version:69,images,usesOwnProcreate:true,myMelodyEars:true};
+ // Las orejas rosas pertenecen al personaje My Melody.
+ // No son botas ni equipamiento del jugador. Su animación se integra
+ // exclusivamente al render del personaje, nunca al menú de ropa.
+window.WalesaRopaDibujada={version:70,images,usesOwnProcreate:true,myMelodyEarFrames:images.botas};
 })();
