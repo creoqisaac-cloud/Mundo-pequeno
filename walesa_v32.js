@@ -129,9 +129,19 @@ H.bill.push(b=>{
    drawSprite(g,images[side?'perfil':'frente'],-13,-30,26,27);
   }});
  }
- if(save.inv?.botas32>0&&save.shoes==='botasLluvia'){
-  b.push({x:p.x,y:p.y+3,draw:g=>drawSprite(g,images.botas,-8,-9,16,10)});
+ // El dibujo rosa de Procreate son orejas de My Melody, NO botas.
+ // Es un accesorio de cabeza independiente del calzado de lluvia.
+ if(save.myMelodyEars===true){
+  b.push({x:p.x,y:p.y+4,draw:g=>drawSprite(g,images.botas,-14,-44,28,21)});
  }
 });
-window.WalesaRopaDibujada={version:68,images,usesOwnProcreate:true};
+H.tab.push((tab,box)=>{
+ if(tab!=='tasks')return;
+ const d=document.createElement('div');
+ const btn=document.createElement('button');btn.className='orow';
+ btn.textContent=(save.myMelodyEars?'🐰 Quitar':'🐰 Poner')+' orejas de My Melody';
+ btn.onclick=()=>{save.myMelodyEars=!save.myMelodyEars;persist();X.toast(save.myMelodyEars?'🐰 Orejas equipadas':'🐰 Orejas guardadas');btn.textContent=(save.myMelodyEars?'🐰 Quitar':'🐰 Poner')+' orejas de My Melody';};
+ d.appendChild(btn);box.appendChild(d);
+});
+window.WalesaRopaDibujada={version:69,images,usesOwnProcreate:true,myMelodyEars:true};
 })();
