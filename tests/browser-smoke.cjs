@@ -231,12 +231,21 @@ async function slideZipper(page){
 
   // Validar que el motor siga pintando después de cerrar Opciones.
   await page.evaluate(async()=>{await Game.enter();});
-  await page.waitForTimeout(850);
+  // El atlas dibujado puede generar texturas por primera vez al entrar.
+  // Esperar un fotograma real en lugar de asumir que 850 ms son suficientes.
+  await page.waitForFunction(()=>{
+   const c=document.getElementById('cv');
+   if(!c||!c.width||!c.height||!document.querySelector('#game')?.classList.contains('on'))return false;
+   return c.getContext('2d').getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data[3]>0;
+  },null,{timeout:14000}).catch(()=>{});
   const canvas=await page.evaluate(()=>{
    const c=document.getElementById('cv'),ctx=c.getContext('2d');
    const p=ctx.getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data;
    return{width:c.width,height:c.height,alpha:p[3],visible:document.querySelector('#game').classList.contains('on')};
   });
+  console.log('V68 RENDER STATE',canvas,'PAGE ERRORS',errors,
+   await page.evaluate(()=>({st:Game.X.st,player:Game.X.player,
+    map:World.map?.id,topografia:!!WalesaTopografia.dibujo2026})));
   assert.ok(canvas.width>0&&canvas.height>0&&canvas.alpha>0&&canvas.visible,'La pantalla debe dibujarse, no quedar negra');
   assert.deepEqual(errors,[],'No debe haber errores JS de página');
   console.log('✓ Chromium real: joystick, tamaño, área invisible, cierre solo cremallera y telefono, navegación y render.');
