@@ -115,7 +115,11 @@ window.WalesaMainland=(()=>{
   // Silueta geográfica fiel a los bordes de color azul del boceto.
   return T.coast(u,v);
  }
- function coast(x,y){return Math.min(nativeCoast(x,y),window.WalesaOverworld60?.distance(x,y)??9)}
+ function coast(x,y){
+  // Usa la geometría de la autora en toda la expansión. La imagen no se pega
+  // encima: define el mar real, las playas y la zona bloqueada del terreno.
+  return T.coastGlobal?T.coastGlobal(x,y):Math.min(nativeCoast(x,y),window.WalesaOverworld60?.distance(x,y)??9);
+ }
  function height(x,y){
   if(x<2700&&y<1320)return 0;
   const [u,v]=pos(x,y);
@@ -123,6 +127,8 @@ window.WalesaMainland=(()=>{
   return T.height(u,v);
  }
  function biome(x,y){
+  // Respeta las franjas y regiones coloreadas del nuevo dibujo sin ruido desplazado.
+  if(T.classifyGlobal&&(x>=oldW||y>=oldH))return T.classifyGlobal(x,y);
   const southern=window.WalesaOverworld60?.regionAt(x,y);if(southern)return WalesaOverworld60.biome(x,y,southern);
   const [u,v]=pos(x,y);
   if(u<0||u>1||v<0||v>1)return 'town';

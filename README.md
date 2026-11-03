@@ -61,3 +61,10 @@ El hospital ahora es un edificio en **Ciudad Corazón**, al sur del Salón de ju
 - Se mantienen vagones originales v66, rutas, personajes y clave de guardado `walesa-ds-v1`.
 - La caché del service worker cambia a `walesa-v67-viaducto-andenes-20261030` para actualizar la PWA en iPhone.
 - QA en Chromium móvil: `tests/metro67-station.cjs`, `tests/metro67-access.cjs` y pruebas de regresión anteriores.
+
+## v68 · Dibujo del terreno y ropa de Procreate (2026-11-03)
+
+- La máscara de agua, ríos, canales y tierra se extrajo de la imagen dibujada por la autora, integrada en `topografia_walesa_v2.js` como geometría del mundo (560 × 383 muestras), no como una capa plana sobre el juego.
+- La costa, las colisiones y el mapa nativo de `walesa_mainland_v3.js` usan el mismo trazado. Se preserva la isla original, sus NPCs y la clave de guardado `walesa-ds-v1`.
+- Se incorporaron los tres sprites originales hechos en Procreate: impermeable de frente, de perfil y botas rosas. Se muestran al equipar `impermeable32` y `botas32`, sin cambiar el inventario.
+- La PWA aumenta su versión de caché para instalar los cambios desde GitHub Pages.

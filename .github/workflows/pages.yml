@@ -54,6 +54,7 @@ jobs:
           node --check metro66.js
           node --check walesa_position65.js
           node --check walesa_mainland_v3.js
+          node tests/procreate-v68.cjs
           grep -q 'metro61.js' index.html
           grep -q 'metro62.js' index.html
           grep -q 'metro63.js' index.html

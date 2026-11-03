@@ -16,7 +16,11 @@ window.WalesaOverworld60=(()=>{'use strict';
   {id:'sur60',name:'Línea de las Islas',color:'#9c8ab7',speed:120,points:[[760,1100],[750,1600],[750,2300],[1120,2670],[1500,3320],[1880,3800],[2460,3720],[3350,3720],[3320,3740],[2460,3740],[1850,3840],[1470,3350],[1090,2700],[720,2340],[720,1600],[730,1120]],stops:[['Playa · sur',760,1100],['Azahar',750,2300],['Luciérnaga',1880,3800],['Sur · enlace',3350,3720]]}
  ];
  let main=null,done=false;const berries=[];
- function install(m){if(m.overworld60)return;m.overworld60=api;main=m;const old=m.islandD;m.islandD=(x,y)=>Math.min(old(x,y),distance(x,y));m.metro47=lines;}
+ function install(m){if(m.overworld60)return;m.overworld60=api;main=m;const old=m.islandD;
+ m.islandD=(x,y)=>window.WalesaTopografia?.dibujo2026 &&
+  x>=0&&y>=0&&(x>=m.baseMW||y>=m.baseMH)
+   ?old(x,y):Math.min(old(x,y),distance(x,y));
+ m.metro47=lines;}
  const here=()=>main&&X.M()===main&&X.st.scene==='out';
  const onBridge=(x,y)=>bridges.some(l=>segment(x,y,l)<48);
  const onRail=(x,y,r=26)=>lines.some(l=>l.points.some((p,i)=>segment(x,y,[p,l.points[(i+1)%l.points.length]])<r));
