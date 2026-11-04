@@ -123,7 +123,7 @@ function drawSprite(g,im,x,y,w,h){
 H.bill.push(b=>{
  if(X.st.scene!=='out'||X.st.mg||X.st.mode!=='play'||!X.player)return;
  const p=X.player;
- if(save.inv?.impermeable32>0&&save.outfit==='impermeable'){
+ if((save.inv?.impermeable32>0&&save.outfit==='impermeable')||window.WalesaRaincoatPreview){
   b.push({x:p.x,y:p.y+2,draw:g=>{
    const side=(p.dir===1||p.dir===3);
    drawSprite(g,images[side?'perfil':'frente'],-13,-30,26,27);
@@ -132,5 +132,15 @@ H.bill.push(b=>{
  // Las orejas rosas pertenecen al personaje My Melody.
  // No son botas ni equipamiento del jugador. Su animación se integra
  // exclusivamente al render del personaje, nunca al menú de ropa.
-window.WalesaRopaDibujada={version:70,images,usesOwnProcreate:true,myMelodyEarFrames:images.botas};
+H.tab.push((tab,box)=>{
+ if(tab!=='tasks')return;
+ const btn=document.createElement('button');
+ btn.className='orow';
+ btn.textContent='🧥 Vista previa del impermeable de Procreate';
+ btn.onclick=()=>{window.WalesaRaincoatPreview=!window.WalesaRaincoatPreview;
+  btn.textContent=window.WalesaRaincoatPreview?'🧥 Ocultar vista previa':'🧥 Vista previa del impermeable de Procreate';
+  X.toast(window.WalesaRaincoatPreview?'🧥 Impermeable visible en tu personaje':'Vista previa cerrada');};
+ box.appendChild(btn);
+});
+window.WalesaRopaDibujada={version:71,images,usesOwnProcreate:true,myMelodyEarFrames:images.botas};
 })();
