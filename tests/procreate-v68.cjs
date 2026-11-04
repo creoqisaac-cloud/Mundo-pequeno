@@ -27,5 +27,15 @@ assert.match(read('overworld60.js'),/x>=m\.baseMW\|\|y>=m\.baseMH/,'legacy islan
 const clothes=read('walesa_v32.js');
 for(const n of ['botas','perfil','frente'])assert.match(clothes,new RegExp(n+": 'data:image/png;base64,"));
 assert.match(clothes,/WalesaRopaDibujada/);
-assert.match(read('sw.js'),/walesa-v68-mapa-procreate-20261103/);
+assert.match(read('sw.js'),/walesa-v72-armario-objetos-procreate-20261103/);
+const art=read('walesa_raincoat_procreate.js');
+for(const n of ['perfil','frente'])assert.match(art,new RegExp(n+": 'data:image/png;base64,"));
+assert.match(art,/save\.rainGear34\?\.coat/);
+const html=read('index.html');
+assert.match(html,/id="wearCoat34"/);
+assert.match(html,/id="useMedicine34"/);
+assert.match(html,/case 'medicina':/);
+assert.match(html,/case 'paraguas32':/);
+assert.match(html,/walesa_raincoat_procreate\.js/);
+assert.doesNotMatch(html,/id="rain32"/,'rain gear must not have a Tasks shortcut');
 console.log('✓ v68: water mask, new coasts, collisions, biomes, original NPC/save code and Procreate rainwear');
