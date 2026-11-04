@@ -118,6 +118,8 @@ window.WalesaMainland=(()=>{
  function coast(x,y){
   // Usa la geometría de la autora en toda la expansión. La imagen no se pega
   // encima: define el mar real, las playas y la zona bloqueada del terreno.
+  // Los caminos/puentes dibujados tienen prioridad sobre la máscara de agua.
+  if(nearbyRoad(x,y,30)&&x>2450)return .06;
   return T.coastGlobal?T.coastGlobal(x,y):Math.min(nativeCoast(x,y),window.WalesaOverworld60?.distance(x,y)??9);
  }
  function height(x,y){
@@ -1408,7 +1410,7 @@ window.WalesaMainland=(()=>{
   if(m.mainland)return m;
   main=m;oldW=m.MW;oldH=m.MH;baseD=m.islandD;origBiome=m.biome;
   m.baseMW=oldW;m.baseMH=oldH;m.MW=MW;m.MH=MH;
-  m.islandD=(x,y)=>x>=0&&y>=0&&x<oldW&&y<oldH?baseD(x,y):coast(x,y);
+  m.islandD=(x,y)=>nearbyRoad(x,y,30)&&x>2450?.06:(x>=0&&y>=0&&x<oldW&&y<oldH?baseD(x,y):coast(x,y));
   m.biome=(x,y,mm)=>x>=0&&y>=0&&x<oldW&&y<oldH?origBiome(x,y,mm):biome(x,y);
   m.elevation=height;
   m.mainland={draw,coast,height,biome,zone,roadAt,nearbyRoad,sampleMap,original:{width:oldW,height:oldH},extent:{width:MW,height:MH},landmarks:P};
