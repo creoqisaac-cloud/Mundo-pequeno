@@ -1492,6 +1492,40 @@ window.WalesaMainland=(()=>{
   if(typeof Game==='undefined'||!Game.X?.HOOKS)return;
   const X=Game.X,H=X.HOOKS;let seen='';
   H.tab.push(navigationTab);
+  // Fauna ambiental por bioma: posiciones reproducibles, animación suave y rareza real.
+  // No genera colisiones ni altera NPC, inventario o partidas guardadas.
+  const fauna={
+   forest:[['🐇',46],['🦊',27],['🦉',18],['🦌',8],['🦄',1]],
+   shroom:[['🐌',42],['🐸',30],['🦋',19],['🦎',8],['✨',1]],
+   candy:[['🐝',44],['🦋',33],['🐿️',19],['🦄',3],['🌟',1]],
+   chile:[['🦎',46],['🐦',31],['🦂',18],['🦅',4],['✨',1]],
+   city:[['🐦',52],['🐈',30],['🐕',16],['🦉',2]],
+   town:[['🐇',39],['🐿️',29],['🐦',25],['🦊',6],['✨',1]]
+  };
+  const wildlifeHash=(a,b,c)=>{let n=Math.imul(a|0,374761393)+Math.imul(b|0,668265263)+Math.imul(c|0,1442695041);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296};
+  H.ground.push((g,ox,oy,t)=>{
+   if(!main||X.M()!==main||X.st.scene!=='out'||X.st.mode!=='play')return;
+   const p=X.player,cell=120,cx=Math.floor(p.x/cell),cy=Math.floor(p.y/cell);
+   g.save();g.textAlign='center';g.textBaseline='middle';
+   for(let dy=-3;dy<=3;dy++)for(let dx=-4;dx<=4;dx++){
+    const ix=cx+dx,iy=cy+dy,roll=wildlifeHash(ix,iy,7);
+    if(roll>.29)continue;
+    const x=(ix+.15+wildlifeHash(ix,iy,9)*.7)*cell;
+    const y=(iy+.15+wildlifeHash(ix,iy,11)*.7)*cell;
+    if(x<0||y<0||x>=main.MW||y>=main.MH||coast(x,y)>.75||nearbyRoad(x,y,23))continue;
+    const kind=biome(x,y),species=fauna[kind]||fauna.town;
+    // Apariciones especiales ~1% de los animales, no 1% de las casillas.
+    let chance=wildlifeHash(ix,iy,19)*100,animal=species[0][0];
+    for(const [symbol,weight] of species){chance-=weight;if(chance<0){animal=symbol;break}}
+    const phase=wildlifeHash(ix,iy,23)*Math.PI*2;
+    const sx=x-ox+Math.sin(t*.48+phase)*9,sy=y-oy+Math.sin(t*.91+phase)*3;
+    if(Math.abs(sx)>700||Math.abs(sy)>700)continue;
+    g.globalAlpha=.17;g.fillStyle='#253c32';g.beginPath();g.ellipse(sx,sy+3,10,3,0,0,Math.PI*2);g.fill();
+    g.globalAlpha=.95;g.font='19px sans-serif';g.fillText(animal,sx,sy-9);
+   }
+   g.restore();
+  });
+
   H.ground.push((g,ox,oy,t)=>{
    if(!main||X.M()!==main||X.st.scene!=='out')return;
    const p=X.player,regional=zone(p.x,p.y),atPark=plazaDistance(p.x,p.y)<300;
