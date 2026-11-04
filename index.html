@@ -2871,7 +2871,7 @@ const Game=(()=>{
    box.innerHTML=`<div class="daybar"><span>${d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}</span><span>${wxl}</span></div><h4>Pendientes de hoy</h4>`+save.tasks.list.map(x=>{const def=TASKS.find(k=>k[0]===x.id);return def?`<div class="task${x.done?' done':''}"><div><b>${def[1]}</b><i><u style="width:${x.n/x.goal*100}%"></u></i></div><span>${x.done?'✓':def[3]+' 🔔'}</span></div>`:''}).join('')+
    (save.req&&Talk.P[save.req.npc]?`<h4>Favor pendiente</h4><div class="task"><div><b>Llevarle ${Talk.RNAME[save.req.item]} a ${Talk.P[save.req.npc].name}</b><small>${hasCat(save.req.item)?'¡Ya lo tienes!':'Todavía no lo tienes'} · está ${Talk.P[save.req.npc].where}</small></div><span>${save.req.reward} 🔔</span></div>`:'')+
    (save.eggs.length?`<h4>Huevos incubándose</h4><div class="inv">${save.eggs.map(e=>`<span>🥚 ${Math.min(99,Math.round(e.dist/9))}%</span>`).join('')}</div>`:'')+
-   `<h4>Tu bolsita · 🔔 ${save.bells.toLocaleString('es-MX')}</h4><div class="inv">${Object.keys(save.inv).filter(k=>itemInfo(k)).length?Object.keys(save.inv).map(k=>{const f=itemInfo(k);return f?`<span>${f.i} ${save.inv[k]}</span>`:''}).join(''):'<span>Vacía · recoge cosas por la isla</span>'}</div>`}
+   `<h4>🎒 Objetos · 🔔 ${save.bells.toLocaleString('es-MX')}</h4><div class="inv">${Object.keys(save.inv).filter(k=>itemInfo(k)).length?Object.keys(save.inv).map(k=>{const f=itemInfo(k);return f?`<span>${f.i} ${save.inv[k]}</span>`:''}).join(''):'<span>Vacía · recoge cosas por la isla</span>'}</div>`}
   if(t==='pets'){box.innerHTML=save.pets.length?'<h4>Tus mascotas</h4>'+save.pets.map(p=>{const P=V.PETS[p.sp];return`<div class="petrow${p.uid===save.activePet?' on':''}" data-u="${p.uid}"><canvas width="68" height="60" data-sp="${V.petId(p)}"></canvas><div><b>${p.name}</b><small>${P.n}${V.petVarName&&V.petVarName(p)?" "+V.petVarName(p).toLowerCase():""} · ${V.RARITY[P.r]}</small><i><u style="width:${p.hunger}%;background:#f29a5c"></u></i><i><u style="width:${p.love}%"></u></i></div><span>${p.uid===save.activePet?'🐾 Te acompaña':'🏡 En su casita'}</span></div>`}).join('')+'<p class="memtext">Toca una mascota para que te acompañe; las demás se quedan jugando en la Casita de mascotas, junto a tu casa. Barra naranja: pancita llena · barra rosa: cariño.</p>'
    :'<p class="memtext">Todavía no tienes mascotas. Viaja en barco a una isla misteriosa para encontrar criaturas mágicas, o compra un huevo en la Tienda de mascotas de Ciudad Corazón.</p>';
    box.querySelectorAll('canvas').forEach(c=>{const x=c.getContext('2d');x.imageSmoothingEnabled=false;const s=V.petSprite(c.dataset.sp,0,false);x.drawImage(s.c,2,0,s.c.width*2,s.c.height*2)});
@@ -9813,10 +9813,29 @@ window.Wardrobe=Wardrobe;
    persist();X.toast((gear[key]?'✨ ¡Accesorio equipado!':'📦 Accesorio guardado')+' Tu ropa normal sigue igual.');
  }
  H.tab.push((t,box)=>{if(t==='closet'){
-   const d=document.createElement('div');d.className='rain-wardrobe34';
-   const wear=(k,id)=>!save.inv[id]?'Por conseguir':gear[k]?'Puesto sobre tu ropa':'Guardado';
-   d.innerHTML='<h4>🌦️ Capas y accesorios para lluvia</h4><p class="rain-desc34">Combina el impermeable con cualquier vestido o conjunto. No reemplaza tu ropa.</p><button class="orow" id="wearRain34">🧥 '+wear('coat','impermeable32')+' · 👢 '+wear('boots','botas32')+' · ☂️ '+wear('umbrella','paraguas32')+'<span>›</span></button>';
-   box.appendChild(d);d.querySelector('#wearRain34').onclick=()=>{X.closeMenu();gearMenu()};
+   // El impermeable es una capa exterior: NO modifica save.outfit,
+   // save.bottom, save.shoes ni los colores de las prendas normales.
+   const d=document.createElement('section');d.className='rain-wardrobe34';
+   const coat=!!save.rainGear34?.coat,boots=!!save.rainGear34?.boots;
+   const hasCoat=!!save.inv.impermeable32,hasBoots=!!save.inv.botas32,hasMedicine=!!save.inv.medicina;
+   d.innerHTML='<h4>🧥 Prendas exteriores</h4>'+
+     '<p class="rain-desc34">Se ponen encima del conjunto que ya llevas. Tu ropa y tus accesorios permanecen igual.</p>'+
+     '<button class="orow" id="wearCoat34" '+(hasCoat?'':'disabled')+'>🧥 Impermeable <span>'+(hasCoat?(coat?'Quitar':'Poner'):'No lo tienes')+'</span></button>'+
+     '<button class="orow" id="wearBoots34" '+(hasBoots?'':'disabled')+'>👢 Botas para lluvia <span>'+(hasBoots?(boots?'Quitar':'Poner'):'No las tienes')+'</span></button>'+
+     '<p class="memtext">El paraguas se abre desde Mochila → Objetos, no desde el armario.</p>'+
+     '<h4>💊 Botiquín personal</h4>'+
+     '<button class="orow" id="useMedicine34" '+(hasMedicine?'':'disabled')+'>💊 Usar medicina <span>'+(hasMedicine?'×'+save.inv.medicina:'No tienes')+'</span></button>';
+   box.appendChild(d);
+   const toggle=(key,id)=>{if(!save.inv[id])return;
+     gear[key]=!gear[key];persist();
+     X.toast(gear[key]?'✨ Prenda exterior puesta':'🧺 Prenda exterior guardada');
+     X.showTab('closet');
+   };
+   d.querySelector('#wearCoat34').onclick=()=>toggle('coat','impermeable32');
+   d.querySelector('#wearBoots34').onclick=()=>toggle('boots','botas32');
+   d.querySelector('#useMedicine34').onclick=async()=>{if(!save.inv.medicina)return;
+     await window.Mercado36?.use('medicina');X.showTab('closet');
+   };
   }
   if(t==='pets'){const p=pet();if(!p)return;const d=document.createElement('div');d.innerHTML='<button class="orow" id="pcoat32">🐾 '+(save.petCoats32?.[p.uid]?'Quitar':'Poner')+' impermeable a '+String(p.name).replace(/[&<>]/g,'')+' <span>›</span></button><small class="memtext">La barra naranja de cada mascota indica cuánto ha comido. Dale alimento desde su menú de interacción.</small>';box.appendChild(d);d.querySelector('button').onclick=()=>{if(!save.inv.petCoat32){X.toast('🛍️ Compra un impermeable para mascota en el mercadito.');return}save.petCoats32=save.petCoats32||{};save.petCoats32[p.uid]=!save.petCoats32[p.uid];persist();X.showTab('pets')}}
  });
@@ -9937,10 +9956,10 @@ window.Wardrobe=Wardrobe;
    box.innerHTML=`<span class="well-icon34">🍏</span><h3>Mi pancita</h3><p>${s.hunger>=75?'¡Estás satisfecha!':s.hunger>=50?'Un bocadito te vendría bien.':s.hunger>=25?'Ya tienes bastante hambre.':'¡Es hora de comer algo rico!'}</p><div class="well-bar34"><i style="width:${s.hunger}%"></i></div><button class="well-btn34 primary" data-k="feed">🍱 Comer de la mochila</button><button class="well-btn34" data-k="close">Seguir paseando</button>`;
   }else{
    const reason=healthy.dataset.well||'Te sientes bien';
-   box.innerHTML=`<span class="well-icon34">${face.textContent}</span><h3>Cómo me siento</h3><p>${reason}<br>Humedad ${Math.round(s.wet)}% · Saciedad ${Math.round(s.hunger)}%</p><div class="well-bar34"><i style="width:${100-s.wet}%;background:linear-gradient(90deg,#aadcd3,#76acb1)"></i></div><button class="well-btn34 primary" data-k="care">🩹 Cuidarme</button><button class="well-btn34" data-k="gear">🌧️ Accesorios de lluvia</button><button class="well-btn34" data-k="close">Seguir paseando</button>`;
+   box.innerHTML=`<span class="well-icon34">${face.textContent}</span><h3>Cómo me siento</h3><p>${reason}<br>Humedad ${Math.round(s.wet)}% · Saciedad ${Math.round(s.hunger)}%</p><div class="well-bar34"><i style="width:${100-s.wet}%;background:linear-gradient(90deg,#aadcd3,#76acb1)"></i></div><p class="memtext">Para curarte, abre Mochila → Objetos y usa medicina o botiquín. El impermeable se pone desde el Armario, y el paraguas desde Objetos.</p><button class="well-btn34" data-k="close">Seguir paseando</button>`;
   }
   panel.classList.add('on');X.st.menu=true;
-  box.querySelectorAll('[data-k]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;closePanel();if(k==='feed')health.feed();else if(k==='care')health.treatment();else if(k==='gear')health.gearMenu()}));
+  box.querySelectorAll('[data-k]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;closePanel();if(k==='feed')health.feed()}));
  }
  hunger.addEventListener('click',e=>{e.stopPropagation();showPanel('hunger')});healthy.addEventListener('click',e=>{e.stopPropagation();showPanel('health')});
  // Layered rainwear: draw each segment inside its real Procreate mask, so body, sleeves and boots follow bones.
@@ -9981,6 +10000,7 @@ window.Wardrobe=Wardrobe;
  ['miel','🍯 Trata las picaduras de abeja','salud'],
  ['vitaminas','💊 Evita resfriados por humedad durante 15 minutos','salud'],
  ['botiquin','🩹 Cura una enfermedad o picadura','salud'],
+ ['medicina','💊 Cura enfermedades o picaduras con una dosis','salud'],
  ['termometro','🌡️ Examina hambre, humedad y enfermedad','salud'],
  ['paraguas32','☂️ Abre o guarda el paraguas sobre tu atuendo','ropa'],
  ['impermeable32','🧥 Superpone el impermeable a la ropa puesta','ropa'],
@@ -10055,6 +10075,7 @@ window.Wardrobe=Wardrobe;
    case 'miel':if(!s)return false;if(!s.stings){say('🐝 No tienes picaduras.');return false}s.stings=0;if(s.reason==='Picadura de abejita'){s.sick=false;s.reason=''}consumed=true;say('🍯 Miel aplicada: picaduras curadas.');break;
    case 'vitaminas':if(!s)return false;state.shieldUntil=Date.now()+15*60*1000;consumed=true;say('💊 Protegida del resfriado por 15 minutos.');break;
    case 'botiquin':if(!s||(!s.sick&&!s.stings)){say('🩹 Sin heridas ni enfermedad. Consérvalo.');return false}Health32.cure();consumed=true;break;
+   case 'medicina':if(!s||(!s.sick&&!s.stings)){say('💊 No necesitas medicina ahora. Se conserva en tu mochila.');return false}Health32.cure();consumed=true;say('💊 Te recuperaste con una dosis de medicina.');break;
    case 'termometro':say(`🌡️ Hambre: ${Math.round(s?.hunger||0)}% · Humedad: ${Math.round(s?.wet||0)}% · ${s?.sick?'Enferma: '+s.reason:'Saludable'}`);break;
    case 'paraguas32':g.umbrella=!g.umbrella;save.umbrella32=g.umbrella;say(g.umbrella?'☂️ Paraguas abierto':'☂️ Paraguas guardado');break;
    case 'impermeable32':g.coat=!g.coat;say(g.coat?'🧥 Impermeable sobre tu atuendo':'🧥 Impermeable guardado');break;
@@ -10253,6 +10274,7 @@ window.Wardrobe=Wardrobe;
 <script src="./native_joystick40.js"></script>
 <script src="./topografia_walesa_v2.js"></script>
 <script src="./walesa_mainland_v3.js"></script>
+<script src="./walesa_raincoat_procreate.js"></script>
 <script src="./overworld60.js"></script>
 <script src="./metro61.js"></script>
 <script src="./metro62.js"></script>
