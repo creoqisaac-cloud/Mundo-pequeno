@@ -1,9 +1,5 @@
 name: Retirar juego publico de GitHub Pages
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
   contents: read
