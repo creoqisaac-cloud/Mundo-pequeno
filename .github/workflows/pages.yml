@@ -1,19 +1,17 @@
-name: Publicar Isla de Walesa en GitHub Pages
-
+name: Retirar juego publico de GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: github-pages
   cancel-in-progress: false
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,64 +19,21 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Obtener juego
+      - name: Conservar codigo sin publicarlo
         uses: actions/checkout@v4
-      - name: Verificar archivos
+      - name: Verificar que NO se incluya el juego
         run: |
-          test -s index.html
-          test -s manifest.webmanifest
-          test -s sw.js
-          test -s icon.svg
-          grep -q 'walesa-ds-v1' index.html
-      - name: Revisar JavaScript antes de publicar
-        run: |
-          node - <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const html = fs.readFileSync('index.html', 'utf8');
-          const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
-          if (scripts.length < 40) throw Error('Faltan scripts del juego');
-          for (const [i, script] of scripts.entries()) {
-            try { new vm.Script(script[1], {filename: 'index-script-'+i+'.js'}); }
-            catch (error) { console.error(error); process.exit(1); }
-          }
-          console.log(scripts.length + ' bloques JavaScript válidos');
-          NODE
-      - name: Probar controles nativos sin regresiones
-        run: |
-          node --check native_joystick40.js
-          node --check sw.js
-          node --check metro61.js
-          node --check metro62.js
-          node --check metro63.js
-          node --check metro66.js
-          node --check walesa_position65.js
-          node --check walesa_mainland_v3.js
-          node tests/procreate-v68.cjs
-          grep -q 'metro61.js' index.html
-          grep -q 'metro62.js' index.html
-          grep -q 'metro63.js' index.html
-          grep -q 'metro66.js' index.html
-          grep -q 'walesa_position65.js' index.html
-          node tests/joystick-smoke.cjs
-      - name: Probar Opciones y juego en Chromium real
-        continue-on-error: true
-        run: |
-          npm install --no-save --no-audit --no-fund playwright@1.56.1
-          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || true)"
-          test -n "$CHROME_PATH"
-          CHROME_PATH="$CHROME_PATH" node tests/browser-smoke.cjs
-          CHROME_PATH="$CHROME_PATH" node tests/v60-smoke.cjs
-          CHROME_PATH="$CHROME_PATH" node tests/metro66-visual.cjs
-          CHROME_PATH="$CHROME_PATH" node tests/metro67-access.cjs
+          test -s site-closed/index.html
+          test ! -e site-closed/walesa_v32.js
+          test ! -e site-closed/sw.js
       - name: Configurar Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
-      - name: Subir sitio
+      - name: Sustituir sitio por pagina neutral
         uses: actions/upload-pages-artifact@v4
         with:
-          path: .
-      - name: Publicar sitio
+          path: ./site-closed
+      - name: Retirar juego publico
         id: deployment
         uses: actions/deploy-pages@v4
